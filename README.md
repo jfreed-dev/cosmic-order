@@ -8,10 +8,14 @@ Rust toolkit for COSMIC applications.
 
 ## Project Status
 
-**Phase: Research & Planning**
+| Status | Branch | Visibility |
+|--------|--------|------------|
+| **Alpha** | `alpha` | Private |
 
-This project is in early development. See [docs/ROADMAP.md](docs/ROADMAP.md)
-for the development plan.
+This project is in **alpha development** with a single developer workflow.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for the development plan and
+[docs/development/WORKFLOW.md](docs/development/WORKFLOW.md) for the
+release strategy.
 
 ## Goals
 

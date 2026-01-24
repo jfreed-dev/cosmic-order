@@ -110,6 +110,21 @@ widget::text::title2(fl!("page-title"))
 - [docs/architecture/](docs/architecture/) - System design
 - [docs/research/](docs/research/) - libcosmic and COSMIC research
 - [docs/development/](docs/development/) - Development guides
+- [docs/development/WORKFLOW.md](docs/development/WORKFLOW.md) - Git workflow
+
+## Development Phase
+
+**Current: Alpha** (private repo, single developer, direct commits to `alpha`)
+
+```bash
+# Standard workflow
+git checkout alpha
+# make changes
+git add -A && git commit -m "feat: description"
+git push
+```
+
+See WORKFLOW.md for beta/public release plans.
 
 ## Related Projects
 
