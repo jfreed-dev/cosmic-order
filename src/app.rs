@@ -116,11 +116,11 @@ impl Application for App {
                 // TODO: Implement page message routing
                 tracing::debug!("Page message: {:?}", page_message);
                 Task::none()
-            },
+            }
             Message::ConfigChanged(config) => {
                 self.config = config;
                 Task::none()
-            },
+            }
         }
     }
 

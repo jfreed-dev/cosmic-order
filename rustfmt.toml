@@ -1,5 +1,5 @@
 # Rust formatting configuration
-# Following COSMIC ecosystem conventions (defaults) with minor enhancements
+# Following COSMIC ecosystem conventions (defaults)
 
 edition = "2024"
 max_width = 100
@@ -7,16 +7,12 @@ tab_spaces = 4
 newline_style = "Unix"
 use_small_heuristics = "Default"
 
-# Import organization
-imports_granularity = "Module"
-group_imports = "StdExternalCrate"
+# Import ordering (stable options)
 reorder_imports = true
 reorder_modules = true
 
-# Comments
-normalize_comments = false
-wrap_comments = false
-
-# Control flow
-match_arm_leading_pipes = "Never"
-match_block_trailing_comma = true
+# Note: The following options require nightly rustfmt:
+# imports_granularity = "Module"
+# group_imports = "StdExternalCrate"
+# normalize_comments = false
+# wrap_comments = false
