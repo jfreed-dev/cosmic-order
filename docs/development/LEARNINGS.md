@@ -37,6 +37,7 @@ cosmic.primary.on    // Text color
 ### Theme Config Files
 
 Each theme directory contains individual RON files:
+
 - `accent` - Accent color with base/hover/pressed/selected states
 - `background` - Background colors
 - `name` - Theme name string
@@ -81,6 +82,7 @@ TERMINAL="ghostty"
 ### libcosmic UI Patterns
 
 **Settings sections with items:**
+
 ```rust
 widget::settings::section()
     .title("Section Title")
@@ -91,6 +93,7 @@ widget::settings::section()
 ```
 
 **Page layout:**
+
 ```rust
 widget::column()
     .spacing(spacing.space_m)
@@ -113,7 +116,9 @@ Project uses strict clippy with `-D warnings`. Common allows needed for placehol
 
 ### Rust 2024 Edition
 
-Project uses `edition = "2024"` which requires Rust 1.85+. Some rustfmt options are nightly-only and were commented out:
+Project uses `edition = "2024"` which requires Rust 1.85+. Some rustfmt options
+are nightly-only and were commented out:
+
 - `imports_granularity`
 - `group_imports`
 - `normalize_comments`

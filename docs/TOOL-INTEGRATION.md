@@ -23,6 +23,7 @@ using the libcosmic framework.
 Ghostty is the primary terminal for screensaver display and daily use.
 
 **What's Available:**
+
 - Simple text config file (`~/.config/ghostty/config`)
 - Theme files in `~/.config/ghostty/themes/`
 - D-Bus service: `com.mitchellh.ghostty`
@@ -31,13 +32,14 @@ Ghostty is the primary terminal for screensaver display and daily use.
 - Light/dark mode auto-switching: `theme = dark:Catppuccin,light:Catppuccin Latte`
 
 **What's Missing:**
+
 - No programmatic theme switching API
 - No window embedding (libghostty-vt is parse-only currently)
 - No plugin/extension system
 
 ### Integration Approach
 
-```
+```text
 COSMIC Theme Change
     ↓
 Read COSMIC accent/palette from cosmic-config
@@ -52,6 +54,7 @@ Send OSC escape sequences to reload colors
 ```
 
 **D-Bus Window Control:**
+
 ```bash
 # Instant new window via D-Bus (faster than spawning)
 ghostty +new-window
@@ -66,6 +69,7 @@ ghostty +new-window
 ### Future: libghostty
 
 Mitchell Hashimoto is building full libghostty with:
+
 - GTK widget for embedding
 - Native UI framework support
 - GPU rendering surfaces
@@ -81,6 +85,7 @@ Once available, could embed Ghostty windows directly in COSMIC ORDER.
 Neovim has the **best integration potential** due to its RPC API.
 
 **What's Available:**
+
 - Full MessagePack-RPC protocol for external control
 - Bidirectional communication (call functions AND receive events)
 - Real-time highlight group modification via `nvim_set_hl()`
@@ -88,7 +93,8 @@ Neovim has the **best integration potential** due to its RPC API.
 - LazyVim's colorscheme system is well-structured
 
 **RPC Functions for Theming:**
-```
+
+```text
 nvim_set_hl(namespace, group, attributes)  # Set highlight colors
 nvim_get_hl(namespace, name)               # Query current colors
 nvim_command(":colorscheme name")          # Switch colorscheme
@@ -97,14 +103,16 @@ nvim_exec_lua("vim.g.colors_name = ...")   # Direct Lua execution
 
 ### Integration Approach
 
-**Option A: File-based (Current)**
+#### Option A: File-based (Current)
+
 ```bash
 # Current switch-theme.sh approach
 cp themes/$THEME/colorscheme.lua ~/.config/nvim/lua/plugins/colorscheme.lua
 # User must restart Neovim
 ```
 
-**Option B: RPC-based (Enhanced)**
+#### Option B: RPC-based (Enhanced)
+
 ```rust
 // Rust pseudo-code for COSMIC ORDER
 let nvim = NvimClient::connect_socket("~/.cache/nvim/server.sock")?;
@@ -119,11 +127,13 @@ nvim.command(&format!(":colorscheme {}", theme_name))?;
 ### libcosmic Benefits
 
 **Immediate:**
+
 - Generate colorscheme.lua from COSMIC theme
 - Store Neovim preferences in cosmic-config
 - RPC client for real-time theme sync
 
 **Future (Advanced):**
+
 - Native COSMIC Neovim GUI using RPC + libcosmic rendering
 - Would require significant development (6-12 months)
 - Neovide/Neovim-Qt exist as reference implementations
@@ -146,11 +156,13 @@ neovim-lib = "0.6"  # Sync Neovim RPC client
 btop is a system monitor with theme support but no external APIs.
 
 **What's Available:**
+
 - Theme files in `~/.config/btop/themes/`
 - CLI flags: `--config`, `--preset`, `--themes-dir`
 - Key-value configuration format
 
 **What's Missing:**
+
 - No IPC/D-Bus interface
 - No runtime theme reloading (must restart)
 - No data export API
@@ -158,7 +170,7 @@ btop is a system monitor with theme support but no external APIs.
 
 ### Integration Approach
 
-```
+```text
 COSMIC Theme Change
     ↓
 Read COSMIC colors
@@ -218,11 +230,13 @@ theme[free_end]="{destructive}"
 Zellij is a terminal multiplexer with theme support.
 
 **What's Available:**
+
 - KDL configuration format
 - Theme definitions in config
 - Layout system
 
 **What's Missing:**
+
 - No runtime theme switching
 - No IPC for external control
 
@@ -261,6 +275,7 @@ themes {
 ### fzf
 
 **Color Configuration:**
+
 ```bash
 export FZF_DEFAULT_OPTS="
   --color=bg+:#313244,bg:#1e1e2e,spinner:#f5e0dc
@@ -275,6 +290,7 @@ export FZF_DEFAULT_OPTS="
 ### ripgrep
 
 **Color Configuration:**
+
 ```bash
 export RIPGREP_CONFIG_PATH="$HOME/.config/ripgrep/config"
 # In config file:
@@ -288,6 +304,7 @@ export RIPGREP_CONFIG_PATH="$HOME/.config/ripgrep/config"
 ### lazygit
 
 **Theme Configuration** (`~/.config/lazygit/config.yml`):
+
 ```yaml
 gui:
   theme:
@@ -347,6 +364,7 @@ OMARCHY uses hook scripts for extensibility:
 ```
 
 **COSMIC Equivalent:**
+
 ```bash
 ~/.config/cosmic-order/hooks/theme-set.d/
 ├── 10-ghostty.sh
@@ -362,7 +380,7 @@ OMARCHY uses hook scripts for extensibility:
 
 ### Unified Theme Engine
 
-```
+```text
 ┌─────────────────────────────────────────────────────────┐
 │                    COSMIC ORDER                          │
 ├─────────────────────────────────────────────────────────┤
@@ -393,7 +411,7 @@ OMARCHY uses hook scripts for extensibility:
 
 ### Data Flow
 
-```
+```text
 User selects theme in COSMIC ORDER
     ↓
 Read COSMIC theme via cosmic-theme crate

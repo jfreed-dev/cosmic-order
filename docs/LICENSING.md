@@ -22,7 +22,7 @@ This document tracks licensing requirements for COSMIC ORDER.
 
 ### Attribution Template
 
-```
+```text
 Color schemes inspired by:
 - OMARCHY by Basecamp (MIT License)
 - Tokyo Night by folke (MIT License)
@@ -117,4 +117,4 @@ public release.
 
 ---
 
-*Last updated: 2026-01-24*
+Last updated: 2026-01-24

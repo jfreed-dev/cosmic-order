@@ -66,7 +66,10 @@ impl Application for App {
 
         // Load screensaver configuration
         let screensaver_config = ScreensaverConfig::load().unwrap_or_default();
-        tracing::info!("Loaded screensaver config: enabled={}", screensaver_config.enabled);
+        tracing::info!(
+            "Loaded screensaver config: enabled={}",
+            screensaver_config.enabled
+        );
 
         // Load theme configuration
         let theme_config = ThemeConfig::load();
@@ -401,7 +404,9 @@ impl App {
                     ))
                     .add(widget::settings::item(
                         "Battery idle timeout",
-                        widget::text::body(ScreensaverConfig::format_timeout(cfg.battery_idle_timeout)),
+                        widget::text::body(ScreensaverConfig::format_timeout(
+                            cfg.battery_idle_timeout,
+                        )),
                     )),
             )
             .into()
