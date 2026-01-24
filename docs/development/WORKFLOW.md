@@ -92,6 +92,17 @@ Before going public, verify:
 - [ ] Contributing guidelines complete
 - [ ] Issue templates configured
 
+### Asset Licensing Checklist
+
+See [../LICENSING.md](../LICENSING.md) for full details.
+
+- [ ] All wallpapers have verified licenses (Unsplash, Pixabay, AI-generated, etc.)
+- [ ] Remove dharmx/walls sourced wallpapers (unlicensed)
+- [ ] Create WALLPAPER-SOURCES.md with attribution
+- [ ] Verify ASCII logo usage rights (Framework, Pop!_OS)
+- [ ] Add attribution section to README
+- [ ] Document theme color scheme sources
+
 ## Branch Strategy
 
 ```text
