@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-//! COSMIC Tweaks - Theme, wallpaper, and screensaver management
+//! COSMIC ORDER - Establishing order in the chaos
 //!
-//! A native COSMIC Desktop application for managing themes, wallpapers,
-//! and screensaver configurations.
+//! OMARCHY-inspired workflow and aesthetics for COSMIC Desktop.
+//! The keyboard-first workflow you love, on the desktop you deserve.
 
 mod app;
 mod config;
@@ -13,18 +13,18 @@ mod pages;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 /// Application ID for COSMIC configuration
-pub const APP_ID: &str = "com.github.jfreed-dev.CosmicTweaks";
+pub const APP_ID: &str = "com.github.jfreed-dev.CosmicOrder";
 
 fn main() -> cosmic::iced::Result {
     // Initialize logging
     tracing_subscriber::registry()
         .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-            EnvFilter::new("warn,cosmic_tweaks=info")
+            EnvFilter::new("warn,cosmic_order=info")
         }))
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    tracing::info!("Starting COSMIC Tweaks");
+    tracing::info!("Starting COSMIC ORDER");
 
     // Initialize localization with system language preferences
     let requested_languages = i18n_embed::DesktopLanguageRequester::requested_languages();

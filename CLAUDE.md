@@ -1,11 +1,12 @@
 # CLAUDE.md
 
-Instructions for Claude Code when working on COSMIC Tweaks.
+Instructions for Claude Code when working on COSMIC ORDER.
 
 ## Project Overview
 
-COSMIC Tweaks is a native COSMIC Desktop application built with libcosmic (Rust).
-It manages themes, wallpapers, and screensaver configurations.
+COSMIC ORDER is a native COSMIC Desktop application built with libcosmic (Rust).
+OMARCHY-inspired workflow and aesthetics for COSMIC Desktop - the keyboard-first
+workflow you love, on the desktop you deserve.
 
 ## Key Commands
 
@@ -17,7 +18,7 @@ cargo build --release
 cargo run --release
 
 # Run with debug logging
-RUST_LOG=cosmic_tweaks=debug cargo run
+RUST_LOG=cosmic_order=debug cargo run
 
 # Check code quality
 cargo clippy --all-features
@@ -99,7 +100,7 @@ widget::column()
 Use the `fl!` macro for all user-facing strings:
 
 ```rust
-use crate::localize::fl;
+use crate::fl;
 
 widget::text::title2(fl!("page-title"))
 ```
@@ -131,6 +132,7 @@ See WORKFLOW.md for beta/public release plans.
 - [libcosmic](https://github.com/pop-os/libcosmic) - GUI toolkit
 - [cosmic-settings](https://github.com/pop-os/cosmic-settings) - Reference app
 - [laptop-configs-popos](../laptop-configs-popos) - Screensaver scripts
+- [OMARCHY](https://omarchy.com) - Workflow inspiration
 
 ## AI Attribution Policy
 

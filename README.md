@@ -1,10 +1,25 @@
-# COSMIC Tweaks
+# COSMIC ORDER
 
-A native COSMIC Desktop application for managing themes, wallpapers, and
-screensaver configurations on Pop!_OS and other COSMIC-based distributions.
+**Establishing order in the chaos.**
+
+OMARCHY-inspired workflow and aesthetics for COSMIC Desktop. We took the
+keyboard-first philosophy, the curated applications, and the polished look -
+and left the opinions behind.
 
 Built with [libcosmic](https://github.com/pop-os/libcosmic) - the official
 Rust toolkit for COSMIC applications.
+
+## What Is This?
+
+[OMARCHY](https://omarchy.com) is a cleverly crafted Linux distribution with
+excellent taste in applications and workflow design. The keyboard-first
+approach, the terminal aesthetics, the curated tool selection (ghostty, btop,
+lazyvim) - it's genuinely good stuff.
+
+COSMIC ORDER brings that workflow to [COSMIC Desktop](https://system76.com/cosmic),
+letting you enjoy the rice without subscribing to the newsletter.
+
+**Think of it as:** *"I'll take the workflow, hold the manifesto."*
 
 ## Project Status
 
@@ -12,23 +27,23 @@ Rust toolkit for COSMIC applications.
 |--------|--------|------------|
 | **Alpha** | `alpha` | Private |
 
-This project is in **alpha development** with a single developer workflow.
-See [docs/ROADMAP.md](docs/ROADMAP.md) for the development plan and
-[docs/development/WORKFLOW.md](docs/development/WORKFLOW.md) for the
-release strategy.
+This project is in **alpha development**. See [docs/ROADMAP.md](docs/ROADMAP.md)
+for the development plan.
 
 ## Goals
 
-1. **Theme Management** - Create, edit, import/export COSMIC themes
-2. **Wallpaper Management** - Organize wallpapers by theme with rotation support
-3. **Screensaver Configuration** - Configure the terminal-based screensaver
-4. **Integration** - Native COSMIC look and feel, integrates with system settings
+1. **Theme Management** - OMARCHY-inspired dark themes and accent colors
+2. **Wallpaper Management** - Curated wallpapers with rotation support
+3. **Screensaver** - Terminal-based screensaver with ASCII art effects
+4. **Application Config** - Preconfigured settings for ghostty, btop, lazyvim
+5. **Keyboard Shortcuts** - Keyboard-first workflow bindings for COSMIC
 
 ## Architecture
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│                     COSMIC Tweaks App                       │
+│                      COSMIC ORDER                           │
+│              "Establishing order in the chaos"              │
 ├─────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
 │  │   Themes    │  │ Wallpapers  │  │    Screensaver      │ │
@@ -60,6 +75,16 @@ cargo build --release
 # Run
 cargo run --release
 ```
+
+## Acknowledgments
+
+COSMIC ORDER draws heavy inspiration from [OMARCHY](https://omarchy.com),
+created by DHH. We admire the curated workflow, application choices, and
+keyboard-first philosophy that went into that project.
+
+This project exists for those who appreciate the aesthetic and workflow
+but prefer COSMIC Desktop as their foundation - and prefer their desktop
+environment without editorial commentary.
 
 ## Documentation
 

@@ -1,7 +1,7 @@
-# COSMIC Tweaks - English Translations
+# COSMIC ORDER - English Translations
 
 # Application
-app-title = COSMIC Tweaks
+app-title = COSMIC ORDER
 
 # Navigation
 themes = Themes

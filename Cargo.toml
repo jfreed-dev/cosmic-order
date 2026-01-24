@@ -1,12 +1,12 @@
 [package]
-name = "cosmic-tweaks"
+name = "cosmic-order"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
 license = "GPL-3.0-only"
-description = "Theme, wallpaper, and screensaver management for COSMIC Desktop"
-repository = "https://github.com/jfreed-dev/cosmic-tweaks"
-keywords = ["cosmic", "pop-os", "theme", "wallpaper", "screensaver"]
+description = "OMARCHY-inspired workflow and aesthetics for COSMIC Desktop - establishing order in the chaos"
+repository = "https://github.com/jfreed-dev/cosmic-order"
+keywords = ["cosmic", "pop-os", "omarchy", "theme", "workflow", "keyboard-first"]
 categories = ["gui"]
 
 [dependencies]
