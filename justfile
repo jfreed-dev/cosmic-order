@@ -74,13 +74,46 @@ audit:
 check-compile:
     cargo check --all-features
 
-# Install locally
+# Install locally (binary only)
 install:
     cargo install --path .
 
+# Install with desktop integration
+install-desktop: build-release
+    @echo "Installing binary..."
+    sudo install -Dm755 target/release/cosmic-order /usr/local/bin/cosmic-order
+    @echo "Installing desktop file..."
+    sudo install -Dm644 resources/com.github.jfreed-dev.CosmicOrder.desktop /usr/share/applications/com.github.jfreed-dev.CosmicOrder.desktop
+    @echo "Installing icon..."
+    sudo install -Dm644 resources/icons/com.github.jfreed-dev.CosmicOrder.svg /usr/share/icons/hicolor/scalable/apps/com.github.jfreed-dev.CosmicOrder.svg
+    @echo "Updating icon cache..."
+    sudo gtk-update-icon-cache -f /usr/share/icons/hicolor/ || true
+    @echo "Installation complete!"
+
+# Install to user directory (no sudo)
+install-user: build-release
+    @echo "Installing binary..."
+    install -Dm755 target/release/cosmic-order ~/.local/bin/cosmic-order
+    @echo "Installing desktop file..."
+    install -Dm644 resources/com.github.jfreed-dev.CosmicOrder.desktop ~/.local/share/applications/com.github.jfreed-dev.CosmicOrder.desktop
+    @echo "Installing icon..."
+    install -Dm644 resources/icons/com.github.jfreed-dev.CosmicOrder.svg ~/.local/share/icons/hicolor/scalable/apps/com.github.jfreed-dev.CosmicOrder.svg
+    @echo "Updating icon cache..."
+    gtk-update-icon-cache -f ~/.local/share/icons/hicolor/ || true
+    @echo "User installation complete!"
+
 # Uninstall
 uninstall:
-    cargo uninstall cosmic-order
+    cargo uninstall cosmic-order || true
+    sudo rm -f /usr/local/bin/cosmic-order
+    sudo rm -f /usr/share/applications/com.github.jfreed-dev.CosmicOrder.desktop
+    sudo rm -f /usr/share/icons/hicolor/scalable/apps/com.github.jfreed-dev.CosmicOrder.svg
+
+# Uninstall from user directory
+uninstall-user:
+    rm -f ~/.local/bin/cosmic-order
+    rm -f ~/.local/share/applications/com.github.jfreed-dev.CosmicOrder.desktop
+    rm -f ~/.local/share/icons/hicolor/scalable/apps/com.github.jfreed-dev.CosmicOrder.svg
 
 # Show dependency tree
 deps:

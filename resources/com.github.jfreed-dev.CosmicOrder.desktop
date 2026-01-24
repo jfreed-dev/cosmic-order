@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=COSMIC ORDER
+Comment=OMARCHY-inspired workflow and aesthetics for COSMIC Desktop
+Comment[en_US]=OMARCHY-inspired workflow and aesthetics for COSMIC Desktop
+Exec=cosmic-order
+Terminal=false
+Type=Application
+StartupNotify=true
+Icon=com.github.jfreed-dev.CosmicOrder
+Categories=COSMIC;Settings;Utility;
+Keywords=theme;wallpaper;screensaver;customization;omarchy;

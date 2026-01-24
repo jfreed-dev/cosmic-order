@@ -41,7 +41,7 @@ Documentation is maintained alongside code development.
 - [x] Implement page routing system
 - [x] Add placeholder pages (Themes, Wallpapers, Screensaver)
 - [ ] Set up cosmic-config integration
-- [ ] Add application icon and desktop file
+- [x] Add application icon and desktop file
 - [x] Implement i18n foundation
 
 ### Deliverables
