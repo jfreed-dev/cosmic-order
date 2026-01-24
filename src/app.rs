@@ -5,12 +5,11 @@
 //! Implements the COSMIC Application trait and handles message routing.
 
 use cosmic::app::{Core, Task};
-use cosmic::iced::window;
 use cosmic::widget::{self, nav_bar};
 use cosmic::{Application, Element};
 
 use crate::config::Config;
-use crate::localize::fl;
+use crate::fl;
 use crate::pages::{self, PageId};
 
 /// Application state
@@ -116,7 +115,7 @@ impl Application for App {
         }
     }
 
-    fn view(&self) -> Element<Self::Message> {
+    fn view(&self) -> Element<'_, Self::Message> {
         // Build page content based on active page
         let content = match self.active_page {
             PageId::Themes => self.view_themes_page(),
@@ -127,22 +126,22 @@ impl Application for App {
         content
     }
 
-    fn header_start(&self) -> Vec<Element<Self::Message>> {
+    fn header_start(&self) -> Vec<Element<'_, Self::Message>> {
         vec![]
     }
 
-    fn header_center(&self) -> Vec<Element<Self::Message>> {
+    fn header_center(&self) -> Vec<Element<'_, Self::Message>> {
         vec![widget::text::title3(fl!("app-title")).into()]
     }
 
-    fn header_end(&self) -> Vec<Element<Self::Message>> {
+    fn header_end(&self) -> Vec<Element<'_, Self::Message>> {
         vec![]
     }
 }
 
 impl App {
     /// View for the Themes page
-    fn view_themes_page(&self) -> Element<Message> {
+    fn view_themes_page(&self) -> Element<'_, Message> {
         let spacing = cosmic::theme::spacing();
 
         widget::column()
@@ -151,17 +150,18 @@ impl App {
             .push(widget::text::title2(fl!("themes")))
             .push(widget::text::body(fl!("themes-description")))
             .push(
-                widget::container(
-                    widget::text::body("Theme management coming in Phase 2")
-                )
-                .padding(spacing.space_l)
-                .style(cosmic::theme::Container::Card)
+                widget::settings::section()
+                    .title("Coming Soon")
+                    .add(widget::settings::item(
+                        "Theme management",
+                        widget::text::body("Coming in Phase 2"),
+                    ))
             )
             .into()
     }
 
     /// View for the Wallpapers page
-    fn view_wallpapers_page(&self) -> Element<Message> {
+    fn view_wallpapers_page(&self) -> Element<'_, Message> {
         let spacing = cosmic::theme::spacing();
 
         widget::column()
@@ -170,17 +170,18 @@ impl App {
             .push(widget::text::title2(fl!("wallpapers")))
             .push(widget::text::body(fl!("wallpapers-description")))
             .push(
-                widget::container(
-                    widget::text::body("Wallpaper management coming in Phase 3")
-                )
-                .padding(spacing.space_l)
-                .style(cosmic::theme::Container::Card)
+                widget::settings::section()
+                    .title("Coming Soon")
+                    .add(widget::settings::item(
+                        "Wallpaper management",
+                        widget::text::body("Coming in Phase 3"),
+                    ))
             )
             .into()
     }
 
     /// View for the Screensaver page
-    fn view_screensaver_page(&self) -> Element<Message> {
+    fn view_screensaver_page(&self) -> Element<'_, Message> {
         let spacing = cosmic::theme::spacing();
 
         widget::column()
@@ -189,11 +190,12 @@ impl App {
             .push(widget::text::title2(fl!("screensaver")))
             .push(widget::text::body(fl!("screensaver-description")))
             .push(
-                widget::container(
-                    widget::text::body("Screensaver configuration coming in Phase 4")
-                )
-                .padding(spacing.space_l)
-                .style(cosmic::theme::Container::Card)
+                widget::settings::section()
+                    .title("Coming Soon")
+                    .add(widget::settings::item(
+                        "Screensaver configuration",
+                        widget::text::body("Coming in Phase 4"),
+                    ))
             )
             .into()
     }

@@ -26,8 +26,9 @@ fn main() -> cosmic::iced::Result {
 
     tracing::info!("Starting COSMIC Tweaks");
 
-    // Initialize localization
-    localize::init();
+    // Initialize localization with system language preferences
+    let requested_languages = i18n_embed::DesktopLanguageRequester::requested_languages();
+    localize::init(&requested_languages);
 
     // Run the application
     cosmic::app::run::<app::App>(cosmic::app::Settings::default(), ())

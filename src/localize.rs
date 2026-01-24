@@ -1,50 +1,50 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-//! Localization support using Fluent
-//!
-//! Provides the `fl!` macro for translating strings.
+//! Provides localization support for this crate.
 
 use i18n_embed::{
     fluent::{fluent_language_loader, FluentLanguageLoader},
-    DesktopLanguageRequester,
+    unic_langid::LanguageIdentifier,
+    DefaultLocalizer, LanguageLoader, Localizer,
 };
-use once_cell::sync::Lazy;
 use rust_embed::RustEmbed;
+use std::sync::LazyLock;
+
+/// Applies the requested language(s) to requested translations from the `fl!()` macro.
+pub fn init(requested_languages: &[LanguageIdentifier]) {
+    if let Err(why) = localizer().select(requested_languages) {
+        eprintln!("error while loading fluent localizations: {why}");
+    }
+}
+
+// Get the `Localizer` to be used for localizing this library.
+#[must_use]
+pub fn localizer() -> Box<dyn Localizer> {
+    Box::from(DefaultLocalizer::new(&*LANGUAGE_LOADER, &Localizations))
+}
 
 #[derive(RustEmbed)]
-#[folder = "resources/i18n/"]
+#[folder = "i18n/"]
 struct Localizations;
 
-/// Language loader for translations
-pub static LANGUAGE_LOADER: Lazy<FluentLanguageLoader> = Lazy::new(|| {
-    let loader = fluent_language_loader!();
-    let requested_languages = DesktopLanguageRequester::requested_languages();
-    let _result = i18n_embed::select(&loader, &Localizations, &requested_languages);
+pub static LANGUAGE_LOADER: LazyLock<FluentLanguageLoader> = LazyLock::new(|| {
+    let loader: FluentLanguageLoader = fluent_language_loader!();
+
+    loader
+        .load_fallback_language(&Localizations)
+        .expect("Error while loading fallback language");
+
     loader
 });
 
-/// Initialize localization
-pub fn init() {
-    // Force initialization of the lazy loader
-    let _ = &*LANGUAGE_LOADER;
-}
-
-/// Translation macro
-///
-/// # Examples
-///
-/// ```
-/// let title = fl!("app-title");
-/// let greeting = fl!("greeting", name = "User");
-/// ```
+/// Request a localized string by ID from the i18n/ directory.
 #[macro_export]
 macro_rules! fl {
     ($message_id:literal) => {{
         i18n_embed_fl::fl!($crate::localize::LANGUAGE_LOADER, $message_id)
     }};
-    ($message_id:literal, $($arg:tt)*) => {{
-        i18n_embed_fl::fl!($crate::localize::LANGUAGE_LOADER, $message_id, $($arg)*)
+
+    ($message_id:literal, $($args:expr),*) => {{
+        i18n_embed_fl::fl!($crate::localize::LANGUAGE_LOADER, $message_id, $($args), *)
     }};
 }
-
-pub use fl;

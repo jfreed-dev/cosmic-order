@@ -37,6 +37,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 i18n-embed = { version = "0.15", features = ["fluent-system", "desktop-requester"] }
 i18n-embed-fl = "0.9"
 rust-embed = "8"
+unic-langid = "0.9"
 
 # Error handling
 thiserror = "2"
