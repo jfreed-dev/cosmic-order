@@ -1,0 +1,29 @@
+# Rust/Cargo
+/target/
+Cargo.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.so
+*.dylib
+*.dll
+
+# Debug
+*.log
+*.pdb
+
+# Distribution
+*.deb
+*.rpm
+*.tar.gz
+*.AppImage
