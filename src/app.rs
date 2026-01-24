@@ -58,19 +58,28 @@ impl Application for App {
         let mut nav_model = nav_bar::Model::default();
 
         // Add navigation items
-        nav_model.insert()
+        nav_model
+            .insert()
             .text(fl!("themes"))
-            .icon(widget::icon::from_name("preferences-desktop-theme-symbolic"))
+            .icon(widget::icon::from_name(
+                "preferences-desktop-theme-symbolic",
+            ))
             .data(PageId::Themes);
 
-        nav_model.insert()
+        nav_model
+            .insert()
             .text(fl!("wallpapers"))
-            .icon(widget::icon::from_name("preferences-desktop-wallpaper-symbolic"))
+            .icon(widget::icon::from_name(
+                "preferences-desktop-wallpaper-symbolic",
+            ))
             .data(PageId::Wallpapers);
 
-        nav_model.insert()
+        nav_model
+            .insert()
             .text(fl!("screensaver"))
-            .icon(widget::icon::from_name("preferences-desktop-screensaver-symbolic"))
+            .icon(widget::icon::from_name(
+                "preferences-desktop-screensaver-symbolic",
+            ))
             .data(PageId::Screensaver);
 
         // Activate first item
@@ -107,11 +116,11 @@ impl Application for App {
                 // TODO: Implement page message routing
                 tracing::debug!("Page message: {:?}", page_message);
                 Task::none()
-            }
+            },
             Message::ConfigChanged(config) => {
                 self.config = config;
                 Task::none()
-            }
+            },
         }
     }
 
@@ -155,7 +164,7 @@ impl App {
                     .add(widget::settings::item(
                         "Theme management",
                         widget::text::body("Coming in Phase 2"),
-                    ))
+                    )),
             )
             .into()
     }
@@ -175,7 +184,7 @@ impl App {
                     .add(widget::settings::item(
                         "Wallpaper management",
                         widget::text::body("Coming in Phase 3"),
-                    ))
+                    )),
             )
             .into()
     }
@@ -195,7 +204,7 @@ impl App {
                     .add(widget::settings::item(
                         "Screensaver configuration",
                         widget::text::body("Coming in Phase 4"),
-                    ))
+                    )),
             )
             .into()
     }

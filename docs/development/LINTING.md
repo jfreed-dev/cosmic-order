@@ -1,6 +1,6 @@
 # Linting and Code Quality
 
-This document describes the linting and code quality practices for COSMIC Tweaks.
+This document describes the linting and code quality practices for COSMIC ORDER.
 
 ## Overview
 

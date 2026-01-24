@@ -1,4 +1,4 @@
-# COSMIC Tweaks - Build and Development Commands
+# COSMIC ORDER - Build and Development Commands
 # Run 'just --list' to see all available commands
 
 # Default recipe: build release
@@ -14,15 +14,15 @@ build-release:
 
 # Run the application
 run:
-    RUST_LOG=cosmic_tweaks=info cargo run --release 2>&1
+    RUST_LOG=cosmic_order=info cargo run --release 2>&1
 
 # Run with debug logging
 run-debug:
-    RUST_LOG=cosmic_tweaks=debug,libcosmic=info cargo run 2>&1
+    RUST_LOG=cosmic_order=debug,libcosmic=info cargo run 2>&1
 
 # Run with trace logging
 run-trace:
-    RUST_LOG=cosmic_tweaks=trace cargo run 2>&1
+    RUST_LOG=cosmic_order=trace cargo run 2>&1
 
 # Run all lints
 lint: lint-clippy lint-fmt lint-docs
@@ -80,7 +80,7 @@ install:
 
 # Uninstall
 uninstall:
-    cargo uninstall cosmic-tweaks
+    cargo uninstall cosmic-order
 
 # Show dependency tree
 deps:

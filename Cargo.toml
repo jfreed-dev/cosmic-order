@@ -60,7 +60,7 @@ default = []
 # Lint configuration
 [lints.rust]
 unsafe_code = "deny"
-rust_2018_idioms = "warn"
+rust_2018_idioms = { level = "warn", priority = -1 }
 
 [lints.clippy]
 # Deny dangerous patterns
@@ -80,7 +80,7 @@ fallible_impl_from = "warn"
 imprecise_flops = "warn"
 inefficient_to_string = "warn"
 macro_use_imports = "warn"
-match_on_vec_items = "warn"
+# match_on_vec_items removed - covered by indexing_slicing
 missing_const_for_fn = "warn"
 needless_continue = "warn"
 needless_for_each = "warn"

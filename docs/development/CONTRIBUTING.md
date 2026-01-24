@@ -1,6 +1,6 @@
-# Contributing to COSMIC Tweaks
+# Contributing to COSMIC ORDER
 
-Thank you for your interest in contributing to COSMIC Tweaks!
+Thank you for your interest in contributing to COSMIC ORDER!
 
 ## Code of Conduct
 
@@ -58,6 +58,7 @@ feat(themes): add theme export functionality
 ```
 
 Prefixes:
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation

@@ -184,6 +184,7 @@ Whichever name you choose, the documentation can maintain a consistent voice:
 **Manual parody potential:**
 
 Instead of "The Omarchy Manual," we could have:
+
 - "The Cosmic Order Manual" - dry, official sounding
 - "The Way of Cosmic Order" - slightly mystical parody
 - "Protocol Documentation" - technical and straight-faced
@@ -198,4 +199,4 @@ Instead of "The Omarchy Manual," we could have:
 
 ---
 
-*Draft v1 - Ready for feedback*
+Draft v1 - Ready for feedback

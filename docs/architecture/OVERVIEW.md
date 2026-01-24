@@ -1,6 +1,6 @@
 # Architecture Overview
 
-This document describes the high-level architecture of COSMIC Tweaks.
+This document describes the high-level architecture of COSMIC ORDER.
 
 ## Design Principles
 
@@ -13,7 +13,7 @@ This document describes the high-level architecture of COSMIC Tweaks.
 ## Application Structure
 
 ```text
-cosmic-tweaks/
+cosmic-order/
 ├── src/
 │   ├── main.rs              # Entry point
 │   ├── app.rs               # Application state and message routing
@@ -36,7 +36,7 @@ cosmic-tweaks/
 
 ```text
 ┌─────────────────────────────────────────────────────────────────┐
-│                         COSMIC Tweaks                           │
+│                         COSMIC ORDER                           │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
 │  ┌──────────────────────────────────────────────────────────┐  │
@@ -147,10 +147,10 @@ pub fn create_page(id: PageId) -> Box<dyn Page> {
 
 ### Application Config
 
-COSMIC Tweaks uses `cosmic-config` for its own settings:
+COSMIC ORDER uses `cosmic-config` for its own settings:
 
 ```text
-~/.config/cosmic/com.example.CosmicTweaks/v1/
+~/.config/cosmic/com.example.CosmicOrder/v1/
 ├── config           # Application preferences
 └── state            # Window state, last page, etc.
 ```

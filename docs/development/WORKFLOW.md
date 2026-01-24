@@ -1,6 +1,6 @@
 # Development Workflow
 
-This document describes the development and release workflow for COSMIC Tweaks.
+This document describes the development and release workflow for COSMIC ORDER.
 
 ## Repository Status
 
@@ -38,7 +38,7 @@ git push
 
 Use conventional commits for clarity:
 
-```
+```text
 feat: add new feature
 fix: fix a bug
 docs: update documentation
@@ -94,7 +94,7 @@ Before going public, verify:
 
 ## Branch Strategy
 
-```
+```text
 main (public release)
   │
   └── beta (pre-release testing)
@@ -123,7 +123,7 @@ git push --tags
 
 ```bash
 # Current development
-cd ~/Repos/cosmic-tweaks
+cd ~/Repos/cosmic-order
 git checkout alpha
 
 # Build and test

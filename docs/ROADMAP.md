@@ -1,6 +1,6 @@
 # Development Roadmap
 
-This document outlines the phased development plan for COSMIC Tweaks.
+This document outlines the phased development plan for COSMIC ORDER.
 
 ## Overview
 

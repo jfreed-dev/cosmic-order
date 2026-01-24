@@ -19,7 +19,7 @@ environment. It demonstrates production-quality libcosmic patterns.
 - Adding pages requires code changes and recompilation
 - Third-party extensions are not supported
 
-### Implications for COSMIC Tweaks
+### Implications for COSMIC ORDER
 
 Since we cannot extend cosmic-settings, we must build a **standalone application**
 that:

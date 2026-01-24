@@ -1,6 +1,6 @@
 # Development Environment Setup
 
-Guide to setting up a development environment for COSMIC Tweaks.
+Guide to setting up a development environment for COSMIC ORDER.
 
 ## Prerequisites
 
@@ -57,8 +57,8 @@ cargo --version
 
 ```bash
 cd ~/Repos
-git clone https://github.com/YOUR_USERNAME/cosmic-tweaks.git
-cd cosmic-tweaks
+git clone https://github.com/YOUR_USERNAME/cosmic-order.git
+cd cosmic-order
 ```
 
 ### 4. Build the Project
@@ -121,7 +121,7 @@ require('lspconfig').rust_analyzer.setup({
 RUST_LOG=debug cargo run
 
 # Run with specific log level
-RUST_LOG=cosmic_tweaks=trace cargo run
+RUST_LOG=cosmic_order=trace cargo run
 
 # Run release build
 cargo run --release
