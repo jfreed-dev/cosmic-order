@@ -10,9 +10,10 @@
 use serde::{Deserialize, Serialize};
 
 /// Page identifiers
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PageId {
     /// Theme management page
+    #[default]
     Themes,
     /// Wallpaper management page
     Wallpapers,
@@ -20,14 +21,9 @@ pub enum PageId {
     Screensaver,
 }
 
-impl Default for PageId {
-    fn default() -> Self {
-        Self::Themes
-    }
-}
-
 /// Messages from pages
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // Variants will be used as features are implemented
 pub enum Message {
     /// Theme page messages
     Themes(ThemesMessage),
@@ -39,6 +35,7 @@ pub enum Message {
 
 /// Theme page messages
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // Variants will be used in Phase 2
 pub enum ThemesMessage {
     /// Select a theme
     Select(String),
@@ -52,6 +49,7 @@ pub enum ThemesMessage {
 
 /// Wallpaper page messages
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // Variants will be used in Phase 3
 pub enum WallpapersMessage {
     /// Select a wallpaper
     Select(String),
@@ -67,6 +65,7 @@ pub enum WallpapersMessage {
 
 /// Screensaver page messages
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // Variants will be used in Phase 4
 pub enum ScreensaverMessage {
     /// Set idle timeout
     SetIdleTimeout(u32),

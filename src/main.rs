@@ -9,6 +9,7 @@ mod app;
 mod config;
 mod localize;
 mod pages;
+mod screensaver_config;
 
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 

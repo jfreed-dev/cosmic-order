@@ -38,6 +38,9 @@ impl Config {
     }
 
     /// Save configuration to cosmic-config
+    #[allow(dead_code)] // Will be used when cosmic-config integration is complete
+    #[allow(clippy::unused_self)] // Will use self when cosmic-config saving is implemented
+    #[allow(clippy::missing_const_for_fn)] // Will not be const once implemented
     pub fn save(&self) -> Result<(), ConfigError> {
         // TODO: Implement cosmic-config saving
         Ok(())
@@ -46,6 +49,7 @@ impl Config {
 
 /// Configuration errors
 #[derive(Debug, thiserror::Error)]
+#[allow(dead_code)] // Variants will be used when cosmic-config integration is complete
 pub enum ConfigError {
     #[error("Failed to load configuration: {0}")]
     Load(String),

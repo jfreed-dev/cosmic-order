@@ -121,8 +121,8 @@ Documentation is maintained alongside code development.
 
 ### Tasks
 
-- [ ] Read screensaver configuration
-- [ ] Display current screensaver settings
+- [x] Read screensaver configuration
+- [x] Display current screensaver settings
 - [ ] Configure idle timeout
 - [ ] Configure lock timeout
 - [ ] Configure DPMS timeout

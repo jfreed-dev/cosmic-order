@@ -11,6 +11,7 @@ use cosmic::{Application, Element};
 use crate::config::Config;
 use crate::fl;
 use crate::pages::{self, PageId};
+use crate::screensaver_config::ScreensaverConfig;
 
 /// Application state
 pub struct App {
@@ -22,10 +23,13 @@ pub struct App {
     nav_model: nav_bar::Model,
     /// Currently active page
     active_page: PageId,
+    /// Screensaver configuration
+    screensaver_config: ScreensaverConfig,
 }
 
 /// Application messages
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // Variants will be used as features are implemented
 pub enum Message {
     /// Navigation item selected
     NavSelect(nav_bar::Id),
@@ -53,6 +57,10 @@ impl Application for App {
     fn init(core: Core, _flags: Self::Flags) -> (Self, Task<Message>) {
         // Load configuration
         let config = Config::load().unwrap_or_default();
+
+        // Load screensaver configuration
+        let screensaver_config = ScreensaverConfig::load().unwrap_or_default();
+        tracing::info!("Loaded screensaver config: enabled={}", screensaver_config.enabled);
 
         // Build navigation model
         let mut nav_model = nav_bar::Model::default();
@@ -85,11 +93,12 @@ impl Application for App {
         // Activate first item
         nav_model.activate_position(0);
 
-        let app = App {
+        let app = Self {
             core,
             config,
             nav_model,
             active_page: PageId::Themes,
+            screensaver_config,
         };
 
         (app, Task::none())
@@ -126,13 +135,11 @@ impl Application for App {
 
     fn view(&self) -> Element<'_, Self::Message> {
         // Build page content based on active page
-        let content = match self.active_page {
+        match self.active_page {
             PageId::Themes => self.view_themes_page(),
             PageId::Wallpapers => self.view_wallpapers_page(),
             PageId::Screensaver => self.view_screensaver_page(),
-        };
-
-        content
+        }
     }
 
     fn header_start(&self) -> Vec<Element<'_, Self::Message>> {
@@ -150,6 +157,7 @@ impl Application for App {
 
 impl App {
     /// View for the Themes page
+    #[allow(clippy::unused_self)] // Will use self when theme data is added
     fn view_themes_page(&self) -> Element<'_, Message> {
         let spacing = cosmic::theme::spacing();
 
@@ -170,6 +178,7 @@ impl App {
     }
 
     /// View for the Wallpapers page
+    #[allow(clippy::unused_self)] // Will use self when wallpaper data is added
     fn view_wallpapers_page(&self) -> Element<'_, Message> {
         let spacing = cosmic::theme::spacing();
 
@@ -192,18 +201,100 @@ impl App {
     /// View for the Screensaver page
     fn view_screensaver_page(&self) -> Element<'_, Message> {
         let spacing = cosmic::theme::spacing();
+        let cfg = &self.screensaver_config;
 
         widget::column()
             .spacing(spacing.space_m)
             .padding(spacing.space_m)
             .push(widget::text::title2(fl!("screensaver")))
             .push(widget::text::body(fl!("screensaver-description")))
+            // Status section
             .push(
                 widget::settings::section()
-                    .title("Coming Soon")
+                    .title("Status")
                     .add(widget::settings::item(
-                        "Screensaver configuration",
-                        widget::text::body("Coming in Phase 4"),
+                        "Screensaver",
+                        widget::text::body(if cfg.enabled { "Enabled" } else { "Disabled" }),
+                    ))
+                    .add(widget::settings::item(
+                        "Terminal",
+                        widget::text::body(&cfg.terminal),
+                    ))
+                    .add(widget::settings::item(
+                        "Logo",
+                        widget::text::body(cfg.logo_name()),
+                    )),
+            )
+            // Timeouts section
+            .push(
+                widget::settings::section()
+                    .title("Timeouts")
+                    .add(widget::settings::item(
+                        "Idle timeout",
+                        widget::text::body(ScreensaverConfig::format_timeout(cfg.idle_timeout)),
+                    ))
+                    .add(widget::settings::item(
+                        "Lock timeout",
+                        widget::text::body(ScreensaverConfig::format_timeout(cfg.lock_timeout)),
+                    ))
+                    .add(widget::settings::item(
+                        "Screen off (DPMS)",
+                        widget::text::body(ScreensaverConfig::format_timeout(cfg.dpms_timeout)),
+                    )),
+            )
+            // Effects section
+            .push(
+                widget::settings::section()
+                    .title("Effects")
+                    .add(widget::settings::item(
+                        "Frame rate",
+                        widget::text::body(format!("{} fps", cfg.frame_rate)),
+                    ))
+                    .add(widget::settings::item(
+                        "Excluded effects",
+                        widget::text::body(if cfg.exclude_effects.is_empty() {
+                            "None".to_string()
+                        } else {
+                            cfg.exclude_effects.clone()
+                        }),
+                    ))
+                    .add(widget::settings::item(
+                        "Included effects",
+                        widget::text::body(if cfg.include_effects.is_empty() {
+                            "All (except excluded)".to_string()
+                        } else {
+                            cfg.include_effects.clone()
+                        }),
+                    )),
+            )
+            // Clock section
+            .push(
+                widget::settings::section()
+                    .title("Clock Display")
+                    .add(widget::settings::item(
+                        "Show clock",
+                        widget::text::body(if cfg.show_clock { "Yes" } else { "No" }),
+                    ))
+                    .add(widget::settings::item(
+                        "Clock duration",
+                        widget::text::body(format!("{} seconds", cfg.clock_duration)),
+                    ))
+                    .add(widget::settings::item(
+                        "Clock format",
+                        widget::text::body(&cfg.clock_format),
+                    )),
+            )
+            // Power section
+            .push(
+                widget::settings::section()
+                    .title("Power Settings")
+                    .add(widget::settings::item(
+                        "Disable on battery",
+                        widget::text::body(if cfg.disable_on_battery { "Yes" } else { "No" }),
+                    ))
+                    .add(widget::settings::item(
+                        "Battery idle timeout",
+                        widget::text::body(ScreensaverConfig::format_timeout(cfg.battery_idle_timeout)),
                     )),
             )
             .into()
