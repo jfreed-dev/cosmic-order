@@ -224,7 +224,54 @@ Documentation is maintained alongside code development.
 
 ---
 
-## Phase 6: Advanced Features (Future)
+## Phase 6: Tool Theme Synchronization
+
+**Goal**: Unified theming across OMARCHY-style tools.
+
+### Tasks
+
+- [ ] Create colors.toml format specification (24-color standard)
+- [ ] Build COSMIC theme → colors.toml converter
+- [ ] Implement Ghostty theme generator
+- [ ] Implement Neovim/LazyVim colorscheme generator
+- [ ] Implement btop theme generator
+- [ ] Implement Zellij theme generator
+- [ ] Add CLI tools color export (fzf, lazygit)
+- [ ] Create hook system for extensibility
+
+### Deliverables
+
+- Unified color format (colors.toml)
+- Theme generators for all supported tools
+- User-configurable tool selection
+
+### Documentation
+
+- colors.toml specification
+- Adding new tool generators
+
+---
+
+## Phase 6A: Real-time Theme Sync
+
+**Goal**: Instant theme propagation without restarts.
+
+### Tasks
+
+- [ ] Neovim RPC client for live theme updates
+- [ ] Ghostty OSC escape sequences for color reload
+- [ ] D-Bus integration for supporting apps
+- [ ] File watcher for tools without IPC
+
+### Deliverables
+
+- Real-time Neovim theme switching
+- Instant Ghostty color updates
+- Seamless theme experience
+
+---
+
+## Phase 6B: Advanced Features
 
 **Goal**: Additional features based on user feedback.
 
@@ -273,6 +320,8 @@ See [SCREENSAVER-INTEGRATION.md](SCREENSAVER-INTEGRATION.md) for detailed resear
 | 0.4.0 | 4 | Screensaver configuration |
 | 0.5.0 | 4A | Power-aware screensaver |
 | 0.6.0 | 4B | Enhanced cursor/input handling |
+| 0.7.0 | 6 | Tool theme synchronization |
+| 0.8.0 | 6A | Real-time theme sync |
 | 1.0.0 | 5 | First stable release |
 
 ## Success Criteria
