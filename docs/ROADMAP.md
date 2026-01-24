@@ -146,6 +146,56 @@ Documentation is maintained alongside code development.
 
 ---
 
+## Phase 4A: Power-Aware Screensaver
+
+**Goal**: Integrate with system power management for intelligent behavior.
+
+### Tasks
+
+- [ ] Add zbus and upower_dbus dependencies
+- [ ] Create power monitoring service
+- [ ] Detect AC power vs battery state
+- [ ] Read system76-power profile (performance/balanced/battery)
+- [ ] Create effect profiles for each power state
+- [ ] Adjust effect complexity based on power profile
+- [ ] Skip screensaver on critical battery (<10%)
+- [ ] Display power state in screensaver settings UI
+
+### Deliverables
+
+- Power-aware effect selection
+- Battery threshold configuration
+- Profile-specific effect lists
+
+### Documentation
+
+- Power integration architecture
+- D-Bus interface usage
+
+---
+
+## Phase 4B: Enhanced Cursor & Input Handling
+
+**Goal**: Reliable cursor hiding and input wake detection.
+
+### Tasks
+
+- [ ] Verify fullscreen cursor behavior on COSMIC
+- [ ] Document actual cursor hiding behavior
+- [ ] Implement pointer confinement if needed
+- [ ] Ensure clean cursor restore on wake
+- [ ] Test wake on mouse movement
+- [ ] Test wake on keyboard input
+- [ ] Add configurable wake sensitivity
+
+### Deliverables
+
+- Cursor reliably hidden during screensaver
+- Clean input wake handling
+- Configurable behavior
+
+---
+
 ## Phase 5: Polish and Integration
 
 **Goal**: Refine the application for release.
@@ -190,6 +240,29 @@ Documentation is maintained alongside code development.
 
 ---
 
+## Phase 7: Deep Compositor Integration (Future)
+
+**Goal**: Native COSMIC compositor integration for advanced screensaver features.
+
+### Potential Features
+
+- [ ] Native effect rendering (eliminate terminal dependency)
+- [ ] Session lock protocol (ext-session-lock-v1)
+- [ ] Layer-shell overlay surfaces
+- [ ] Compositor-level cursor control
+- [ ] Direct idle notification subscription
+- [ ] cosmic-term contributions (--fullscreen flag)
+
+### Research Required
+
+- Smithay framework for Wayland protocols
+- cosmic-comp integration patterns
+- Layer-shell protocol usage
+
+See [SCREENSAVER-INTEGRATION.md](SCREENSAVER-INTEGRATION.md) for detailed research.
+
+---
+
 ## Version Milestones
 
 | Version | Phase | Description |
@@ -198,6 +271,8 @@ Documentation is maintained alongside code development.
 | 0.2.0 | 2 | Theme management |
 | 0.3.0 | 3 | Wallpaper management |
 | 0.4.0 | 4 | Screensaver configuration |
+| 0.5.0 | 4A | Power-aware screensaver |
+| 0.6.0 | 4B | Enhanced cursor/input handling |
 | 1.0.0 | 5 | First stable release |
 
 ## Success Criteria
