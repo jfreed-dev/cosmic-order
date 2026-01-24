@@ -63,7 +63,7 @@ Documentation is maintained alongside code development.
 
 ### Tasks
 
-- [ ] Read system themes via cosmic-theme
+- [x] Read system themes via cosmic-theme
 - [ ] Display theme list with previews
 - [ ] Implement theme switching
 - [ ] Create color picker for accent colors

@@ -12,6 +12,7 @@ use crate::config::Config;
 use crate::fl;
 use crate::pages::{self, PageId};
 use crate::screensaver_config::ScreensaverConfig;
+use crate::theme_config::ThemeConfig;
 
 /// Application state
 pub struct App {
@@ -25,6 +26,8 @@ pub struct App {
     active_page: PageId,
     /// Screensaver configuration
     screensaver_config: ScreensaverConfig,
+    /// Theme configuration
+    theme_config: ThemeConfig,
 }
 
 /// Application messages
@@ -61,6 +64,14 @@ impl Application for App {
         // Load screensaver configuration
         let screensaver_config = ScreensaverConfig::load().unwrap_or_default();
         tracing::info!("Loaded screensaver config: enabled={}", screensaver_config.enabled);
+
+        // Load theme configuration
+        let theme_config = ThemeConfig::load();
+        tracing::info!(
+            "Loaded theme config: name={}, dark={}",
+            theme_config.name,
+            theme_config.is_dark
+        );
 
         // Build navigation model
         let mut nav_model = nav_bar::Model::default();
@@ -99,6 +110,7 @@ impl Application for App {
             nav_model,
             active_page: PageId::Themes,
             screensaver_config,
+            theme_config,
         };
 
         (app, Task::none())
@@ -157,20 +169,55 @@ impl Application for App {
 
 impl App {
     /// View for the Themes page
-    #[allow(clippy::unused_self)] // Will use self when theme data is added
     fn view_themes_page(&self) -> Element<'_, Message> {
         let spacing = cosmic::theme::spacing();
+        let cfg = &self.theme_config;
 
         widget::column()
             .spacing(spacing.space_m)
             .padding(spacing.space_m)
             .push(widget::text::title2(fl!("themes")))
             .push(widget::text::body(fl!("themes-description")))
+            // Current theme section
+            .push(
+                widget::settings::section()
+                    .title("Current Theme")
+                    .add(widget::settings::item(
+                        "Name",
+                        widget::text::body(&cfg.name),
+                    ))
+                    .add(widget::settings::item(
+                        "Mode",
+                        widget::text::body(if cfg.is_dark { "Dark" } else { "Light" }),
+                    )),
+            )
+            // Colors section
+            .push(
+                widget::settings::section()
+                    .title("Colors")
+                    .add(widget::settings::item(
+                        "Accent",
+                        widget::text::body(cfg.accent_hex()),
+                    ))
+                    .add(widget::settings::item(
+                        "Background",
+                        widget::text::body(cfg.background_hex()),
+                    ))
+                    .add(widget::settings::item(
+                        "Text",
+                        widget::text::body(cfg.text_hex()),
+                    )),
+            )
+            // Coming soon section
             .push(
                 widget::settings::section()
                     .title("Coming Soon")
                     .add(widget::settings::item(
-                        "Theme management",
+                        "Theme switching",
+                        widget::text::body("Coming in Phase 2"),
+                    ))
+                    .add(widget::settings::item(
+                        "Color customization",
                         widget::text::body("Coming in Phase 2"),
                     )),
             )

@@ -1,0 +1,105 @@
+// SPDX-License-Identifier: GPL-3.0-only
+
+//! Theme configuration reading
+//!
+//! Reads COSMIC theme settings via cosmic-theme/cosmic-config.
+
+use cosmic::cosmic_theme::palette::Srgba;
+use cosmic::theme;
+
+/// Theme configuration extracted from COSMIC
+#[derive(Debug, Clone)]
+#[allow(dead_code)] // Fields will be used as UI expands
+pub struct ThemeConfig {
+    /// Theme name
+    pub name: String,
+    /// Whether dark mode is active
+    pub is_dark: bool,
+    /// Accent color (RGBA)
+    pub accent_color: Srgba,
+    /// Background color (RGBA)
+    pub background_color: Srgba,
+    /// Primary text color (RGBA)
+    pub text_color: Srgba,
+}
+
+impl Default for ThemeConfig {
+    fn default() -> Self {
+        Self {
+            name: "Unknown".to_string(),
+            is_dark: true,
+            accent_color: Srgba::new(0.39, 0.82, 0.87, 1.0),
+            background_color: Srgba::new(0.11, 0.11, 0.11, 1.0),
+            text_color: Srgba::new(1.0, 1.0, 1.0, 1.0),
+        }
+    }
+}
+
+impl ThemeConfig {
+    /// Load current theme configuration from COSMIC
+    pub fn load() -> Self {
+        let active_theme = theme::active();
+        let cosmic = active_theme.cosmic();
+
+        Self {
+            name: cosmic.name.clone(),
+            is_dark: cosmic.is_dark,
+            accent_color: cosmic.accent.base,
+            background_color: cosmic.background.base,
+            text_color: cosmic.primary.on,
+        }
+    }
+
+    /// Format a color as hex string
+    pub fn color_to_hex(color: &Srgba) -> String {
+        format!(
+            "#{:02X}{:02X}{:02X}",
+            (color.red * 255.0) as u8,
+            (color.green * 255.0) as u8,
+            (color.blue * 255.0) as u8
+        )
+    }
+
+    /// Format a color as RGB string
+    #[allow(dead_code)] // Available for future use
+    pub fn color_to_rgb(color: &Srgba) -> String {
+        format!(
+            "rgb({}, {}, {})",
+            (color.red * 255.0) as u8,
+            (color.green * 255.0) as u8,
+            (color.blue * 255.0) as u8
+        )
+    }
+
+    /// Get accent color as hex
+    pub fn accent_hex(&self) -> String {
+        Self::color_to_hex(&self.accent_color)
+    }
+
+    /// Get background color as hex
+    pub fn background_hex(&self) -> String {
+        Self::color_to_hex(&self.background_color)
+    }
+
+    /// Get text color as hex
+    pub fn text_hex(&self) -> String {
+        Self::color_to_hex(&self.text_color)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_color_to_hex() {
+        let color = Srgba::new(1.0, 0.5, 0.0, 1.0);
+        assert_eq!(ThemeConfig::color_to_hex(&color), "#FF7F00");
+    }
+
+    #[test]
+    fn test_color_to_rgb() {
+        let color = Srgba::new(1.0, 0.5, 0.0, 1.0);
+        assert_eq!(ThemeConfig::color_to_rgb(&color), "rgb(255, 127, 0)");
+    }
+}
