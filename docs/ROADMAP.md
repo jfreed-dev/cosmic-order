@@ -91,7 +91,7 @@ Documentation is maintained alongside code development.
 
 ### Tasks
 
-- [ ] Read wallpapers from system directories
+- [x] Read wallpapers from system directories
 - [ ] Display wallpaper grid with thumbnails
 - [ ] Implement wallpaper selection
 - [ ] Add wallpaper to theme association

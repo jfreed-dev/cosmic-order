@@ -13,6 +13,7 @@ use crate::fl;
 use crate::pages::{self, PageId};
 use crate::screensaver_config::ScreensaverConfig;
 use crate::theme_config::ThemeConfig;
+use crate::wallpaper_config::WallpaperConfig;
 
 /// Application state
 pub struct App {
@@ -28,6 +29,8 @@ pub struct App {
     screensaver_config: ScreensaverConfig,
     /// Theme configuration
     theme_config: ThemeConfig,
+    /// Wallpaper configuration
+    wallpaper_config: WallpaperConfig,
 }
 
 /// Application messages
@@ -73,6 +76,14 @@ impl Application for App {
             theme_config.is_dark
         );
 
+        // Load wallpaper configuration
+        let wallpaper_config = WallpaperConfig::load();
+        tracing::info!(
+            "Loaded wallpaper config: {} themes, {} total wallpapers",
+            wallpaper_config.available_themes.len(),
+            wallpaper_config.total_wallpaper_count()
+        );
+
         // Build navigation model
         let mut nav_model = nav_bar::Model::default();
 
@@ -111,6 +122,7 @@ impl Application for App {
             active_page: PageId::Themes,
             screensaver_config,
             theme_config,
+            wallpaper_config,
         };
 
         (app, Task::none())
@@ -225,24 +237,72 @@ impl App {
     }
 
     /// View for the Wallpapers page
-    #[allow(clippy::unused_self)] // Will use self when wallpaper data is added
     fn view_wallpapers_page(&self) -> Element<'_, Message> {
         let spacing = cosmic::theme::spacing();
+        let cfg = &self.wallpaper_config;
 
-        widget::column()
+        let mut column = widget::column()
             .spacing(spacing.space_m)
             .padding(spacing.space_m)
             .push(widget::text::title2(fl!("wallpapers")))
-            .push(widget::text::body(fl!("wallpapers-description")))
-            .push(
-                widget::settings::section()
-                    .title("Coming Soon")
-                    .add(widget::settings::item(
-                        "Wallpaper management",
-                        widget::text::body("Coming in Phase 3"),
-                    )),
-            )
-            .into()
+            .push(widget::text::body(fl!("wallpapers-description")));
+
+        // Current wallpaper section
+        column = column.push(
+            widget::settings::section()
+                .title("Current Wallpaper")
+                .add(widget::settings::item(
+                    "File",
+                    widget::text::body(cfg.current_wallpaper_name()),
+                ))
+                .add(widget::settings::item(
+                    "Theme",
+                    widget::text::body(cfg.current_theme_name()),
+                ))
+                .add(widget::settings::item(
+                    "Scaling",
+                    widget::text::body(&cfg.scaling_mode),
+                ))
+                .add(widget::settings::item(
+                    "Rotation",
+                    widget::text::body(cfg.format_rotation()),
+                )),
+        );
+
+        // Available themes section
+        let theme_names = cfg.theme_names();
+        let mut themes_section = widget::settings::section().title(format!(
+            "Available Themes ({} themes, {} wallpapers)",
+            theme_names.len(),
+            cfg.total_wallpaper_count()
+        ));
+
+        for name in theme_names {
+            if let Some(theme) = cfg.available_themes.get(&name) {
+                themes_section = themes_section.add(widget::settings::item(
+                    name,
+                    widget::text::body(format!("{} wallpapers", theme.count)),
+                ));
+            }
+        }
+
+        column = column.push(themes_section);
+
+        // Coming soon section
+        column = column.push(
+            widget::settings::section()
+                .title("Coming Soon")
+                .add(widget::settings::item(
+                    "Wallpaper selection",
+                    widget::text::body("Coming in Phase 3"),
+                ))
+                .add(widget::settings::item(
+                    "Wallpaper import",
+                    widget::text::body("Coming in Phase 3"),
+                )),
+        );
+
+        column.into()
     }
 
     /// View for the Screensaver page
