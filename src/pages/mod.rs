@@ -33,6 +33,8 @@ pub enum Message {
     Screensaver(ScreensaverMessage),
 }
 
+use crate::theme_config::ThemeId;
+
 /// Theme page messages
 #[derive(Debug, Clone)]
 pub enum ThemesMessage {
@@ -40,10 +42,8 @@ pub enum ThemesMessage {
     SetDarkMode(bool),
     /// Set accent color (RGB 0.0-1.0)
     SetAccentColor(f32, f32, f32),
-    /// Select a theme
-    Select(String),
-    /// Apply the selected theme
-    Apply,
+    /// Select and apply a theme preset
+    SelectTheme(ThemeId),
     /// Export current theme
     Export,
     /// Import a theme file

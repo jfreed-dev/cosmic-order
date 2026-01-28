@@ -5,7 +5,7 @@
 //! Reads and modifies COSMIC theme settings via cosmic-theme/cosmic-config.
 
 use cosmic::cosmic_theme::palette::{Srgb, Srgba};
-use cosmic::cosmic_theme::{ThemeBuilder, ThemeMode};
+use cosmic::cosmic_theme::{Theme as CosmicTheme, ThemeBuilder, ThemeMode};
 use cosmic::theme;
 use cosmic_config::CosmicConfigEntry;
 
@@ -16,6 +16,86 @@ pub enum ThemeError {
     ConfigAccess(String),
     #[error("Failed to write theme config: {0}")]
     ConfigWrite(String),
+}
+
+/// Built-in theme identifier
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ThemeId {
+    Dark,
+    Light,
+    HighContrastDark,
+    HighContrastLight,
+}
+
+/// Theme preview information
+#[derive(Debug, Clone)]
+pub struct ThemePreview {
+    /// Theme identifier
+    pub id: ThemeId,
+    /// Display name
+    pub name: String,
+    /// Whether this is a dark theme
+    pub is_dark: bool,
+    /// Whether this is high contrast
+    pub is_high_contrast: bool,
+    /// Accent color
+    pub accent: Srgba,
+    /// Background color
+    pub background: Srgba,
+    /// Text color
+    pub text: Srgba,
+}
+
+impl ThemePreview {
+    /// Get all built-in theme previews
+    pub fn built_in_themes() -> Vec<Self> {
+        vec![
+            Self::from_cosmic_theme(ThemeId::Dark, CosmicTheme::dark_default()),
+            Self::from_cosmic_theme(ThemeId::Light, CosmicTheme::light_default()),
+            Self::from_cosmic_theme(
+                ThemeId::HighContrastDark,
+                CosmicTheme::high_contrast_dark_default(),
+            ),
+            Self::from_cosmic_theme(
+                ThemeId::HighContrastLight,
+                CosmicTheme::high_contrast_light_default(),
+            ),
+        ]
+    }
+
+    fn from_cosmic_theme(id: ThemeId, theme: CosmicTheme) -> Self {
+        Self {
+            id,
+            name: theme.name.clone(),
+            is_dark: theme.is_dark,
+            is_high_contrast: theme.is_high_contrast,
+            accent: theme.accent.base,
+            background: theme.background.base,
+            text: theme.primary.on,
+        }
+    }
+
+    /// Format accent color as hex
+    pub fn accent_hex(&self) -> String {
+        ThemeConfig::color_to_hex(&self.accent)
+    }
+
+    /// Format background color as hex
+    pub fn background_hex(&self) -> String {
+        ThemeConfig::color_to_hex(&self.background)
+    }
+
+    /// Apply this theme preset
+    pub fn apply(&self) -> Result<(), ThemeError> {
+        // Set the dark mode based on theme
+        ThemeConfig::set_dark_mode(self.is_dark)?;
+
+        // Note: High contrast themes would need additional handling
+        // For now, we just switch between dark/light
+        // TODO: Add high contrast toggle support
+
+        Ok(())
+    }
 }
 
 /// Theme configuration extracted from COSMIC
