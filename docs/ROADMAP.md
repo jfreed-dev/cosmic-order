@@ -64,7 +64,7 @@ Documentation is maintained alongside code development.
 ### Tasks
 
 - [x] Read system themes via cosmic-theme
-- [ ] Display theme list with previews
+- [x] Display theme list with previews
 - [x] Implement theme switching (dark/light mode toggle)
 - [x] Create color picker for accent colors
 - [ ] Add theme export functionality
