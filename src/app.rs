@@ -115,14 +115,20 @@ impl Application for App {
             ))
             .data(PageId::Screensaver);
 
-        // Activate first item
-        nav_model.activate_position(0);
+        // Activate the saved page from config
+        let active_page = config.active_page;
+        let position = match active_page {
+            PageId::Themes => 0,
+            PageId::Wallpapers => 1,
+            PageId::Screensaver => 2,
+        };
+        nav_model.activate_position(position);
 
         let app = Self {
             core,
             config,
             nav_model,
-            active_page: PageId::Themes,
+            active_page,
             screensaver_config,
             theme_config,
             wallpaper_config,
@@ -140,6 +146,12 @@ impl Application for App {
         if let Some(page_id) = self.nav_model.data::<PageId>(id).cloned() {
             self.active_page = page_id;
             self.nav_model.activate(id);
+
+            // Persist the active page
+            self.config.active_page = page_id;
+            if let Err(e) = self.config.save() {
+                tracing::warn!("Failed to save config: {e}");
+            }
         }
         Task::none()
     }

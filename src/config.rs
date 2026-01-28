@@ -4,12 +4,18 @@
 //!
 //! Uses cosmic-config for persistent storage.
 
+use cosmic_config::CosmicConfigEntry;
+use cosmic_config::cosmic_config_derive::CosmicConfigEntry;
 use serde::{Deserialize, Serialize};
 
 use crate::pages::PageId;
 
+/// Application identifier for cosmic-config
+const APP_ID: &str = "com.system76.CosmicOrder";
+
 /// Application configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, CosmicConfigEntry, PartialEq)]
+#[version = 1]
 pub struct Config {
     /// Last active page
     pub active_page: PageId,
@@ -19,37 +25,38 @@ pub struct Config {
     pub window_height: u32,
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            active_page: PageId::Themes,
-            window_width: 900,
-            window_height: 600,
-        }
-    }
-}
-
 impl Config {
     /// Load configuration from cosmic-config
     pub fn load() -> Result<Self, ConfigError> {
-        // TODO: Implement cosmic-config loading
-        // For now, return default
-        Ok(Self::default())
+        let config = cosmic_config::Config::new(APP_ID, Self::VERSION)
+            .map_err(|e| ConfigError::Load(e.to_string()))?;
+
+        match Self::get_entry(&config) {
+            Ok(cfg) => Ok(cfg),
+            Err((errors, cfg)) => {
+                // Log real errors, ignore missing config (expected on first run)
+                for err in errors {
+                    if err.is_err() {
+                        tracing::warn!("Config load warning: {err}");
+                    }
+                }
+                Ok(cfg)
+            }
+        }
     }
 
     /// Save configuration to cosmic-config
-    #[allow(dead_code)] // Will be used when cosmic-config integration is complete
-    #[allow(clippy::unused_self)] // Will use self when cosmic-config saving is implemented
-    #[allow(clippy::missing_const_for_fn)] // Will not be const once implemented
     pub fn save(&self) -> Result<(), ConfigError> {
-        // TODO: Implement cosmic-config saving
-        Ok(())
+        let config = cosmic_config::Config::new(APP_ID, Self::VERSION)
+            .map_err(|e| ConfigError::Save(e.to_string()))?;
+
+        self.write_entry(&config)
+            .map_err(|e| ConfigError::Save(e.to_string()))
     }
 }
 
 /// Configuration errors
 #[derive(Debug, thiserror::Error)]
-#[allow(dead_code)] // Variants will be used when cosmic-config integration is complete
 pub enum ConfigError {
     #[error("Failed to load configuration: {0}")]
     Load(String),
