@@ -30,7 +30,7 @@ Documentation is maintained alongside code development.
 
 ---
 
-## Phase 1: Application Shell (Current)
+## Phase 1: Application Shell ✓
 
 **Goal**: Create the basic application structure with navigation.
 
@@ -40,7 +40,7 @@ Documentation is maintained alongside code development.
 - [x] Create navigation sidebar
 - [x] Implement page routing system
 - [x] Add placeholder pages (Themes, Wallpapers, Screensaver)
-- [ ] Set up cosmic-config integration
+- [x] Set up cosmic-config integration
 - [x] Add application icon and desktop file
 - [x] Implement i18n foundation
 
@@ -57,7 +57,7 @@ Documentation is maintained alongside code development.
 
 ---
 
-## Phase 2: Theme Management
+## Phase 2: Theme Management (Current)
 
 **Goal**: Implement theme viewing and basic customization.
 
@@ -65,7 +65,7 @@ Documentation is maintained alongside code development.
 
 - [x] Read system themes via cosmic-theme
 - [ ] Display theme list with previews
-- [ ] Implement theme switching
+- [x] Implement theme switching (dark/light mode toggle)
 - [ ] Create color picker for accent colors
 - [ ] Add theme export functionality
 - [ ] Add theme import functionality
