@@ -1,11 +1,22 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-//! Theme configuration reading
+//! Theme configuration reading and writing
 //!
-//! Reads COSMIC theme settings via cosmic-theme/cosmic-config.
+//! Reads and modifies COSMIC theme settings via cosmic-theme/cosmic-config.
 
+use cosmic::cosmic_theme::ThemeMode;
 use cosmic::cosmic_theme::palette::Srgba;
 use cosmic::theme;
+use cosmic_config::CosmicConfigEntry;
+
+/// Theme operation errors
+#[derive(Debug, thiserror::Error)]
+pub enum ThemeError {
+    #[error("Failed to access theme config: {0}")]
+    ConfigAccess(String),
+    #[error("Failed to write theme config: {0}")]
+    ConfigWrite(String),
+}
 
 /// Theme configuration extracted from COSMIC
 #[derive(Debug, Clone)]
@@ -48,6 +59,27 @@ impl ThemeConfig {
             background_color: cosmic.background.base,
             text_color: cosmic.primary.on,
         }
+    }
+
+    /// Set dark mode on or off
+    pub fn set_dark_mode(is_dark: bool) -> Result<(), ThemeError> {
+        let config = ThemeMode::config().map_err(|e| ThemeError::ConfigAccess(e.to_string()))?;
+
+        let mut mode = match ThemeMode::get_entry(&config) {
+            Ok(m) => m,
+            Err((errors, m)) => {
+                for err in errors {
+                    if err.is_err() {
+                        tracing::warn!("ThemeMode load warning: {err}");
+                    }
+                }
+                m
+            }
+        };
+
+        mode.is_dark = is_dark;
+        mode.write_entry(&config)
+            .map_err(|e| ThemeError::ConfigWrite(e.to_string()))
     }
 
     /// Format a color as hex string

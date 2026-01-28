@@ -159,12 +159,7 @@ impl Application for App {
     fn update(&mut self, message: Self::Message) -> Task<Message> {
         match message {
             Message::NavSelect(id) => self.on_nav_select(id),
-            Message::Page(page_message) => {
-                // Route to appropriate page
-                // TODO: Implement page message routing
-                tracing::debug!("Page message: {:?}", page_message);
-                Task::none()
-            }
+            Message::Page(page_message) => self.handle_page_message(page_message),
             Message::ConfigChanged(config) => {
                 self.config = config;
                 Task::none()
@@ -195,6 +190,50 @@ impl Application for App {
 }
 
 impl App {
+    /// Handle page-specific messages
+    fn handle_page_message(&mut self, message: pages::Message) -> Task<Message> {
+        match message {
+            pages::Message::Themes(msg) => self.handle_themes_message(msg),
+            pages::Message::Wallpapers(_msg) => {
+                // TODO: Implement wallpaper message handling
+                Task::none()
+            }
+            pages::Message::Screensaver(_msg) => {
+                // TODO: Implement screensaver message handling
+                Task::none()
+            }
+        }
+    }
+
+    /// Handle theme page messages
+    fn handle_themes_message(&mut self, message: pages::ThemesMessage) -> Task<Message> {
+        match message {
+            pages::ThemesMessage::SetDarkMode(is_dark) => {
+                if let Err(e) = crate::theme_config::ThemeConfig::set_dark_mode(is_dark) {
+                    tracing::error!("Failed to set dark mode: {e}");
+                } else {
+                    // Optimistically update local state (system theme updates async)
+                    self.theme_config.is_dark = is_dark;
+                    // Update theme name to match mode
+                    self.theme_config.name = if is_dark {
+                        "COSMIC Dark".to_string()
+                    } else {
+                        "COSMIC Light".to_string()
+                    };
+                    tracing::info!("Dark mode set to: {is_dark}");
+                }
+                Task::none()
+            }
+            pages::ThemesMessage::Select(_)
+            | pages::ThemesMessage::Apply
+            | pages::ThemesMessage::Export
+            | pages::ThemesMessage::Import => {
+                // TODO: Implement other theme actions
+                Task::none()
+            }
+        }
+    }
+
     /// View for the Themes page
     fn view_themes_page(&self) -> Element<'_, Message> {
         let spacing = cosmic::theme::spacing();
@@ -235,17 +274,17 @@ impl App {
                         widget::text::body(cfg.text_hex()),
                     )),
             )
-            // Coming soon section
+            // Mode selection
             .push(
                 widget::settings::section()
-                    .title("Coming Soon")
+                    .title(fl!("theme-mode"))
                     .add(widget::settings::item(
-                        "Theme switching",
-                        widget::text::body("Coming in Phase 2"),
-                    ))
-                    .add(widget::settings::item(
-                        "Color customization",
-                        widget::text::body("Coming in Phase 2"),
+                        fl!("dark-mode"),
+                        widget::toggler(cfg.is_dark).on_toggle(|enabled| {
+                            Message::Page(pages::Message::Themes(
+                                pages::ThemesMessage::SetDarkMode(enabled),
+                            ))
+                        }),
                     )),
             )
             .into()

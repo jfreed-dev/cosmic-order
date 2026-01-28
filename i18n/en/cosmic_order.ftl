@@ -19,6 +19,7 @@ theme-accent-color = Accent Color
 theme-mode = Mode
 theme-mode-dark = Dark
 theme-mode-light = Light
+dark-mode = Dark Mode
 
 # Wallpapers Page
 wallpapers-description = Organize and set desktop wallpapers

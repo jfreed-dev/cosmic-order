@@ -35,8 +35,9 @@ pub enum Message {
 
 /// Theme page messages
 #[derive(Debug, Clone)]
-#[allow(dead_code)] // Variants will be used in Phase 2
 pub enum ThemesMessage {
+    /// Toggle dark/light mode
+    SetDarkMode(bool),
     /// Select a theme
     Select(String),
     /// Apply the selected theme
