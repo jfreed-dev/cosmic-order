@@ -66,7 +66,7 @@ Documentation is maintained alongside code development.
 - [x] Read system themes via cosmic-theme
 - [ ] Display theme list with previews
 - [x] Implement theme switching (dark/light mode toggle)
-- [ ] Create color picker for accent colors
+- [x] Create color picker for accent colors
 - [ ] Add theme export functionality
 - [ ] Add theme import functionality
 - [ ] Implement theme preview (live preview before applying)
