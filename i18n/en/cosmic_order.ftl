@@ -20,6 +20,7 @@ theme-mode = Mode
 theme-mode-dark = Dark
 theme-mode-light = Light
 dark-mode = Dark Mode
+accent-presets = Presets
 
 # Wallpapers Page
 wallpapers-description = Organize and set desktop wallpapers

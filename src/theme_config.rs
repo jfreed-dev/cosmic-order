@@ -4,8 +4,8 @@
 //!
 //! Reads and modifies COSMIC theme settings via cosmic-theme/cosmic-config.
 
-use cosmic::cosmic_theme::ThemeMode;
-use cosmic::cosmic_theme::palette::Srgba;
+use cosmic::cosmic_theme::palette::{Srgb, Srgba};
+use cosmic::cosmic_theme::{ThemeBuilder, ThemeMode};
 use cosmic::theme;
 use cosmic_config::CosmicConfigEntry;
 
@@ -80,6 +80,38 @@ impl ThemeConfig {
         mode.is_dark = is_dark;
         mode.write_entry(&config)
             .map_err(|e| ThemeError::ConfigWrite(e.to_string()))
+    }
+
+    /// Set accent color
+    pub fn set_accent_color(r: f32, g: f32, b: f32, is_dark: bool) -> Result<(), ThemeError> {
+        let color = Srgb::new(r, g, b);
+
+        // Get the appropriate builder config based on current mode
+        let config = if is_dark {
+            ThemeBuilder::dark_config()
+        } else {
+            ThemeBuilder::light_config()
+        }
+        .map_err(|e| ThemeError::ConfigAccess(e.to_string()))?;
+
+        let mut builder = match ThemeBuilder::get_entry(&config) {
+            Ok(b) => b,
+            Err((errors, b)) => {
+                for err in errors {
+                    if err.is_err() {
+                        tracing::warn!("ThemeBuilder load warning: {err}");
+                    }
+                }
+                b
+            }
+        };
+
+        // Set the accent color and persist
+        builder
+            .set_accent(&config, Some(color))
+            .map_err(|e| ThemeError::ConfigWrite(e.to_string()))?;
+
+        Ok(())
     }
 
     /// Format a color as hex string

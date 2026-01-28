@@ -38,6 +38,8 @@ pub enum Message {
 pub enum ThemesMessage {
     /// Toggle dark/light mode
     SetDarkMode(bool),
+    /// Set accent color (RGB 0.0-1.0)
+    SetAccentColor(f32, f32, f32),
     /// Select a theme
     Select(String),
     /// Apply the selected theme

@@ -224,6 +224,19 @@ impl App {
                 }
                 Task::none()
             }
+            pages::ThemesMessage::SetAccentColor(r, g, b) => {
+                let is_dark = self.theme_config.is_dark;
+                if let Err(e) = crate::theme_config::ThemeConfig::set_accent_color(r, g, b, is_dark)
+                {
+                    tracing::error!("Failed to set accent color: {e}");
+                } else {
+                    // Optimistically update local state
+                    self.theme_config.accent_color =
+                        cosmic::cosmic_theme::palette::Srgba::new(r, g, b, 1.0);
+                    tracing::info!("Accent color set to: ({r}, {g}, {b})");
+                }
+                Task::none()
+            }
             pages::ThemesMessage::Select(_)
             | pages::ThemesMessage::Apply
             | pages::ThemesMessage::Export
@@ -287,7 +300,67 @@ impl App {
                         }),
                     )),
             )
+            // Accent color selection
+            .push(
+                widget::settings::section()
+                    .title(fl!("theme-accent-color"))
+                    .add(widget::settings::item(
+                        fl!("accent-presets"),
+                        self.view_accent_color_presets(),
+                    )),
+            )
             .into()
+    }
+
+    /// Create accent color preset buttons
+    fn view_accent_color_presets(&self) -> Element<'_, Message> {
+        use cosmic::iced::Length;
+        let spacing = cosmic::theme::spacing();
+
+        // Preset accent colors (COSMIC-style palette)
+        let presets: [(f32, f32, f32, &str); 8] = [
+            (0.39, 0.82, 0.87, "Cyan"),   // COSMIC default cyan
+            (0.53, 0.59, 0.93, "Blue"),   // Blue
+            (0.67, 0.47, 0.82, "Purple"), // Purple
+            (0.93, 0.47, 0.62, "Pink"),   // Pink
+            (0.93, 0.53, 0.53, "Red"),    // Red
+            (0.93, 0.68, 0.47, "Orange"), // Orange
+            (0.87, 0.82, 0.47, "Yellow"), // Yellow
+            (0.53, 0.82, 0.53, "Green"),  // Green
+        ];
+
+        let mut row = widget::row().spacing(spacing.space_xs);
+
+        for (r, g, b, _name) in presets {
+            let color = cosmic::iced::Color::from_rgb(r, g, b);
+            let msg = Message::Page(pages::Message::Themes(
+                pages::ThemesMessage::SetAccentColor(r, g, b),
+            ));
+
+            row = row.push(
+                widget::button::custom(
+                    widget::container(widget::Space::new(Length::Fixed(20.0), Length::Fixed(20.0)))
+                        .width(Length::Fixed(20.0))
+                        .height(Length::Fixed(20.0))
+                        .class(cosmic::theme::Container::custom(move |_| {
+                            widget::container::Style {
+                                background: Some(cosmic::iced::Background::Color(color)),
+                                border: cosmic::iced::Border {
+                                    radius: 4.0.into(),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            }
+                        })),
+                )
+                .width(Length::Fixed(24.0))
+                .height(Length::Fixed(24.0))
+                .padding(2)
+                .on_press(msg),
+            );
+        }
+
+        widget::container(row).width(Length::Shrink).into()
     }
 
     /// View for the Wallpapers page
