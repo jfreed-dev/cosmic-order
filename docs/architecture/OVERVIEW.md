@@ -15,21 +15,25 @@ This document describes the high-level architecture of COSMIC ORDER.
 ```text
 cosmic-order/
 ├── src/
-│   ├── main.rs              # Entry point
-│   ├── app.rs               # Application state and message routing
-│   ├── config.rs            # Application configuration
+│   ├── main.rs              # Entry point, APP_ID
+│   ├── app.rs               # Application state, message routing, all page views
+│   ├── config.rs            # Application configuration (cosmic-config)
+│   ├── localize.rs          # i18n support (fl! macro)
 │   ├── pages/
-│   │   ├── mod.rs           # Page registry and routing
-│   │   ├── themes/          # Theme management page
-│   │   ├── wallpapers/      # Wallpaper management page
-│   │   └── screensaver/     # Screensaver configuration page
-│   └── widgets/
-│       └── mod.rs           # Shared custom widgets
-├── resources/
-│   ├── icons/               # Application icons
-│   └── i18n/                # Translation files
-└── tests/
-    └── ...                  # Integration tests
+│   │   └── mod.rs           # PageId enum, Message routing, per-page message enums
+│   ├── theme_config.rs      # Theme reading/writing, ThemePreview, export/import
+│   ├── wallpaper_config.rs  # Wallpaper config, RON structs, ThumbnailCache
+│   └── screensaver_config.rs # Screensaver config parsing
+├── i18n/
+│   └── en/
+│       └── cosmic_order.ftl # English translations
+├── prs/
+│   ├── LOG.md               # PR review log
+│   └── pr-02-*.md           # Deferred PR proposals
+└── docs/
+    ├── ROADMAP.md            # Development phases
+    ├── architecture/         # System design
+    └── development/          # Dev guides and learnings
 ```
 
 ## Component Architecture

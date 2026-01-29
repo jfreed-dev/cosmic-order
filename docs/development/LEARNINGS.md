@@ -136,10 +136,143 @@ are nightly-only and were commented out:
 
 ---
 
+## 2026-01-28: Phase 3 — Wallpaper Management
+
+### libcosmic Widget APIs
+
+**`widget::flex_row`** — responsive wrapping grid layout:
+
+```rust
+widget::flex_row(cards)
+    .column_spacing(spacing.space_s)
+    .row_spacing(spacing.space_s)
+    .width(Length::Fill)
+```
+
+Key methods: `.column_spacing()`, `.row_spacing()`, `.spacing()` (both), `.width()`, `.min_item_width()`, `.align_items()`, `.justify_content()`.
+
+**`widget::button::image`** — image button with selection support:
+
+```rust
+widget::button::image(Handle::from_path(path))
+    .width(Length::Fixed(160.0))
+    .height(Length::Fixed(100.0))
+    .selected(is_selected)
+    .on_press(Message::Select(id))
+```
+
+Key methods: `.selected(bool)`, `.on_press()`, `.on_remove()`, `.width()`, `.height()`.
+
+**`widget::dropdown`** — popover select menu:
+
+```rust
+// Takes ownership of options via Into<Cow<[S]>>
+// Closure must be 'static — clone data for closure if needed
+let options_for_closure = options.clone();
+widget::dropdown(options, selected_index, move |index| {
+    Message::Selected(options_for_closure[index].clone())
+})
+```
+
+### Performance: Image Grid Rendering
+
+**Problem**: Loading full-resolution wallpapers (5120x2880, ~1.4 MB each) as `button::image` thumbnails causes the UI to freeze. Even 24 images overwhelm the iced renderer.
+
+**Root cause**: `Handle::from_path` loads the full image into GPU memory. The visual display size (160x100) doesn't reduce the decode/upload cost.
+
+**Solution — thumbnail cache + pagination**:
+
+1. **Thumbnail cache** (`ThumbnailCache` in `wallpaper_config.rs`):
+   - Uses `image` crate to generate 160x100 thumbnails
+   - Stored at `~/.cache/cosmic-order/thumbnails/`
+   - Cache key: `{theme}__{filename}` (avoids collisions)
+   - Failed thumbnails cached as empty marker files (0 bytes) to prevent retry on every `view()` frame
+   - Falls back to original path on failure
+
+2. **Pagination** (12 per page):
+   - `flex_row` layout with large element counts is expensive even with small images
+   - 12 thumbnails per page keeps rendering smooth
+   - `<` / `>` nav buttons with page counter
+
+3. **No "All" option**: removed aggregate view entirely — too many images regardless of caching
+
+**Key lesson**: In iced's Elm architecture, `view()` runs on every frame. Any I/O or computation in `view()` blocks the UI thread. Thumbnail generation must be cached, and failure must be cached too (otherwise corrupt files retry every frame).
+
+### RON Serialization for COSMIC Background Config
+
+Proper round-trip serialization using serde + ron:
+
+```rust
+#[derive(Serialize, Deserialize)]
+pub struct CosmicBgEntry {
+    pub output: String,
+    pub source: BgSource,
+    pub filter_by_theme: bool,
+    pub rotation_frequency: u32,
+    pub filter_method: FilterMethod,
+    pub scaling_mode: ScalingMode,
+    pub sampling_method: SamplingMethod,
+}
+
+// Parse with fallback
+if let Ok(entry) = ron::from_str::<CosmicBgEntry>(content) {
+    // use entry
+} else {
+    // fallback to manual line parsing
+}
+```
+
+### Async Patterns for File Operations
+
+Theme export/import established the pattern; wallpaper apply/import follows it:
+
+```rust
+// In update handler:
+cosmic::task::future(async move {
+    let result = run_async_operation().await;
+    Message::OperationComplete(result)
+})
+
+// File dialog via xdg-portal:
+use cosmic::dialog::file_chooser;
+let dialog = file_chooser::open::Dialog::new()
+    .title("Title")
+    .filter(file_chooser::FileFilter::new("Images").glob("*.png").glob("*.jpg"));
+match dialog.open_file().await {
+    Ok(response) => { /* use response.url().to_file_path() */ }
+    Err(file_chooser::Error::Cancelled) => { /* user cancelled */ }
+    Err(e) => { /* real error */ }
+}
+```
+
+### App ID Mismatch (PR-01)
+
+`main.rs` defined `APP_ID = "com.github.jfreed-dev.CosmicOrder"` but `config.rs` used a separate hardcoded `"com.system76.CosmicOrder"`. Config state was split across two namespaces. Fix: `config.rs` now uses `crate::APP_ID`.
+
+### Dependencies Added
+
+| Crate | Purpose |
+|-------|---------|
+| `image` | Thumbnail generation (160x100 from 5K wallpapers) |
+
+### Files Changed in Phase 3
+
+| File | Changes |
+|------|---------|
+| `src/wallpaper_config.rs` | RON structs, `WallpaperError`, `save()`, `set_wallpaper()`, `user_wallpapers_dir()`, `ThumbnailCache`, user wallpaper scanning |
+| `src/pages/mod.rs` | Full `WallpapersMessage` enum (11 variants + pagination) |
+| `src/app.rs` | Wallpaper state fields, `handle_wallpapers_message()`, async helpers, full page view with grid/pagination/dropdown/rotation |
+| `i18n/en/cosmic_order.ftl` | 11 new wallpaper i18n strings |
+| `src/config.rs` | Unified app ID (PR-01) |
+| `Cargo.toml` | Added `image` crate |
+
+---
+
 ## Next Session TODO
 
-- [ ] Add interactive controls (toggles for enable/disable)
-- [ ] Implement cosmic-config integration for app preferences
-- [ ] Consider adding color swatches (visual color display)
-- [ ] Wallpaper thumbnails (requires image loading)
-- [ ] Test screensaver button (spawn screensaver-ctl.sh test)
+- [ ] Investigate theme label display issue (fl!("theme-mode-dark") returns correct string but labels may not render visibly — needs visual debugging)
+- [ ] PR-02: Full theme palette application (deferred to Phase 5)
+- [ ] Phase 4: Screensaver configuration (interactive controls)
+- [ ] Consider async thumbnail generation (move off UI thread)
+- [ ] Test wallpaper Apply flow end-to-end (select → apply → verify config file)
+- [ ] Test wallpaper Import flow (file picker → copy → grid refresh)
