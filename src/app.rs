@@ -12,7 +12,7 @@ use crate::config::Config;
 use crate::fl;
 use crate::pages::{self, PageId};
 use crate::screensaver_config::ScreensaverConfig;
-use crate::theme_config::ThemeConfig;
+use crate::theme_config::{ThemeConfig, ThemePreviewState};
 use crate::wallpaper_config::WallpaperConfig;
 
 /// Application state
@@ -31,6 +31,8 @@ pub struct App {
     theme_config: ThemeConfig,
     /// Wallpaper configuration
     wallpaper_config: WallpaperConfig,
+    /// Backup of theme state during preview (None when not previewing)
+    theme_preview_backup: Option<ThemePreviewState>,
 }
 
 /// Application messages
@@ -132,6 +134,7 @@ impl Application for App {
             screensaver_config,
             theme_config,
             wallpaper_config,
+            theme_preview_backup: None,
         };
 
         (app, Task::none())
@@ -141,7 +144,17 @@ impl Application for App {
         Some(&self.nav_model)
     }
 
+    #[allow(clippy::cognitive_complexity)]
     fn on_nav_select(&mut self, id: nav_bar::Id) -> Task<Message> {
+        // Auto-cancel theme preview when navigating away
+        if let Some(backup) = self.theme_preview_backup.take() {
+            if let Err(e) = ThemeConfig::set_dark_mode(backup.config.is_dark) {
+                tracing::error!("Failed to restore theme on nav: {e}");
+            }
+            self.theme_config = backup.config;
+            tracing::info!("Theme preview auto-cancelled on navigation");
+        }
+
         // Get the page ID from the navigation item
         if let Some(page_id) = self.nav_model.data::<PageId>(id).cloned() {
             self.active_page = page_id;
@@ -206,6 +219,7 @@ impl App {
     }
 
     /// Handle theme page messages
+    #[allow(clippy::cognitive_complexity)]
     fn handle_themes_message(&mut self, message: pages::ThemesMessage) -> Task<Message> {
         match message {
             pages::ThemesMessage::SetDarkMode(is_dark) => {
@@ -297,6 +311,52 @@ impl App {
                 }
                 Task::none()
             }
+            pages::ThemesMessage::PreviewTheme(theme_id) => {
+                let previews = crate::theme_config::ThemePreview::built_in_themes();
+                if let Some(preview) = previews.iter().find(|p| p.id == theme_id) {
+                    // Only snapshot the original state if no preview is active yet
+                    if self.theme_preview_backup.is_none() {
+                        self.theme_preview_backup = Some(ThemePreviewState {
+                            config: self.theme_config.clone(),
+                            previewing_id: theme_id,
+                        });
+                    } else if let Some(ref mut backup) = self.theme_preview_backup {
+                        // Switching between previews — keep original backup, update previewing id
+                        backup.previewing_id = theme_id;
+                    }
+
+                    if let Err(e) = preview.apply() {
+                        tracing::error!("Failed to preview theme: {e}");
+                        // On failure, clear the backup
+                        self.theme_preview_backup = None;
+                    } else {
+                        self.theme_config.is_dark = preview.is_dark;
+                        self.theme_config.name = preview.name.clone();
+                        tracing::info!("Previewing theme: {}", preview.name);
+                    }
+                }
+                Task::none()
+            }
+            pages::ThemesMessage::ConfirmPreview => {
+                if let Some(backup) = self.theme_preview_backup.take() {
+                    tracing::info!(
+                        "Confirmed preview — theme {:?} is now applied",
+                        backup.previewing_id
+                    );
+                }
+                Task::none()
+            }
+            pages::ThemesMessage::CancelPreview => {
+                if let Some(backup) = self.theme_preview_backup.take() {
+                    if let Err(e) = ThemeConfig::set_dark_mode(backup.config.is_dark) {
+                        tracing::error!("Failed to restore theme: {e}");
+                    } else {
+                        self.theme_config = backup.config;
+                        tracing::info!("Theme preview cancelled, restored previous theme");
+                    }
+                }
+                Task::none()
+            }
         }
     }
 
@@ -354,11 +414,18 @@ impl App {
         let spacing = cosmic::theme::spacing();
         let cfg = &self.theme_config;
 
-        widget::column()
+        let mut column = widget::column()
             .spacing(spacing.space_m)
             .padding(spacing.space_m)
             .push(widget::text::title2(fl!("themes")))
-            .push(widget::text::body(fl!("themes-description")))
+            .push(widget::text::body(fl!("themes-description")));
+
+        // Insert preview banner when actively previewing
+        if let Some(banner) = self.view_preview_banner() {
+            column = column.push(banner);
+        }
+
+        column = column
             // Theme presets
             .push(widget::settings::section().title(fl!("theme-presets")).add(
                 widget::settings::item(fl!("available-themes"), self.view_theme_list()),
@@ -413,8 +480,9 @@ impl App {
                                 ),
                             ),
                     ),
-            )
-            .into()
+            );
+
+        column.into()
     }
 
     /// Create accent color preset buttons
@@ -477,10 +545,16 @@ impl App {
         row.into()
     }
 
-    /// Create theme list with color previews
+    /// Create theme list with mini-UI mockup cards and "Try" button
     fn view_theme_list(&self) -> Element<'_, Message> {
         use cosmic::iced::Length;
         let spacing = cosmic::theme::spacing();
+
+        let is_previewing = self.theme_preview_backup.is_some();
+        let previewing_id = self
+            .theme_preview_backup
+            .as_ref()
+            .map(|b| b.previewing_id);
 
         // Only show Dark and Light (skip high contrast for now)
         let themes: Vec<_> = crate::theme_config::ThemePreview::built_in_themes()
@@ -508,95 +582,216 @@ impl App {
             );
 
             let theme_id = preview.id;
-            let is_current = self.theme_config.is_dark == preview.is_dark;
+            let is_current = !is_previewing && self.theme_config.is_dark == preview.is_dark;
+            let is_preview_active = previewing_id == Some(theme_id);
             let display_name = if preview.is_dark { "Dark" } else { "Light" };
 
-            // Theme card with color swatches
+            // Mini-UI mockup: background with accent bar and text-colored lines
+            let mockup = widget::container(
+                widget::column()
+                    .spacing(4)
+                    .padding(6)
+                    // Accent bar at top (simulates a header/titlebar)
+                    .push(
+                        widget::container(widget::Space::new(
+                            Length::Fill,
+                            Length::Fixed(6.0),
+                        ))
+                        .class(cosmic::theme::Container::custom(move |_| {
+                            widget::container::Style {
+                                background: Some(cosmic::iced::Background::Color(accent)),
+                                border: cosmic::iced::Border {
+                                    radius: 2.0.into(),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            }
+                        })),
+                    )
+                    // Text line 1 (wider)
+                    .push(
+                        widget::container(widget::Space::new(
+                            Length::Fixed(80.0),
+                            Length::Fixed(4.0),
+                        ))
+                        .class(cosmic::theme::Container::custom(move |_| {
+                            widget::container::Style {
+                                background: Some(cosmic::iced::Background::Color(
+                                    cosmic::iced::Color {
+                                        a: 0.7,
+                                        ..text_color
+                                    },
+                                )),
+                                border: cosmic::iced::Border {
+                                    radius: 1.0.into(),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            }
+                        })),
+                    )
+                    // Text line 2 (shorter)
+                    .push(
+                        widget::container(widget::Space::new(
+                            Length::Fixed(56.0),
+                            Length::Fixed(4.0),
+                        ))
+                        .class(cosmic::theme::Container::custom(move |_| {
+                            widget::container::Style {
+                                background: Some(cosmic::iced::Background::Color(
+                                    cosmic::iced::Color {
+                                        a: 0.5,
+                                        ..text_color
+                                    },
+                                )),
+                                border: cosmic::iced::Border {
+                                    radius: 1.0.into(),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            }
+                        })),
+                    )
+                    // Text line 3 (medium)
+                    .push(
+                        widget::container(widget::Space::new(
+                            Length::Fixed(66.0),
+                            Length::Fixed(4.0),
+                        ))
+                        .class(cosmic::theme::Container::custom(move |_| {
+                            widget::container::Style {
+                                background: Some(cosmic::iced::Background::Color(
+                                    cosmic::iced::Color {
+                                        a: 0.4,
+                                        ..text_color
+                                    },
+                                )),
+                                border: cosmic::iced::Border {
+                                    radius: 1.0.into(),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            }
+                        })),
+                    )
+                    // Small accent button mockup at bottom
+                    .push(
+                        widget::container(widget::Space::new(
+                            Length::Fixed(36.0),
+                            Length::Fixed(8.0),
+                        ))
+                        .class(cosmic::theme::Container::custom(move |_| {
+                            widget::container::Style {
+                                background: Some(cosmic::iced::Background::Color(
+                                    cosmic::iced::Color {
+                                        a: 0.8,
+                                        ..accent
+                                    },
+                                )),
+                                border: cosmic::iced::Border {
+                                    radius: 3.0.into(),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            }
+                        })),
+                    ),
+            )
+            .width(Length::Fixed(120.0))
+            .height(Length::Fixed(80.0))
+            .class(cosmic::theme::Container::custom(move |_| {
+                let border_color = if is_preview_active {
+                    // Gold border for actively previewed theme
+                    cosmic::iced::Color::from_rgb(0.85, 0.65, 0.13)
+                } else if is_current {
+                    accent
+                } else {
+                    cosmic::iced::Color::from_rgba(0.5, 0.5, 0.5, 0.3)
+                };
+                widget::container::Style {
+                    background: Some(cosmic::iced::Background::Color(background)),
+                    border: cosmic::iced::Border {
+                        radius: 6.0.into(),
+                        width: if is_current || is_preview_active {
+                            2.0
+                        } else {
+                            1.0
+                        },
+                        color: border_color,
+                    },
+                    ..Default::default()
+                }
+            }));
+
+            // Card: mockup + name + Try button
             let card = widget::column()
                 .spacing(spacing.space_xxs)
-                .width(Length::Fixed(80.0))
+                .width(Length::Fixed(140.0))
                 .align_x(cosmic::iced::Alignment::Center)
+                .push(mockup)
+                .push(widget::text::body(display_name))
                 .push(
-                    // Color preview box
-                    widget::container(
-                        widget::row()
-                            .push(
-                                widget::container(widget::Space::new(
-                                    Length::Fixed(24.0),
-                                    Length::Fixed(32.0),
-                                ))
-                                .class(
-                                    cosmic::theme::Container::custom(move |_| {
-                                        widget::container::Style {
-                                            background: Some(cosmic::iced::Background::Color(
-                                                background,
-                                            )),
-                                            ..Default::default()
-                                        }
-                                    }),
-                                ),
-                            )
-                            .push(
-                                widget::container(widget::Space::new(
-                                    Length::Fixed(24.0),
-                                    Length::Fixed(32.0),
-                                ))
-                                .class(
-                                    cosmic::theme::Container::custom(move |_| {
-                                        widget::container::Style {
-                                            background: Some(cosmic::iced::Background::Color(
-                                                accent,
-                                            )),
-                                            ..Default::default()
-                                        }
-                                    }),
-                                ),
-                            )
-                            .push(
-                                widget::container(widget::Space::new(
-                                    Length::Fixed(24.0),
-                                    Length::Fixed(32.0),
-                                ))
-                                .class(
-                                    cosmic::theme::Container::custom(move |_| {
-                                        widget::container::Style {
-                                            background: Some(cosmic::iced::Background::Color(
-                                                text_color,
-                                            )),
-                                            ..Default::default()
-                                        }
-                                    }),
-                                ),
-                            ),
-                    )
-                    .class(cosmic::theme::Container::custom(move |_| {
-                        widget::container::Style {
-                            border: cosmic::iced::Border {
-                                radius: 4.0.into(),
-                                width: if is_current { 2.0 } else { 1.0 },
-                                color: if is_current {
-                                    accent
-                                } else {
-                                    cosmic::iced::Color::from_rgba(0.5, 0.5, 0.5, 0.3)
-                                },
-                            },
-                            ..Default::default()
-                        }
-                    })),
-                )
-                .push(widget::text::body(display_name));
+                    widget::button::standard(fl!("theme-try")).on_press(Message::Page(
+                        pages::Message::Themes(pages::ThemesMessage::PreviewTheme(theme_id)),
+                    )),
+                );
 
-            row = row.push(
-                widget::button::custom(card)
-                    .width(Length::Fixed(88.0))
-                    .padding(spacing.space_xxs)
-                    .on_press(Message::Page(pages::Message::Themes(
-                        pages::ThemesMessage::SelectTheme(theme_id),
-                    ))),
-            );
+            row = row.push(card);
         }
 
         row.into()
+    }
+
+    /// Build the preview confirmation banner (shown when a theme is being previewed)
+    fn view_preview_banner(&self) -> Option<Element<'_, Message>> {
+        self.theme_preview_backup.as_ref()?;
+
+        let spacing = cosmic::theme::spacing();
+
+        let banner = widget::container(
+            widget::row()
+                .spacing(spacing.space_m)
+                .align_y(cosmic::iced::Alignment::Center)
+                .push(
+                    widget::text::body(fl!("theme-preview-active"))
+                        .width(cosmic::iced::Length::Fill),
+                )
+                .push(
+                    widget::button::standard(fl!("cancel")).on_press(Message::Page(
+                        pages::Message::Themes(pages::ThemesMessage::CancelPreview),
+                    )),
+                )
+                .push(
+                    widget::button::suggested(fl!("theme-apply")).on_press(Message::Page(
+                        pages::Message::Themes(pages::ThemesMessage::ConfirmPreview),
+                    )),
+                ),
+        )
+        .padding(spacing.space_s)
+        .class(cosmic::theme::Container::custom(|theme| {
+            let accent = theme.cosmic().accent.base;
+            widget::container::Style {
+                background: Some(cosmic::iced::Background::Color(cosmic::iced::Color::from_rgba(
+                    accent.red,
+                    accent.green,
+                    accent.blue,
+                    0.15,
+                ))),
+                border: cosmic::iced::Border {
+                    radius: 8.0.into(),
+                    width: 1.0,
+                    color: cosmic::iced::Color::from_rgba(
+                        accent.red,
+                        accent.green,
+                        accent.blue,
+                        0.4,
+                    ),
+                },
+                ..Default::default()
+            }
+        }));
+
+        Some(banner.into())
     }
 
     /// View for the Wallpapers page

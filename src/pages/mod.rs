@@ -42,7 +42,8 @@ pub enum ThemesMessage {
     SetDarkMode(bool),
     /// Set accent color (RGB 0.0-1.0)
     SetAccentColor(f32, f32, f32),
-    /// Select and apply a theme preset
+    /// Select and apply a theme preset (retained for programmatic use)
+    #[allow(dead_code)]
     SelectTheme(ThemeId),
     /// Export current theme
     Export,
@@ -52,6 +53,12 @@ pub enum ThemesMessage {
     Import,
     /// Import completed with result (path or error message)
     ImportComplete(Result<String, String>),
+    /// Preview a theme (apply temporarily with confirm/cancel)
+    PreviewTheme(ThemeId),
+    /// Confirm the previewed theme (keep it applied)
+    ConfirmPreview,
+    /// Cancel the preview and restore the previous theme
+    CancelPreview,
 }
 
 /// Wallpaper page messages

@@ -69,7 +69,7 @@ Documentation is maintained alongside code development.
 - [x] Create color picker for accent colors
 - [x] Add theme export functionality
 - [x] Add theme import functionality
-- [ ] Implement theme preview (live preview before applying)
+- [x] Implement theme preview (live preview before applying)
 
 ### Deliverables
 

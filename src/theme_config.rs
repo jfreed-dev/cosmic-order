@@ -37,6 +37,13 @@ pub enum ThemeId {
     HighContrastLight,
 }
 
+/// Snapshot of theme state for preview restore
+#[derive(Debug, Clone)]
+pub struct ThemePreviewState {
+    pub config: ThemeConfig,
+    pub previewing_id: ThemeId,
+}
+
 /// Theme preview information
 #[derive(Debug, Clone)]
 pub struct ThemePreview {
