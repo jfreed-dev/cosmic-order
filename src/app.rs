@@ -784,7 +784,11 @@ impl App {
             let theme_id = preview.id;
             let is_current = !is_previewing && self.theme_config.is_dark == preview.is_dark;
             let is_preview_active = previewing_id == Some(theme_id);
-            let display_name = if preview.is_dark { "Dark" } else { "Light" };
+            let display_name = if preview.is_dark {
+                fl!("theme-mode-dark")
+            } else {
+                fl!("theme-mode-light")
+            };
 
             // Mini-UI mockup: background with accent bar and text-colored lines
             let mockup = widget::container(

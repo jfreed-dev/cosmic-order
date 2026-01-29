@@ -10,8 +10,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::pages::PageId;
 
-/// Application identifier for cosmic-config
-const APP_ID: &str = "com.system76.CosmicOrder";
+/// Application identifier for cosmic-config (must match crate::APP_ID)
+const APP_ID: &str = crate::APP_ID;
 
 /// Application configuration
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, CosmicConfigEntry, PartialEq)]
