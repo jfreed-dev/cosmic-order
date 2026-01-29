@@ -86,6 +86,10 @@ pub enum WallpapersMessage {
     ImportFromFile,
     /// Import completed with result (path or error)
     ImportComplete(Result<String, String>),
+    /// Show next page of wallpaper thumbnails
+    GridNextPage,
+    /// Show previous page of wallpaper thumbnails
+    GridPrevPage,
 }
 
 /// Screensaver page messages

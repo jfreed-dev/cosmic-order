@@ -13,7 +13,7 @@ use crate::fl;
 use crate::pages::{self, PageId};
 use crate::screensaver_config::ScreensaverConfig;
 use crate::theme_config::{ThemeConfig, ThemePreviewState};
-use crate::wallpaper_config::WallpaperConfig;
+use crate::wallpaper_config::{ThumbnailCache, WallpaperConfig};
 
 /// Application state
 pub struct App {
@@ -33,10 +33,14 @@ pub struct App {
     wallpaper_config: WallpaperConfig,
     /// Backup of theme state during preview (None when not previewing)
     theme_preview_backup: Option<ThemePreviewState>,
-    /// Selected wallpaper collection filter (None = "All")
+    /// Selected wallpaper collection filter
     wallpaper_selected_collection: Option<String>,
     /// Full path of the currently highlighted wallpaper in the grid
     wallpaper_selected_path: Option<String>,
+    /// Current page offset in the wallpaper grid (for pagination)
+    wallpaper_grid_page: usize,
+    /// Thumbnail cache for wallpaper grid performance
+    thumbnail_cache: ThumbnailCache,
 }
 
 /// Application messages
@@ -130,6 +134,7 @@ impl Application for App {
         };
         nav_model.activate_position(position);
 
+        let initial_collection = wallpaper_config.current_theme_name();
         let app = Self {
             core,
             config,
@@ -139,8 +144,10 @@ impl Application for App {
             theme_config,
             wallpaper_config,
             theme_preview_backup: None,
-            wallpaper_selected_collection: None,
+            wallpaper_selected_collection: Some(initial_collection),
             wallpaper_selected_path: None,
+            wallpaper_grid_page: 0,
+            thumbnail_cache: ThumbnailCache::new(),
         };
 
         (app, Task::none())
@@ -370,6 +377,7 @@ impl App {
             pages::WallpapersMessage::SelectCollection(collection) => {
                 self.wallpaper_selected_collection = collection;
                 self.wallpaper_selected_path = None;
+                self.wallpaper_grid_page = 0;
                 Task::none()
             }
             pages::WallpapersMessage::SelectWallpaper(path) => {
@@ -455,6 +463,14 @@ impl App {
                         }
                     }
                 }
+                Task::none()
+            }
+            pages::WallpapersMessage::GridNextPage => {
+                self.wallpaper_grid_page += 1;
+                Task::none()
+            }
+            pages::WallpapersMessage::GridPrevPage => {
+                self.wallpaper_grid_page = self.wallpaper_grid_page.saturating_sub(1);
                 Task::none()
             }
         }
@@ -1041,24 +1057,18 @@ impl App {
         let cfg = &self.wallpaper_config;
         let theme_names = cfg.theme_names();
 
-        // Build options: "All" + sorted theme names
-        let mut options: Vec<String> = vec![fl!("wallpaper-all")];
-        options.extend(theme_names);
+        // Build options: sorted theme names only (no "All" — too many images to render)
+        let options: Vec<String> = theme_names;
 
         // Determine selected index
-        let selected = match &self.wallpaper_selected_collection {
-            None => Some(0), // "All"
-            Some(name) => options.iter().position(|o| o == name),
-        };
+        let selected = self
+            .wallpaper_selected_collection
+            .as_ref()
+            .and_then(|name| options.iter().position(|o| o == name));
 
-        // Clone for the closure (dropdown takes ownership of options via Into<Cow>)
         let options_for_closure = options.clone();
         let dropdown = widget::dropdown(options, selected, move |index| {
-            let collection = if index == 0 {
-                None
-            } else {
-                options_for_closure.get(index).cloned()
-            };
+            let collection = options_for_closure.get(index).cloned();
             Message::Page(pages::Message::Wallpapers(
                 pages::WallpapersMessage::SelectCollection(collection),
             ))
@@ -1073,48 +1083,28 @@ impl App {
             .into()
     }
 
-    /// Wallpaper thumbnail grid
+    /// Wallpaper thumbnail grid with pagination
     fn view_wallpaper_grid(&self) -> Element<'_, Message> {
         use cosmic::iced::Length;
 
+        const PER_PAGE: usize = 12;
         let spacing = cosmic::theme::spacing();
         let cfg = &self.wallpaper_config;
 
         // Collect wallpapers for the selected collection
-        let wallpapers: Vec<(String, String)> = match &self.wallpaper_selected_collection {
-            None => {
-                // All collections
-                let mut all = Vec::new();
-                let mut names: Vec<_> = cfg.available_themes.keys().collect();
-                names.sort();
-                for theme_name in names {
-                    if let Some(theme) = cfg.available_themes.get(theme_name) {
-                        for filename in &theme.wallpapers {
-                            let full = theme.path.join(filename);
-                            all.push((
-                                full.to_string_lossy().to_string(),
-                                filename.clone(),
-                            ));
-                        }
-                    }
-                }
-                all
-            }
-            Some(collection) => {
-                if let Some(theme) = cfg.available_themes.get(collection) {
-                    theme
-                        .wallpapers
-                        .iter()
-                        .map(|filename| {
-                            let full = theme.path.join(filename);
-                            (full.to_string_lossy().to_string(), filename.clone())
-                        })
-                        .collect()
-                } else {
-                    Vec::new()
-                }
-            }
-        };
+        let wallpapers: Vec<(String, String)> =
+            if let Some(theme) = self.wallpaper_selected_collection.as_ref().and_then(|c| cfg.available_themes.get(c)) {
+                theme
+                    .wallpapers
+                    .iter()
+                    .map(|filename| {
+                        let full = theme.path.join(filename);
+                        (full.to_string_lossy().to_string(), filename.clone())
+                    })
+                    .collect()
+            } else {
+                Vec::new()
+            };
 
         if wallpapers.is_empty() {
             return widget::container(widget::text::body(fl!("wallpaper-no-wallpapers")))
@@ -1123,16 +1113,61 @@ impl App {
                 .into();
         }
 
-        // Build thumbnail cards
-        let cards: Vec<Element<'_, Message>> = wallpapers
+        let total = wallpapers.len();
+        let total_pages = (total + PER_PAGE - 1) / PER_PAGE;
+        let page = self.wallpaper_grid_page.min(total_pages.saturating_sub(1));
+        let start = page * PER_PAGE;
+        let end = (start + PER_PAGE).min(total);
+
+        let cards: Vec<Element<'_, Message>> = wallpapers[start..end]
             .iter()
             .map(|(full_path, filename)| self.view_wallpaper_card(full_path, filename))
             .collect();
 
-        widget::flex_row(cards)
+        let grid = widget::flex_row(cards)
             .column_spacing(spacing.space_s)
             .row_spacing(spacing.space_s)
-            .width(Length::Fill)
+            .width(Length::Fill);
+
+        // Pagination controls (only if more than one page)
+        if total_pages <= 1 {
+            return grid.into();
+        }
+
+        let mut nav_row = widget::row()
+            .spacing(spacing.space_s)
+            .align_y(cosmic::iced::Alignment::Center);
+
+        if page > 0 {
+            nav_row = nav_row.push(
+                widget::button::standard("<").on_press(Message::Page(
+                    pages::Message::Wallpapers(pages::WallpapersMessage::GridPrevPage),
+                )),
+            );
+        } else {
+            nav_row = nav_row.push(widget::button::standard("<"));
+        }
+
+        nav_row = nav_row.push(widget::text::body(format!(
+            "{} / {}",
+            page + 1,
+            total_pages,
+        )));
+
+        if page + 1 < total_pages {
+            nav_row = nav_row.push(
+                widget::button::standard(">").on_press(Message::Page(
+                    pages::Message::Wallpapers(pages::WallpapersMessage::GridNextPage),
+                )),
+            );
+        } else {
+            nav_row = nav_row.push(widget::button::standard(">"));
+        }
+
+        widget::column()
+            .spacing(spacing.space_s)
+            .push(grid)
+            .push(nav_row)
             .into()
     }
 
@@ -1154,7 +1189,8 @@ impl App {
 
         let path_owned = full_path.to_string();
 
-        let image_button = widget::button::image(Handle::from_path(full_path))
+        let thumb_path = self.thumbnail_cache.get_or_create(full_path);
+        let image_button = widget::button::image(Handle::from_path(thumb_path))
             .width(Length::Fixed(160.0))
             .height(Length::Fixed(100.0))
             .selected(is_current || is_selected)

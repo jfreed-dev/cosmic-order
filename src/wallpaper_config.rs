@@ -436,6 +436,98 @@ impl WallpaperConfig {
     }
 }
 
+/// Thumbnail cache for wallpaper grid performance.
+///
+/// Generates small thumbnails in a cache directory so the grid doesn't
+/// load full 5K images for 160px cards. Failures are cached as empty
+/// marker files to avoid retrying on every frame.
+pub struct ThumbnailCache {
+    cache_dir: PathBuf,
+}
+
+impl ThumbnailCache {
+    const THUMB_WIDTH: u32 = 160;
+    const THUMB_HEIGHT: u32 = 100;
+
+    pub fn new() -> Self {
+        let cache_dir = directories::BaseDirs::new()
+            .map(|dirs| dirs.cache_dir().to_path_buf())
+            .unwrap_or_else(|| PathBuf::from(".cache"))
+            .join("cosmic-order")
+            .join("thumbnails");
+        Self { cache_dir }
+    }
+
+    /// Get the thumbnail path for a wallpaper. Generates it if missing.
+    /// Returns the original path if thumbnail generation fails.
+    pub fn get_or_create(&self, source_path: &str) -> PathBuf {
+        let source = Path::new(source_path);
+
+        // Build a cache key from parent dir name + filename
+        let key = source
+            .parent()
+            .and_then(|p| p.file_name())
+            .and_then(|n| n.to_str())
+            .map(|parent| {
+                let fname = source
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("unknown");
+                format!("{parent}__{fname}")
+            })
+            .unwrap_or_else(|| {
+                source
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("unknown")
+                    .to_string()
+            });
+
+        let thumb_path = self.cache_dir.join(&key);
+
+        if thumb_path.exists() {
+            // Check for failure marker (empty file)
+            if fs::metadata(&thumb_path).map(|m| m.len() == 0).unwrap_or(false) {
+                return source.to_path_buf();
+            }
+            return thumb_path;
+        }
+
+        // Generate thumbnail
+        if let Err(e) = self.generate_thumbnail(source, &thumb_path) {
+            tracing::warn!("Thumbnail generation failed for {source_path}: {e}");
+            // Write empty marker to avoid retrying every frame
+            let _ = fs::create_dir_all(&self.cache_dir);
+            let _ = fs::write(&thumb_path, b"");
+            return source.to_path_buf();
+        }
+
+        thumb_path
+    }
+
+    fn generate_thumbnail(&self, source: &Path, dest: &Path) -> Result<(), String> {
+        fs::create_dir_all(&self.cache_dir)
+            .map_err(|e| format!("Create cache dir: {e}"))?;
+
+        let img = image::open(source)
+            .map_err(|e| format!("Open image: {e}"))?;
+
+        let thumb = img.thumbnail(Self::THUMB_WIDTH, Self::THUMB_HEIGHT);
+
+        thumb
+            .save(dest)
+            .map_err(|e| format!("Save thumbnail: {e}"))?;
+
+        Ok(())
+    }
+
+    /// Clear the thumbnail cache (forces regeneration)
+    #[allow(dead_code)]
+    pub fn clear(&self) {
+        let _ = fs::remove_dir_all(&self.cache_dir);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
