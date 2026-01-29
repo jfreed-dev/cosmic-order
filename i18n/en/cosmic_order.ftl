@@ -40,6 +40,17 @@ wallpaper-rotation = Rotation
 wallpaper-rotation-enabled = Enable Rotation
 wallpaper-rotation-interval = Change Every
 wallpaper-collection = Collection
+wallpaper-current = Current Wallpaper
+wallpaper-file = File
+wallpaper-theme = Theme
+wallpaper-scaling = Scaling Mode
+wallpaper-all = All
+wallpaper-no-wallpapers = No wallpapers found
+wallpaper-5min = 5 minutes
+wallpaper-10min = 10 minutes
+wallpaper-15min = 15 minutes
+wallpaper-30min = 30 minutes
+wallpaper-1hour = 1 hour
 
 # Screensaver Page
 screensaver-description = Configure the terminal-based screensaver

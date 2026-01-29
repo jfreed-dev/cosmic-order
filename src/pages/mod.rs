@@ -63,18 +63,29 @@ pub enum ThemesMessage {
 
 /// Wallpaper page messages
 #[derive(Debug, Clone)]
-#[allow(dead_code)] // Variants will be used in Phase 3
 pub enum WallpapersMessage {
-    /// Select a wallpaper
-    Select(String),
-    /// Set as current wallpaper
-    SetWallpaper,
-    /// Add wallpaper from file
-    AddFromFile,
-    /// Add wallpaper from URL
-    AddFromUrl(String),
-    /// Configure rotation
-    ConfigureRotation,
+    /// Switch collection view (None = "All")
+    SelectCollection(Option<String>),
+    /// Highlight a wallpaper by full path
+    SelectWallpaper(String),
+    /// Apply the selected wallpaper to the desktop
+    ApplyWallpaper,
+    /// Apply completed with result (path or error)
+    ApplyComplete(Result<String, String>),
+    /// Toggle rotation on/off
+    SetRotationEnabled(bool),
+    /// Set rotation frequency in seconds
+    SetRotationFrequency(u32),
+    /// Set the scaling mode
+    SetScalingMode(usize),
+    /// Save rotation/scaling settings to disk
+    SaveSettings,
+    /// Save completed with result
+    SaveComplete(Result<(), String>),
+    /// Open file picker to import a wallpaper
+    ImportFromFile,
+    /// Import completed with result (path or error)
+    ImportComplete(Result<String, String>),
 }
 
 /// Screensaver page messages

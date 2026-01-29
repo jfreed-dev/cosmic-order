@@ -33,6 +33,10 @@ pub struct App {
     wallpaper_config: WallpaperConfig,
     /// Backup of theme state during preview (None when not previewing)
     theme_preview_backup: Option<ThemePreviewState>,
+    /// Selected wallpaper collection filter (None = "All")
+    wallpaper_selected_collection: Option<String>,
+    /// Full path of the currently highlighted wallpaper in the grid
+    wallpaper_selected_path: Option<String>,
 }
 
 /// Application messages
@@ -135,6 +139,8 @@ impl Application for App {
             theme_config,
             wallpaper_config,
             theme_preview_backup: None,
+            wallpaper_selected_collection: None,
+            wallpaper_selected_path: None,
         };
 
         (app, Task::none())
@@ -207,10 +213,7 @@ impl App {
     fn handle_page_message(&mut self, message: pages::Message) -> Task<Message> {
         match message {
             pages::Message::Themes(msg) => self.handle_themes_message(msg),
-            pages::Message::Wallpapers(_msg) => {
-                // TODO: Implement wallpaper message handling
-                Task::none()
-            }
+            pages::Message::Wallpapers(msg) => self.handle_wallpapers_message(msg),
             pages::Message::Screensaver(_msg) => {
                 // TODO: Implement screensaver message handling
                 Task::none()
@@ -358,6 +361,187 @@ impl App {
                 Task::none()
             }
         }
+    }
+
+    /// Handle wallpaper page messages
+    #[allow(clippy::cognitive_complexity)]
+    fn handle_wallpapers_message(&mut self, message: pages::WallpapersMessage) -> Task<Message> {
+        match message {
+            pages::WallpapersMessage::SelectCollection(collection) => {
+                self.wallpaper_selected_collection = collection;
+                self.wallpaper_selected_path = None;
+                Task::none()
+            }
+            pages::WallpapersMessage::SelectWallpaper(path) => {
+                self.wallpaper_selected_path = Some(path);
+                Task::none()
+            }
+            pages::WallpapersMessage::ApplyWallpaper => {
+                let path = match &self.wallpaper_selected_path {
+                    Some(p) => p.clone(),
+                    None => return Task::none(),
+                };
+                let config_path = WallpaperConfig::config_path();
+                cosmic::task::future(async move {
+                    let result = Self::run_apply_wallpaper(path, config_path).await;
+                    Message::Page(pages::Message::Wallpapers(
+                        pages::WallpapersMessage::ApplyComplete(result),
+                    ))
+                })
+            }
+            pages::WallpapersMessage::ApplyComplete(result) => {
+                match &result {
+                    Ok(path) => {
+                        self.wallpaper_config.current_source = path.clone();
+                        tracing::info!("Wallpaper applied: {path}");
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to apply wallpaper: {e}");
+                    }
+                }
+                Task::none()
+            }
+            pages::WallpapersMessage::SetRotationEnabled(enabled) => {
+                self.wallpaper_config.rotation_enabled = enabled;
+                Task::none()
+            }
+            pages::WallpapersMessage::SetRotationFrequency(freq) => {
+                self.wallpaper_config.rotation_frequency = freq;
+                Task::none()
+            }
+            pages::WallpapersMessage::SetScalingMode(index) => {
+                let modes = crate::wallpaper_config::ScalingMode::all();
+                if let Some(mode) = modes.get(index) {
+                    self.wallpaper_config.scaling_mode = mode.clone();
+                }
+                Task::none()
+            }
+            pages::WallpapersMessage::SaveSettings => {
+                let config = self.wallpaper_config.clone();
+                cosmic::task::future(async move {
+                    let result = config.save().map_err(|e| e.to_string());
+                    Message::Page(pages::Message::Wallpapers(
+                        pages::WallpapersMessage::SaveComplete(result),
+                    ))
+                })
+            }
+            pages::WallpapersMessage::SaveComplete(result) => {
+                match &result {
+                    Ok(()) => tracing::info!("Wallpaper settings saved"),
+                    Err(e) => tracing::error!("Failed to save wallpaper settings: {e}"),
+                }
+                Task::none()
+            }
+            pages::WallpapersMessage::ImportFromFile => {
+                cosmic::task::future(async move {
+                    let result = Self::run_wallpaper_import().await;
+                    Message::Page(pages::Message::Wallpapers(
+                        pages::WallpapersMessage::ImportComplete(result),
+                    ))
+                })
+            }
+            pages::WallpapersMessage::ImportComplete(result) => {
+                match &result {
+                    Ok(path) => {
+                        tracing::info!("Wallpaper imported: {path}");
+                        // Reload wallpaper config to pick up the new file
+                        self.wallpaper_config = WallpaperConfig::load();
+                    }
+                    Err(e) => {
+                        if e != "cancelled" {
+                            tracing::error!("Wallpaper import failed: {e}");
+                        } else {
+                            tracing::debug!("Wallpaper import cancelled by user");
+                        }
+                    }
+                }
+                Task::none()
+            }
+        }
+    }
+
+    /// Apply a wallpaper: read current config, update source, write back
+    async fn run_apply_wallpaper(
+        path: String,
+        config_path: std::path::PathBuf,
+    ) -> Result<String, String> {
+        // Read existing config or create default entry
+        let content = tokio::fs::read_to_string(&config_path)
+            .await
+            .unwrap_or_default();
+
+        let mut entry = ron::from_str::<crate::wallpaper_config::CosmicBgEntry>(&content)
+            .unwrap_or_else(|_| crate::wallpaper_config::CosmicBgEntry {
+                output: "all".to_string(),
+                source: crate::wallpaper_config::BgSource::Path(String::new()),
+                filter_by_theme: true,
+                rotation_frequency: 600,
+                filter_method: crate::wallpaper_config::FilterMethod::Lanczos,
+                scaling_mode: crate::wallpaper_config::ScalingMode::Zoom,
+                sampling_method: crate::wallpaper_config::SamplingMethod::Random,
+            });
+
+        entry.source = crate::wallpaper_config::BgSource::Path(path.clone());
+
+        let pretty = ron::ser::PrettyConfig::default();
+        let serialized = ron::ser::to_string_pretty(&entry, pretty)
+            .map_err(|e| format!("Serialize error: {e}"))?;
+
+        if let Some(parent) = config_path.parent() {
+            tokio::fs::create_dir_all(parent)
+                .await
+                .map_err(|e| format!("Create dir error: {e}"))?;
+        }
+
+        tokio::fs::write(&config_path, serialized)
+            .await
+            .map_err(|e| format!("Write error: {e}"))?;
+
+        Ok(path)
+    }
+
+    /// Import a wallpaper file via xdg-portal file picker
+    async fn run_wallpaper_import() -> Result<String, String> {
+        use cosmic::dialog::file_chooser;
+
+        let dialog = file_chooser::open::Dialog::new()
+            .title(fl!("wallpaper-add-file"))
+            .filter(
+                file_chooser::FileFilter::new("Images")
+                    .glob("*.png")
+                    .glob("*.jpg")
+                    .glob("*.jpeg")
+                    .glob("*.webp")
+                    .glob("*.gif")
+                    .glob("*.bmp"),
+            );
+
+        let response = match dialog.open_file().await {
+            Ok(r) => r,
+            Err(file_chooser::Error::Cancelled) => return Err("cancelled".to_string()),
+            Err(e) => return Err(format!("Dialog error: {e}")),
+        };
+
+        let url = response.url();
+        let src_path = url
+            .to_file_path()
+            .map_err(|_| "Invalid file path".to_string())?;
+
+        let dest_dir = WallpaperConfig::user_wallpapers_dir();
+        tokio::fs::create_dir_all(&dest_dir)
+            .await
+            .map_err(|e| format!("Failed to create directory: {e}"))?;
+
+        let filename = src_path
+            .file_name()
+            .ok_or_else(|| "No filename".to_string())?;
+        let dest_path = dest_dir.join(filename);
+
+        tokio::fs::copy(&src_path, &dest_path)
+            .await
+            .map_err(|e| format!("Failed to copy: {e}"))?;
+
+        Ok(dest_path.to_string_lossy().to_string())
     }
 
     /// Run the theme export flow: open save dialog, serialize, write
@@ -797,70 +981,276 @@ impl App {
     /// View for the Wallpapers page
     fn view_wallpapers_page(&self) -> Element<'_, Message> {
         let spacing = cosmic::theme::spacing();
-        let cfg = &self.wallpaper_config;
 
-        let mut column = widget::column()
+        let column = widget::column()
             .spacing(spacing.space_m)
             .padding(spacing.space_m)
             .push(widget::text::title2(fl!("wallpapers")))
-            .push(widget::text::body(fl!("wallpapers-description")));
+            .push(widget::text::body(fl!("wallpapers-description")))
+            .push(self.view_wallpaper_current_section())
+            .push(self.view_wallpaper_collection_selector())
+            .push(self.view_wallpaper_grid())
+            .push(self.view_wallpaper_rotation_section());
 
-        // Current wallpaper section
-        column = column.push(
-            widget::settings::section()
-                .title("Current Wallpaper")
-                .add(widget::settings::item(
-                    "File",
-                    widget::text::body(cfg.current_wallpaper_name()),
-                ))
-                .add(widget::settings::item(
-                    "Theme",
-                    widget::text::body(cfg.current_theme_name()),
-                ))
-                .add(widget::settings::item(
-                    "Scaling",
-                    widget::text::body(&cfg.scaling_mode),
-                ))
-                .add(widget::settings::item(
-                    "Rotation",
-                    widget::text::body(cfg.format_rotation()),
-                )),
-        );
+        widget::scrollable(column).into()
+    }
 
-        // Available themes section
+    /// Current wallpaper info + Apply and Import buttons
+    fn view_wallpaper_current_section(&self) -> Element<'_, Message> {
+        let spacing = cosmic::theme::spacing();
+        let cfg = &self.wallpaper_config;
+
+        let has_selection = self.wallpaper_selected_path.is_some();
+
+        let mut section = widget::settings::section()
+            .title(fl!("wallpaper-current"))
+            .add(widget::settings::item(
+                fl!("wallpaper-file"),
+                widget::text::body(cfg.current_wallpaper_name()),
+            ))
+            .add(widget::settings::item(
+                fl!("wallpaper-theme"),
+                widget::text::body(cfg.current_theme_name()),
+            ));
+
+        // Action buttons row
+        let mut buttons_row = widget::row().spacing(spacing.space_s);
+
+        let apply_button = if has_selection {
+            widget::button::suggested(fl!("wallpaper-set")).on_press(Message::Page(
+                pages::Message::Wallpapers(pages::WallpapersMessage::ApplyWallpaper),
+            ))
+        } else {
+            widget::button::suggested(fl!("wallpaper-set"))
+        };
+
+        let import_button =
+            widget::button::standard(fl!("wallpaper-add-file")).on_press(Message::Page(
+                pages::Message::Wallpapers(pages::WallpapersMessage::ImportFromFile),
+            ));
+
+        buttons_row = buttons_row.push(apply_button).push(import_button);
+
+        section = section.add(buttons_row);
+
+        section.into()
+    }
+
+    /// Collection selector dropdown
+    fn view_wallpaper_collection_selector(&self) -> Element<'_, Message> {
+        let cfg = &self.wallpaper_config;
         let theme_names = cfg.theme_names();
-        let mut themes_section = widget::settings::section().title(format!(
-            "Available Themes ({} themes, {} wallpapers)",
-            theme_names.len(),
-            cfg.total_wallpaper_count()
-        ));
 
-        for name in theme_names {
-            if let Some(theme) = cfg.available_themes.get(&name) {
-                themes_section = themes_section.add(widget::settings::item(
-                    name,
-                    widget::text::body(format!("{} wallpapers", theme.count)),
-                ));
+        // Build options: "All" + sorted theme names
+        let mut options: Vec<String> = vec![fl!("wallpaper-all")];
+        options.extend(theme_names);
+
+        // Determine selected index
+        let selected = match &self.wallpaper_selected_collection {
+            None => Some(0), // "All"
+            Some(name) => options.iter().position(|o| o == name),
+        };
+
+        // Clone for the closure (dropdown takes ownership of options via Into<Cow>)
+        let options_for_closure = options.clone();
+        let dropdown = widget::dropdown(options, selected, move |index| {
+            let collection = if index == 0 {
+                None
+            } else {
+                options_for_closure.get(index).cloned()
+            };
+            Message::Page(pages::Message::Wallpapers(
+                pages::WallpapersMessage::SelectCollection(collection),
+            ))
+        });
+
+        widget::settings::section()
+            .title(fl!("wallpaper-collection"))
+            .add(widget::settings::item(
+                fl!("wallpaper-collection"),
+                dropdown,
+            ))
+            .into()
+    }
+
+    /// Wallpaper thumbnail grid
+    fn view_wallpaper_grid(&self) -> Element<'_, Message> {
+        use cosmic::iced::Length;
+
+        let spacing = cosmic::theme::spacing();
+        let cfg = &self.wallpaper_config;
+
+        // Collect wallpapers for the selected collection
+        let wallpapers: Vec<(String, String)> = match &self.wallpaper_selected_collection {
+            None => {
+                // All collections
+                let mut all = Vec::new();
+                let mut names: Vec<_> = cfg.available_themes.keys().collect();
+                names.sort();
+                for theme_name in names {
+                    if let Some(theme) = cfg.available_themes.get(theme_name) {
+                        for filename in &theme.wallpapers {
+                            let full = theme.path.join(filename);
+                            all.push((
+                                full.to_string_lossy().to_string(),
+                                filename.clone(),
+                            ));
+                        }
+                    }
+                }
+                all
             }
+            Some(collection) => {
+                if let Some(theme) = cfg.available_themes.get(collection) {
+                    theme
+                        .wallpapers
+                        .iter()
+                        .map(|filename| {
+                            let full = theme.path.join(filename);
+                            (full.to_string_lossy().to_string(), filename.clone())
+                        })
+                        .collect()
+                } else {
+                    Vec::new()
+                }
+            }
+        };
+
+        if wallpapers.is_empty() {
+            return widget::container(widget::text::body(fl!("wallpaper-no-wallpapers")))
+                .padding(spacing.space_l)
+                .width(Length::Fill)
+                .into();
         }
 
-        column = column.push(themes_section);
+        // Build thumbnail cards
+        let cards: Vec<Element<'_, Message>> = wallpapers
+            .iter()
+            .map(|(full_path, filename)| self.view_wallpaper_card(full_path, filename))
+            .collect();
 
-        // Coming soon section
-        column = column.push(
-            widget::settings::section()
-                .title("Coming Soon")
-                .add(widget::settings::item(
-                    "Wallpaper selection",
-                    widget::text::body("Coming in Phase 3"),
+        widget::flex_row(cards)
+            .column_spacing(spacing.space_s)
+            .row_spacing(spacing.space_s)
+            .width(Length::Fill)
+            .into()
+    }
+
+    /// Single wallpaper thumbnail card
+    fn view_wallpaper_card<'a>(
+        &'a self,
+        full_path: &str,
+        filename: &str,
+    ) -> Element<'a, Message> {
+        use cosmic::iced::Length;
+        use cosmic::widget::image::Handle;
+
+        let spacing = cosmic::theme::spacing();
+        let is_current = self.wallpaper_config.current_source == full_path;
+        let is_selected = self
+            .wallpaper_selected_path
+            .as_deref()
+            == Some(full_path);
+
+        let path_owned = full_path.to_string();
+
+        let image_button = widget::button::image(Handle::from_path(full_path))
+            .width(Length::Fixed(160.0))
+            .height(Length::Fixed(100.0))
+            .selected(is_current || is_selected)
+            .on_press(Message::Page(pages::Message::Wallpapers(
+                pages::WallpapersMessage::SelectWallpaper(path_owned),
+            )));
+
+        // Truncate filename for display
+        let display_name = if filename.len() > 20 {
+            format!("{}...", &filename[..17])
+        } else {
+            filename.to_string()
+        };
+
+        widget::column()
+            .spacing(spacing.space_xxs)
+            .align_x(cosmic::iced::Alignment::Center)
+            .width(Length::Fixed(168.0))
+            .push(image_button)
+            .push(widget::text::caption(display_name))
+            .into()
+    }
+
+    /// Rotation and scaling settings section
+    fn view_wallpaper_rotation_section(&self) -> Element<'_, Message> {
+        let spacing = cosmic::theme::spacing();
+        let cfg = &self.wallpaper_config;
+
+        // Rotation toggle
+        let rotation_toggle = widget::toggler(cfg.rotation_enabled).on_toggle(|enabled| {
+            Message::Page(pages::Message::Wallpapers(
+                pages::WallpapersMessage::SetRotationEnabled(enabled),
+            ))
+        });
+
+        // Rotation frequency options
+        let freq_options: Vec<String> = vec![
+            fl!("wallpaper-5min"),
+            fl!("wallpaper-10min"),
+            fl!("wallpaper-15min"),
+            fl!("wallpaper-30min"),
+            fl!("wallpaper-1hour"),
+        ];
+        let freq_values: [u32; 5] = [300, 600, 900, 1800, 3600];
+        let freq_selected = freq_values
+            .iter()
+            .position(|&v| v == cfg.rotation_frequency);
+
+        let freq_dropdown = widget::dropdown(freq_options, freq_selected, move |index| {
+            let freq = freq_values.get(index).copied().unwrap_or(600);
+            Message::Page(pages::Message::Wallpapers(
+                pages::WallpapersMessage::SetRotationFrequency(freq),
+            ))
+        });
+
+        // Scaling mode options
+        let scaling_options: Vec<String> = crate::wallpaper_config::ScalingMode::all()
+            .iter()
+            .map(|m| m.to_string())
+            .collect();
+        let scaling_selected = crate::wallpaper_config::ScalingMode::all()
+            .iter()
+            .position(|m| *m == cfg.scaling_mode);
+
+        let scaling_dropdown =
+            widget::dropdown(scaling_options, scaling_selected, |index| {
+                Message::Page(pages::Message::Wallpapers(
+                    pages::WallpapersMessage::SetScalingMode(index),
                 ))
-                .add(widget::settings::item(
-                    "Wallpaper import",
-                    widget::text::body("Coming in Phase 3"),
-                )),
-        );
+            });
 
-        column.into()
+        // Save button
+        let save_button = widget::button::suggested(fl!("save")).on_press(Message::Page(
+            pages::Message::Wallpapers(pages::WallpapersMessage::SaveSettings),
+        ));
+
+        widget::settings::section()
+            .title(fl!("wallpaper-rotation"))
+            .add(widget::settings::item(
+                fl!("wallpaper-rotation-enabled"),
+                rotation_toggle,
+            ))
+            .add(widget::settings::item(
+                fl!("wallpaper-rotation-interval"),
+                freq_dropdown,
+            ))
+            .add(widget::settings::item(
+                fl!("wallpaper-scaling"),
+                scaling_dropdown,
+            ))
+            .add(
+                widget::row()
+                    .spacing(spacing.space_s)
+                    .push(save_button),
+            )
+            .into()
     }
 
     /// View for the Screensaver page

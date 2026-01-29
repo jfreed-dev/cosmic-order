@@ -1,34 +1,118 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-//! Wallpaper configuration reading
+//! Wallpaper configuration reading and writing
 //!
-//! Reads COSMIC background settings and lists available wallpapers.
+//! Reads and modifies COSMIC background settings and lists available wallpapers.
 
 use std::collections::HashMap;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+
+use serde::{Deserialize, Serialize};
+
+/// On-disk RON format for COSMIC background config
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CosmicBgEntry {
+    pub output: String,
+    pub source: BgSource,
+    pub filter_by_theme: bool,
+    pub rotation_frequency: u32,
+    pub filter_method: FilterMethod,
+    pub scaling_mode: ScalingMode,
+    pub sampling_method: SamplingMethod,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum BgSource {
+    Path(String),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum FilterMethod {
+    Lanczos,
+    Linear,
+    Nearest,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum ScalingMode {
+    Zoom,
+    Fit,
+    Stretch,
+    Center,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum SamplingMethod {
+    Random,
+    Alphanumeric,
+}
+
+impl ScalingMode {
+    pub const fn as_str(&self) -> &'static str {
+        match self {
+            Self::Zoom => "Zoom",
+            Self::Fit => "Fit",
+            Self::Stretch => "Stretch",
+            Self::Center => "Center",
+        }
+    }
+
+    pub const fn all() -> &'static [Self] {
+        &[Self::Zoom, Self::Fit, Self::Stretch, Self::Center]
+    }
+}
+
+impl std::fmt::Display for ScalingMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+/// Wallpaper operation errors
+#[derive(Debug, thiserror::Error)]
+#[allow(dead_code)] // Variants available for future error paths
+pub enum WallpaperError {
+    #[error("Failed to read wallpaper config: {0}")]
+    ConfigRead(String),
+    #[error("Failed to write wallpaper config: {0}")]
+    ConfigWrite(String),
+    #[error("Failed to serialize wallpaper config: {0}")]
+    SerializeError(String),
+    #[error("Failed to deserialize wallpaper config: {0}")]
+    DeserializeError(String),
+    #[error("Failed to copy wallpaper file: {0}")]
+    FileCopy(String),
+    #[error("Failed to create directory: {0}")]
+    CreateDir(String),
+}
 
 /// Wallpaper configuration extracted from COSMIC
 #[derive(Debug, Clone)]
-#[allow(dead_code)] // Fields will be used as UI expands
 pub struct WallpaperConfig {
     /// Current wallpaper source (path or directory)
     pub current_source: String,
     /// Rotation frequency in seconds
     pub rotation_frequency: u32,
-    /// Scaling mode (Zoom, Fit, etc.)
-    pub scaling_mode: String,
+    /// Scaling mode
+    pub scaling_mode: ScalingMode,
+    /// Filter method
+    pub filter_method: FilterMethod,
+    /// Sampling method
+    pub sampling_method: SamplingMethod,
     /// Whether filtering by theme is enabled
     pub filter_by_theme: bool,
+    /// Whether rotation is enabled (frequency > 0)
+    pub rotation_enabled: bool,
     /// Available theme wallpaper directories with their wallpaper counts
     pub available_themes: HashMap<String, ThemeWallpapers>,
 }
 
 /// Wallpapers for a specific theme
 #[derive(Debug, Clone)]
-#[allow(dead_code)] // Fields will be used when wallpaper selection UI is added
 pub struct ThemeWallpapers {
-    /// Theme name
+    /// Theme name (used in collection display)
+    #[allow(dead_code)]
     pub name: String,
     /// Directory path
     pub path: PathBuf,
@@ -43,8 +127,11 @@ impl Default for WallpaperConfig {
         Self {
             current_source: String::new(),
             rotation_frequency: 600,
-            scaling_mode: "Zoom".to_string(),
+            scaling_mode: ScalingMode::Zoom,
+            filter_method: FilterMethod::Lanczos,
+            sampling_method: SamplingMethod::Random,
             filter_by_theme: true,
+            rotation_enabled: true,
             available_themes: HashMap::new(),
         }
     }
@@ -65,6 +152,15 @@ impl WallpaperConfig {
             .join("all")
     }
 
+    /// User wallpapers directory for imported files
+    pub fn user_wallpapers_dir() -> PathBuf {
+        directories::BaseDirs::new()
+            .map(|dirs| dirs.data_local_dir().to_path_buf())
+            .unwrap_or_else(|| PathBuf::from(".local/share"))
+            .join("backgrounds")
+            .join("custom")
+    }
+
     /// Load wallpaper configuration
     pub fn load() -> Self {
         let mut config = Self::default();
@@ -80,14 +176,33 @@ impl WallpaperConfig {
         config
     }
 
-    /// Parse COSMIC background RON config
+    /// Parse COSMIC background RON config — tries proper RON deserialization first,
+    /// falls back to manual line parsing if that fails
     fn parse_cosmic_config(&mut self, content: &str) {
-        // Simple parsing of RON format - extract key values
+        if let Ok(entry) = ron::from_str::<CosmicBgEntry>(content) {
+            match &entry.source {
+                BgSource::Path(p) => self.current_source = p.clone(),
+            }
+            self.filter_by_theme = entry.filter_by_theme;
+            self.rotation_frequency = entry.rotation_frequency;
+            self.rotation_enabled = entry.rotation_frequency > 0;
+            self.filter_method = entry.filter_method;
+            self.scaling_mode = entry.scaling_mode;
+            self.sampling_method = entry.sampling_method;
+            return;
+        }
+
+        // Fallback: manual line parsing for older/non-standard configs
+        tracing::debug!("RON parse failed, falling back to manual parsing");
+        self.parse_cosmic_config_fallback(content);
+    }
+
+    /// Fallback manual line parser for non-standard config formats
+    fn parse_cosmic_config_fallback(&mut self, content: &str) {
         for line in content.lines() {
             let line = line.trim();
 
             if line.starts_with("source:") {
-                // Extract path from: source: Path("/path/to/wallpaper"),
                 if let Some(start) = line.find('"') {
                     if let Some(end) = line.rfind('"') {
                         if start < end {
@@ -99,11 +214,18 @@ impl WallpaperConfig {
                 if let Some(value) = line.strip_prefix("rotation_frequency:") {
                     if let Ok(freq) = value.trim().trim_end_matches(',').parse() {
                         self.rotation_frequency = freq;
+                        self.rotation_enabled = self.rotation_frequency > 0;
                     }
                 }
             } else if line.starts_with("scaling_mode:") {
                 if let Some(value) = line.strip_prefix("scaling_mode:") {
-                    self.scaling_mode = value.trim().trim_end_matches(',').to_string();
+                    let val = value.trim().trim_end_matches(',');
+                    self.scaling_mode = match val {
+                        "Fit" => ScalingMode::Fit,
+                        "Stretch" => ScalingMode::Stretch,
+                        "Center" => ScalingMode::Center,
+                        _ => ScalingMode::Zoom,
+                    };
                 }
             } else if line.starts_with("filter_by_theme:") {
                 if let Some(value) = line.strip_prefix("filter_by_theme:") {
@@ -113,15 +235,97 @@ impl WallpaperConfig {
         }
     }
 
-    /// Scan system wallpaper directories
-    fn scan_wallpapers(&mut self) {
-        let wallpaper_dir = PathBuf::from(Self::SYSTEM_WALLPAPERS);
+    /// Build a CosmicBgEntry from the current config state
+    fn to_bg_entry(&self) -> CosmicBgEntry {
+        CosmicBgEntry {
+            output: "all".to_string(),
+            source: BgSource::Path(self.current_source.clone()),
+            filter_by_theme: self.filter_by_theme,
+            rotation_frequency: if self.rotation_enabled {
+                self.rotation_frequency
+            } else {
+                0
+            },
+            filter_method: self.filter_method.clone(),
+            scaling_mode: self.scaling_mode.clone(),
+            sampling_method: self.sampling_method.clone(),
+        }
+    }
 
-        if !wallpaper_dir.exists() {
-            return;
+    /// Save current config state to disk
+    pub fn save(&self) -> Result<(), WallpaperError> {
+        let entry = self.to_bg_entry();
+        let pretty = ron::ser::PrettyConfig::default();
+        let serialized = ron::ser::to_string_pretty(&entry, pretty)
+            .map_err(|e| WallpaperError::SerializeError(e.to_string()))?;
+
+        let config_path = Self::config_path();
+        if let Some(parent) = config_path.parent() {
+            fs::create_dir_all(parent)
+                .map_err(|e| WallpaperError::CreateDir(e.to_string()))?;
         }
 
-        if let Ok(entries) = fs::read_dir(&wallpaper_dir) {
+        fs::write(&config_path, serialized)
+            .map_err(|e| WallpaperError::ConfigWrite(e.to_string()))?;
+
+        Ok(())
+    }
+
+    /// Set wallpaper to the given path and write config to disk
+    #[allow(dead_code)] // Available for programmatic use
+    pub fn set_wallpaper(&mut self, path: &str) -> Result<(), WallpaperError> {
+        self.current_source = path.to_string();
+        self.save()
+    }
+
+    /// Get the full path for a wallpaper given its theme and filename
+    #[allow(dead_code)] // Available for programmatic use
+    pub fn full_path(theme: &str, filename: &str) -> Option<PathBuf> {
+        let path = PathBuf::from(Self::SYSTEM_WALLPAPERS)
+            .join(theme)
+            .join(filename);
+        if path.exists() {
+            return Some(path);
+        }
+
+        let user_path = Self::user_wallpapers_dir().join(filename);
+        if user_path.exists() {
+            return Some(user_path);
+        }
+
+        None
+    }
+
+    /// Scan system and user wallpaper directories
+    fn scan_wallpapers(&mut self) {
+        // Scan system wallpapers
+        let wallpaper_dir = PathBuf::from(Self::SYSTEM_WALLPAPERS);
+        if wallpaper_dir.exists() {
+            self.scan_directory(&wallpaper_dir);
+        }
+
+        // Scan user wallpapers directory
+        let user_dir = Self::user_wallpapers_dir();
+        if user_dir.exists() {
+            let wallpapers = Self::list_wallpapers_in_dir(&user_dir);
+            let count = wallpapers.len();
+            if count > 0 {
+                self.available_themes.insert(
+                    "custom".to_string(),
+                    ThemeWallpapers {
+                        name: "custom".to_string(),
+                        path: user_dir,
+                        count,
+                        wallpapers,
+                    },
+                );
+            }
+        }
+    }
+
+    /// Scan a directory for theme subdirectories containing wallpapers
+    fn scan_directory(&mut self, dir: &Path) {
+        if let Ok(entries) = fs::read_dir(dir) {
             for entry in entries.flatten() {
                 let path = entry.path();
                 if path.is_dir() {
@@ -145,7 +349,7 @@ impl WallpaperConfig {
     }
 
     /// List wallpaper files in a directory
-    fn list_wallpapers_in_dir(dir: &PathBuf) -> Vec<String> {
+    fn list_wallpapers_in_dir(dir: &Path) -> Vec<String> {
         let mut wallpapers = Vec::new();
 
         if let Ok(entries) = fs::read_dir(dir) {
@@ -211,8 +415,9 @@ impl WallpaperConfig {
     }
 
     /// Format rotation frequency for display
+    #[allow(dead_code)] // Available for display use
     pub fn format_rotation(&self) -> String {
-        if self.rotation_frequency == 0 {
+        if !self.rotation_enabled || self.rotation_frequency == 0 {
             "Disabled".to_string()
         } else if self.rotation_frequency < 60 {
             format!("{} seconds", self.rotation_frequency)
@@ -236,7 +441,33 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_config() {
+    fn test_parse_config_ron() {
+        let content = r#"(
+    output: "all",
+    source: Path("/usr/share/backgrounds/gruvbox/1-gruvbox.png"),
+    filter_by_theme: true,
+    rotation_frequency: 300,
+    filter_method: Lanczos,
+    scaling_mode: Fit,
+    sampling_method: Random,
+)"#;
+        let mut config = WallpaperConfig::default();
+        config.parse_cosmic_config(content);
+
+        assert_eq!(
+            config.current_source,
+            "/usr/share/backgrounds/gruvbox/1-gruvbox.png"
+        );
+        assert_eq!(config.rotation_frequency, 300);
+        assert_eq!(config.scaling_mode, ScalingMode::Fit);
+        assert_eq!(config.filter_method, FilterMethod::Lanczos);
+        assert_eq!(config.sampling_method, SamplingMethod::Random);
+        assert!(config.filter_by_theme);
+        assert!(config.rotation_enabled);
+    }
+
+    #[test]
+    fn test_parse_config_fallback() {
         let content = r#"
 (
     output: "all",
@@ -254,14 +485,48 @@ mod tests {
             "/usr/share/backgrounds/gruvbox/1-gruvbox.png"
         );
         assert_eq!(config.rotation_frequency, 300);
-        assert_eq!(config.scaling_mode, "Fit");
         assert!(config.filter_by_theme);
+    }
+
+    #[test]
+    fn test_ron_round_trip() {
+        let entry = CosmicBgEntry {
+            output: "all".to_string(),
+            source: BgSource::Path("/usr/share/backgrounds/ethereal/1.jpg".to_string()),
+            filter_by_theme: true,
+            rotation_frequency: 600,
+            filter_method: FilterMethod::Lanczos,
+            scaling_mode: ScalingMode::Zoom,
+            sampling_method: SamplingMethod::Random,
+        };
+
+        let pretty = ron::ser::PrettyConfig::default();
+        let serialized =
+            ron::ser::to_string_pretty(&entry, pretty).expect("Failed to serialize");
+        let deserialized: CosmicBgEntry =
+            ron::from_str(&serialized).expect("Failed to deserialize");
+
+        assert_eq!(deserialized.output, "all");
+        match &deserialized.source {
+            BgSource::Path(p) => {
+                assert_eq!(p, "/usr/share/backgrounds/ethereal/1.jpg");
+            }
+        }
+        assert!(deserialized.filter_by_theme);
+        assert_eq!(deserialized.rotation_frequency, 600);
+        assert_eq!(deserialized.filter_method, FilterMethod::Lanczos);
+        assert_eq!(deserialized.scaling_mode, ScalingMode::Zoom);
+        assert_eq!(deserialized.sampling_method, SamplingMethod::Random);
     }
 
     #[test]
     fn test_format_rotation() {
         let mut config = WallpaperConfig::default();
 
+        config.rotation_enabled = false;
+        assert_eq!(config.format_rotation(), "Disabled");
+
+        config.rotation_enabled = true;
         config.rotation_frequency = 0;
         assert_eq!(config.format_rotation(), "Disabled");
 
@@ -276,5 +541,27 @@ mod tests {
 
         config.rotation_frequency = 90;
         assert_eq!(config.format_rotation(), "1m 30s");
+    }
+
+    #[test]
+    fn test_scaling_mode_display() {
+        assert_eq!(ScalingMode::Zoom.as_str(), "Zoom");
+        assert_eq!(ScalingMode::Fit.as_str(), "Fit");
+        assert_eq!(ScalingMode::Stretch.as_str(), "Stretch");
+        assert_eq!(ScalingMode::Center.as_str(), "Center");
+    }
+
+    #[test]
+    fn test_to_bg_entry() {
+        let mut config = WallpaperConfig::default();
+        config.current_source = "/test/path.jpg".to_string();
+        config.rotation_enabled = false;
+        config.rotation_frequency = 600;
+
+        let entry = config.to_bg_entry();
+        assert_eq!(entry.rotation_frequency, 0); // Disabled overrides value
+        match &entry.source {
+            BgSource::Path(p) => assert_eq!(p, "/test/path.jpg"),
+        }
     }
 }

@@ -57,7 +57,7 @@ Documentation is maintained alongside code development.
 
 ---
 
-## Phase 2: Theme Management (Current)
+## Phase 2: Theme Management ✓
 
 **Goal**: Implement theme viewing and basic customization.
 
@@ -85,20 +85,20 @@ Documentation is maintained alongside code development.
 
 ---
 
-## Phase 3: Wallpaper Management
+## Phase 3: Wallpaper Management (Current)
 
 **Goal**: Organize and manage wallpapers with theme association.
 
 ### Tasks
 
 - [x] Read wallpapers from system directories
-- [ ] Display wallpaper grid with thumbnails
-- [ ] Implement wallpaper selection
-- [ ] Add wallpaper to theme association
-- [ ] Implement wallpaper rotation configuration
-- [ ] Add wallpaper import (file picker)
+- [x] Display wallpaper grid with thumbnails
+- [x] Implement wallpaper selection
+- [x] Add wallpaper to theme association
+- [x] Implement wallpaper rotation configuration
+- [x] Add wallpaper import (file picker)
 - [ ] Add wallpaper download (URL)
-- [ ] Organize wallpapers by collection/theme
+- [x] Organize wallpapers by collection/theme
 
 ### Deliverables
 
