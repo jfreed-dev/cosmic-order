@@ -9,6 +9,17 @@ Cargo.lock
 *.swo
 *~
 
+# AI agents
+.grok/
+.claude/
+AGENTS.md
+GEMINI.md
+.cursorrules
+.cursor/
+.aider*
+.github/copilot-instructions.md
+copilot-instructions.md
+
 # OS
 .DS_Store
 Thumbs.db
