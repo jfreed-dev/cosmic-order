@@ -345,12 +345,18 @@ impl App {
             .push(
                 widget::settings::section()
                     .title(fl!("theme-export-import"))
-                    .add(widget::settings::item(
-                        fl!("theme-export-description"),
-                        widget::button::standard(fl!("theme-export")).on_press(
-                            Message::Page(pages::Message::Themes(pages::ThemesMessage::Export)),
-                        ),
-                    )),
+                    .add(
+                        widget::column()
+                            .spacing(spacing.space_xs)
+                            .push(widget::text::body(fl!("theme-export-description")))
+                            .push(
+                                widget::button::standard(fl!("theme-export")).on_press(
+                                    Message::Page(pages::Message::Themes(
+                                        pages::ThemesMessage::Export,
+                                    )),
+                                ),
+                            ),
+                    ),
             )
             .into()
     }
