@@ -274,7 +274,27 @@ impl App {
                 Task::none()
             }
             pages::ThemesMessage::Import => {
-                // TODO: Implement theme import
+                cosmic::task::future(async move {
+                    let result = Self::run_theme_import().await;
+                    Message::Page(pages::Message::Themes(
+                        pages::ThemesMessage::ImportComplete(result),
+                    ))
+                })
+            }
+            pages::ThemesMessage::ImportComplete(result) => {
+                match &result {
+                    Ok(path) => {
+                        tracing::info!("Theme imported from: {path}");
+                        self.theme_config = ThemeConfig::load();
+                    }
+                    Err(e) => {
+                        if e != "cancelled" {
+                            tracing::error!("Theme import failed: {e}");
+                        } else {
+                            tracing::debug!("Theme import cancelled by user");
+                        }
+                    }
+                }
                 Task::none()
             }
         }
@@ -301,6 +321,30 @@ impl App {
             .map_err(|_| "Invalid file path".to_string())?;
 
         crate::theme_config::ThemeConfig::export_theme(&path)
+            .await
+            .map_err(|e| e.to_string())
+    }
+
+    /// Run the theme import flow: open file dialog, read, deserialize, apply
+    async fn run_theme_import() -> Result<String, String> {
+        use cosmic::dialog::file_chooser;
+
+        let dialog = file_chooser::open::Dialog::new()
+            .title(fl!("theme-import"))
+            .filter(file_chooser::FileFilter::new("RON Theme").glob("*.ron"));
+
+        let response = match dialog.open_file().await {
+            Ok(r) => r,
+            Err(file_chooser::Error::Cancelled) => return Err("cancelled".to_string()),
+            Err(e) => return Err(format!("Dialog error: {e}")),
+        };
+
+        let url = response.url();
+        let path = url
+            .to_file_path()
+            .map_err(|_| "Invalid file path".to_string())?;
+
+        crate::theme_config::ThemeConfig::import_theme(&path)
             .await
             .map_err(|e| e.to_string())
     }
@@ -353,6 +397,18 @@ impl App {
                                 widget::button::standard(fl!("theme-export")).on_press(
                                     Message::Page(pages::Message::Themes(
                                         pages::ThemesMessage::Export,
+                                    )),
+                                ),
+                            ),
+                    )
+                    .add(
+                        widget::column()
+                            .spacing(spacing.space_xs)
+                            .push(widget::text::body(fl!("theme-import-description")))
+                            .push(
+                                widget::button::standard(fl!("theme-import")).on_press(
+                                    Message::Page(pages::Message::Themes(
+                                        pages::ThemesMessage::Import,
                                     )),
                                 ),
                             ),

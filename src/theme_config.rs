@@ -22,6 +22,10 @@ pub enum ThemeError {
     SerializeError(String),
     #[error("Failed to write theme file: {0}")]
     FileWriteError(String),
+    #[error("Failed to read theme file: {0}")]
+    FileReadError(String),
+    #[error("Failed to deserialize theme: {0}")]
+    DeserializeError(String),
 }
 
 /// Built-in theme identifier
@@ -211,6 +215,30 @@ impl ThemeConfig {
         tokio::fs::write(path, &serialized)
             .await
             .map_err(|e| ThemeError::FileWriteError(e.to_string()))?;
+
+        let path_str = path.to_string_lossy().to_string();
+        Ok(path_str)
+    }
+
+    /// Import a theme from a RON file and apply it to the system
+    pub async fn import_theme(path: &Path) -> Result<String, ThemeError> {
+        let contents = tokio::fs::read_to_string(path)
+            .await
+            .map_err(|e| ThemeError::FileReadError(e.to_string()))?;
+
+        let imported: CosmicTheme =
+            ron::from_str(&contents).map_err(|e| ThemeError::DeserializeError(e.to_string()))?;
+
+        let config = if imported.is_dark {
+            CosmicTheme::dark_config()
+        } else {
+            CosmicTheme::light_config()
+        }
+        .map_err(|e| ThemeError::ConfigAccess(e.to_string()))?;
+
+        imported
+            .write_entry(&config)
+            .map_err(|e| ThemeError::ConfigWrite(e.to_string()))?;
 
         let path_str = path.to_string_lossy().to_string();
         Ok(path_str)

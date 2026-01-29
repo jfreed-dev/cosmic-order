@@ -50,6 +50,8 @@ pub enum ThemesMessage {
     ExportComplete(Result<String, String>),
     /// Import a theme file
     Import,
+    /// Import completed with result (path or error message)
+    ImportComplete(Result<String, String>),
 }
 
 /// Wallpaper page messages

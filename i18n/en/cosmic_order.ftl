@@ -18,6 +18,7 @@ theme-preview = Preview
 theme-accent-color = Accent Color
 theme-export-import = Export & Import
 theme-export-description = Save current theme to a file
+theme-import-description = Load a theme from a file
 theme-mode = Mode
 theme-mode-dark = Dark
 theme-mode-light = Light
