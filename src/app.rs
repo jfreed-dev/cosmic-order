@@ -251,11 +251,58 @@ impl App {
                 }
                 Task::none()
             }
-            pages::ThemesMessage::Export | pages::ThemesMessage::Import => {
-                // TODO: Implement theme export/import
+            pages::ThemesMessage::Export => {
+                let default_name = crate::theme_config::ThemeConfig::default_export_filename();
+                cosmic::task::future(async move {
+                    let result = Self::run_theme_export(default_name).await;
+                    Message::Page(pages::Message::Themes(
+                        pages::ThemesMessage::ExportComplete(result),
+                    ))
+                })
+            }
+            pages::ThemesMessage::ExportComplete(result) => {
+                match &result {
+                    Ok(path) => tracing::info!("Theme exported to: {path}"),
+                    Err(e) => {
+                        if e != "cancelled" {
+                            tracing::error!("Theme export failed: {e}");
+                        } else {
+                            tracing::debug!("Theme export cancelled by user");
+                        }
+                    }
+                }
+                Task::none()
+            }
+            pages::ThemesMessage::Import => {
+                // TODO: Implement theme import
                 Task::none()
             }
         }
+    }
+
+    /// Run the theme export flow: open save dialog, serialize, write
+    async fn run_theme_export(default_name: String) -> Result<String, String> {
+        use cosmic::dialog::file_chooser;
+
+        let dialog = file_chooser::save::Dialog::new()
+            .title(fl!("theme-export"))
+            .file_name(default_name)
+            .filter(file_chooser::FileFilter::new("RON Theme").glob("*.ron"));
+
+        let response = match dialog.save_file().await {
+            Ok(r) => r,
+            Err(file_chooser::Error::Cancelled) => return Err("cancelled".to_string()),
+            Err(e) => return Err(format!("Dialog error: {e}")),
+        };
+
+        let url = response.url().ok_or_else(|| "No file URL returned".to_string())?;
+        let path = url
+            .to_file_path()
+            .map_err(|_| "Invalid file path".to_string())?;
+
+        crate::theme_config::ThemeConfig::export_theme(&path)
+            .await
+            .map_err(|e| e.to_string())
     }
 
     /// View for the Themes page
@@ -292,6 +339,17 @@ impl App {
                     .add(widget::settings::item(
                         fl!("accent-presets"),
                         self.view_accent_color_presets(),
+                    )),
+            )
+            // Export & Import
+            .push(
+                widget::settings::section()
+                    .title(fl!("theme-export-import"))
+                    .add(widget::settings::item(
+                        fl!("theme-export-description"),
+                        widget::button::standard(fl!("theme-export")).on_press(
+                            Message::Page(pages::Message::Themes(pages::ThemesMessage::Export)),
+                        ),
                     )),
             )
             .into()

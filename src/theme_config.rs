@@ -4,6 +4,8 @@
 //!
 //! Reads and modifies COSMIC theme settings via cosmic-theme/cosmic-config.
 
+use std::path::Path;
+
 use cosmic::cosmic_theme::palette::{Srgb, Srgba};
 use cosmic::cosmic_theme::{Theme as CosmicTheme, ThemeBuilder, ThemeMode};
 use cosmic::theme;
@@ -16,6 +18,10 @@ pub enum ThemeError {
     ConfigAccess(String),
     #[error("Failed to write theme config: {0}")]
     ConfigWrite(String),
+    #[error("Failed to serialize theme: {0}")]
+    SerializeError(String),
+    #[error("Failed to write theme file: {0}")]
+    FileWriteError(String),
 }
 
 /// Built-in theme identifier
@@ -192,6 +198,30 @@ impl ThemeConfig {
             .map_err(|e| ThemeError::ConfigWrite(e.to_string()))?;
 
         Ok(())
+    }
+
+    /// Export the current theme to a RON file at the given path
+    pub async fn export_theme(path: &Path) -> Result<String, ThemeError> {
+        let cosmic_theme = theme::active().cosmic().clone();
+
+        let pretty = ron::ser::PrettyConfig::default();
+        let serialized = ron::ser::to_string_pretty(&cosmic_theme, pretty)
+            .map_err(|e| ThemeError::SerializeError(e.to_string()))?;
+
+        tokio::fs::write(path, &serialized)
+            .await
+            .map_err(|e| ThemeError::FileWriteError(e.to_string()))?;
+
+        let path_str = path.to_string_lossy().to_string();
+        Ok(path_str)
+    }
+
+    /// Generate a default filename for exporting the current theme
+    pub fn default_export_filename() -> String {
+        let active_theme = theme::active();
+        let name = &active_theme.cosmic().name;
+        let sanitized = name.to_lowercase().replace(' ', "-");
+        format!("{sanitized}.ron")
     }
 
     /// Format a color as hex string

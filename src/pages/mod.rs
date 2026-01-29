@@ -46,6 +46,8 @@ pub enum ThemesMessage {
     SelectTheme(ThemeId),
     /// Export current theme
     Export,
+    /// Export completed with result (path or error message)
+    ExportComplete(Result<String, String>),
     /// Import a theme file
     Import,
 }

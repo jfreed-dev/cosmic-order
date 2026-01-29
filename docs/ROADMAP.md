@@ -67,7 +67,7 @@ Documentation is maintained alongside code development.
 - [x] Display theme list with previews
 - [x] Implement theme switching (dark/light mode toggle)
 - [x] Create color picker for accent colors
-- [ ] Add theme export functionality
+- [x] Add theme export functionality
 - [ ] Add theme import functionality
 - [ ] Implement theme preview (live preview before applying)
 
