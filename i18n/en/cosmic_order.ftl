@@ -57,9 +57,9 @@ screensaver-description = Configure the terminal-based screensaver
 screensaver-enabled = Enable Screensaver
 screensaver-status = Status
 screensaver-terminal = Terminal
-screensaver-idle-timeout = Idle Timeout
-screensaver-lock-timeout = Lock Timeout
-screensaver-dpms-timeout = Screen Off Timeout
+screensaver-idle-timeout = Idle
+screensaver-lock-timeout = Lock
+screensaver-dpms-timeout = Screen Off
 screensaver-timeouts = Timeouts
 screensaver-logo = Logo
 screensaver-effects = Effects
@@ -84,8 +84,9 @@ screensaver-select-logo = Select
 screensaver-clear-logo = Clear
 screensaver-logo-preview = Logo Preview
 screensaver-logo-none-selected = No logo selected
-screensaver-logo-available = Available Logos
+screensaver-logo-available = Choose Available Logos
 screensaver-logo-from-file = From File
+screensaver-logo-load = Load New Logo
 screensaver-save-success = Configuration saved and service reloaded.
 screensaver-save-error = Failed to save configuration.
 screensaver-service = Service Status
@@ -142,6 +143,12 @@ screensaver-effect-skip = Screensaver Disabled (low battery)
 
 # Screensaver Fade Effects
 screensaver-fade-none = None
+
+# Effects Presets
+screensaver-effects-preset-default = Default (dev_worm)
+screensaver-effects-preset-heavy = Heavy effects
+screensaver-effects-preset-simple = Simple effects
+screensaver-effects-preset-colorful = Colorful effects
 
 # Common
 save = Save
