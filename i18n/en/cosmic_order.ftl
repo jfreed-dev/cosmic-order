@@ -79,9 +79,46 @@ screensaver-power = Power Settings
 screensaver-disable-on-battery = Disable on Battery
 screensaver-battery-idle-timeout = Battery Idle Timeout
 screensaver-test = Test Screensaver
+screensaver-save-reload = Save & Reload
+screensaver-select-logo = Select
+screensaver-clear-logo = Clear
 screensaver-service = Service Status
 screensaver-service-running = Running
 screensaver-service-stopped = Stopped
+
+# Screensaver Timeout Presets
+screensaver-timeout-disabled = Disabled
+screensaver-timeout-1min = 1 minute
+screensaver-timeout-2min = 2 minutes
+screensaver-timeout-5min = 5 minutes
+screensaver-timeout-10min = 10 minutes
+screensaver-timeout-15min = 15 minutes
+screensaver-timeout-30min = 30 minutes
+screensaver-timeout-1hour = 1 hour
+
+# Screensaver Frame Rate
+screensaver-fps-30 = 30 fps
+screensaver-fps-60 = 60 fps
+screensaver-fps-120 = 120 fps
+
+# Screensaver Clock Formats
+screensaver-clock-24h = 24-hour (HH:MM)
+screensaver-clock-24h-sec = 24-hour (HH:MM:SS)
+screensaver-clock-12h = 12-hour (hh:mm AM/PM)
+screensaver-clock-12h-sec = 12-hour (hh:mm:ss AM/PM)
+
+# Screensaver Clock Duration
+screensaver-clock-3sec = 3 seconds
+screensaver-clock-5sec = 5 seconds
+screensaver-clock-10sec = 10 seconds
+screensaver-clock-15sec = 15 seconds
+
+# Screensaver Terminal Options
+screensaver-terminal-ghostty = Ghostty
+screensaver-terminal-cosmic-term = COSMIC Terminal
+
+# Screensaver Fade Effects
+screensaver-fade-none = None
 
 # Common
 save = Save

@@ -23,7 +23,6 @@ pub enum PageId {
 
 /// Messages from pages
 #[derive(Debug, Clone)]
-#[allow(dead_code)] // Variants will be used as features are implemented
 pub enum Message {
     /// Theme page messages
     Themes(ThemesMessage),
@@ -94,18 +93,45 @@ pub enum WallpapersMessage {
 
 /// Screensaver page messages
 #[derive(Debug, Clone)]
-#[allow(dead_code)] // Variants will be used in Phase 4
 pub enum ScreensaverMessage {
-    /// Set idle timeout
-    SetIdleTimeout(u32),
-    /// Set lock timeout
-    SetLockTimeout(u32),
-    /// Set DPMS timeout
-    SetDpmsTimeout(u32),
-    /// Select logo
-    SelectLogo(String),
     /// Enable/disable screensaver
     SetEnabled(bool),
+    /// Set idle timeout (seconds)
+    SetIdleTimeout(u32),
+    /// Set lock timeout (seconds)
+    SetLockTimeout(u32),
+    /// Set DPMS timeout (seconds)
+    SetDpmsTimeout(u32),
+    /// Set frame rate (dropdown index)
+    SetFrameRate(usize),
+    /// Set exclude effects text
+    SetExcludeEffects(String),
+    /// Set include effects text
+    SetIncludeEffects(String),
+    /// Set fade in effect (dropdown index)
+    SetFadeInEffect(usize),
+    /// Set fade out effect (dropdown index)
+    SetFadeOutEffect(usize),
+    /// Toggle clock display
+    SetShowClock(bool),
+    /// Set clock duration (dropdown index)
+    SetClockDuration(usize),
+    /// Set clock format (dropdown index)
+    SetClockFormat(usize),
+    /// Toggle disable on battery
+    SetDisableOnBattery(bool),
+    /// Set battery idle timeout (dropdown index)
+    SetBatteryIdleTimeout(usize),
+    /// Set terminal emulator (dropdown index)
+    SetTerminal(usize),
+    /// Open file dialog to select logo
+    SelectLogoDialog,
+    /// Logo selection completed
+    SelectLogoComplete(Result<String, String>),
+    /// Save configuration and reload service
+    SaveConfig,
+    /// Save completed
+    SaveComplete(Result<(), String>),
     /// Test screensaver
     Test,
 }

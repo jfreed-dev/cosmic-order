@@ -12,7 +12,6 @@ use directories::BaseDirs;
 
 /// Screensaver configuration
 #[derive(Debug, Clone, Default)]
-#[allow(dead_code)] // Fields will be used as UI controls are added
 pub struct ScreensaverConfig {
     /// Whether screensaver is enabled
     pub enabled: bool,
@@ -162,7 +161,69 @@ impl ScreensaverConfig {
         }
     }
 
-    /// Format timeout value for display
+    /// Serialize config to shell KEY="value" format matching screensaver-ctl.sh
+    pub fn serialize(&self) -> String {
+        let bool_str = |b: bool| if b { "true" } else { "false" };
+        format!(
+            r#"ENABLED="{}"
+IDLE_TIMEOUT="{}"
+LOCK_TIMEOUT="{}"
+DPMS_TIMEOUT="{}"
+FRAME_RATE="{}"
+INCLUDE_EFFECTS="{}"
+EXCLUDE_EFFECTS="{}"
+FADE_IN_EFFECT="{}"
+FADE_OUT_EFFECT="{}"
+SHOW_CLOCK="{}"
+CLOCK_DURATION="{}"
+CLOCK_FORMAT="{}"
+CLOCK_FONT="{}"
+LOGO_FILE="{}"
+DISABLE_ON_BATTERY="{}"
+BATTERY_IDLE_TIMEOUT="{}"
+TERMINAL="{}"
+"#,
+            bool_str(self.enabled),
+            self.idle_timeout,
+            self.lock_timeout,
+            self.dpms_timeout,
+            self.frame_rate,
+            self.include_effects,
+            self.exclude_effects,
+            self.fade_in_effect,
+            self.fade_out_effect,
+            bool_str(self.show_clock),
+            self.clock_duration,
+            self.clock_format,
+            self.clock_font,
+            self.logo_file,
+            bool_str(self.disable_on_battery),
+            self.battery_idle_timeout,
+            self.terminal,
+        )
+    }
+
+    /// Save configuration to file
+    pub fn save(&self) -> Result<(), ConfigError> {
+        let path = Self::config_path();
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)
+                .map_err(|e| ConfigError::Write(format!("create dirs: {e}")))?;
+        }
+        fs::write(&path, self.serialize())
+            .map_err(|e| ConfigError::Write(format!("write file: {e}")))?;
+        Ok(())
+    }
+
+    /// Path to the screensaver-ctl script
+    pub fn ctl_path() -> PathBuf {
+        BaseDirs::new()
+            .map(|dirs| dirs.home_dir().join(".local/bin/screensaver-ctl"))
+            .unwrap_or_else(|| PathBuf::from("screensaver-ctl"))
+    }
+
+    /// Format timeout value for display (used in tests, may be useful in future UI)
+    #[allow(dead_code)]
     pub fn format_timeout(seconds: u32) -> String {
         if seconds == 0 {
             "Disabled".to_string()
@@ -201,6 +262,8 @@ impl ScreensaverConfig {
 pub enum ConfigError {
     #[error("Failed to read configuration: {0}")]
     Read(String),
+    #[error("Failed to write configuration: {0}")]
+    Write(String),
 }
 
 #[cfg(test)]
@@ -224,6 +287,50 @@ LOGO_FILE="/home/user/.config/cosmic-screensaver/logo.txt"
         assert_eq!(config.lock_timeout, 600);
         assert!(!config.show_clock);
         assert!(config.logo_file.contains("logo.txt"));
+    }
+
+    #[test]
+    fn test_serialize_roundtrip() {
+        let config = ScreensaverConfig {
+            enabled: true,
+            idle_timeout: 300,
+            lock_timeout: 600,
+            dpms_timeout: 900,
+            frame_rate: 120,
+            include_effects: "matrix,rain".to_string(),
+            exclude_effects: "dev_worm".to_string(),
+            fade_in_effect: "fade".to_string(),
+            fade_out_effect: "slide".to_string(),
+            show_clock: true,
+            clock_duration: 10,
+            clock_format: "%H:%M:%S".to_string(),
+            clock_font: "monospace".to_string(),
+            logo_file: "/home/user/logo.txt".to_string(),
+            disable_on_battery: true,
+            battery_idle_timeout: 120,
+            terminal: "cosmic-term".to_string(),
+        };
+
+        let serialized = config.serialize();
+        let parsed = ScreensaverConfig::parse(&serialized).unwrap();
+
+        assert_eq!(parsed.enabled, config.enabled);
+        assert_eq!(parsed.idle_timeout, config.idle_timeout);
+        assert_eq!(parsed.lock_timeout, config.lock_timeout);
+        assert_eq!(parsed.dpms_timeout, config.dpms_timeout);
+        assert_eq!(parsed.frame_rate, config.frame_rate);
+        assert_eq!(parsed.include_effects, config.include_effects);
+        assert_eq!(parsed.exclude_effects, config.exclude_effects);
+        assert_eq!(parsed.fade_in_effect, config.fade_in_effect);
+        assert_eq!(parsed.fade_out_effect, config.fade_out_effect);
+        assert_eq!(parsed.show_clock, config.show_clock);
+        assert_eq!(parsed.clock_duration, config.clock_duration);
+        assert_eq!(parsed.clock_format, config.clock_format);
+        assert_eq!(parsed.clock_font, config.clock_font);
+        assert_eq!(parsed.logo_file, config.logo_file);
+        assert_eq!(parsed.disable_on_battery, config.disable_on_battery);
+        assert_eq!(parsed.battery_idle_timeout, config.battery_idle_timeout);
+        assert_eq!(parsed.terminal, config.terminal);
     }
 
     #[test]

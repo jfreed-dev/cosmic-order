@@ -45,7 +45,7 @@ pub struct App {
 
 /// Application messages
 #[derive(Debug, Clone)]
-#[allow(dead_code)] // Variants will be used as features are implemented
+#[allow(dead_code)] // Variants constructed by libcosmic framework
 pub enum Message {
     /// Navigation item selected
     NavSelect(nav_bar::Id),
@@ -221,10 +221,7 @@ impl App {
         match message {
             pages::Message::Themes(msg) => self.handle_themes_message(msg),
             pages::Message::Wallpapers(msg) => self.handle_wallpapers_message(msg),
-            pages::Message::Screensaver(_msg) => {
-                // TODO: Implement screensaver message handling
-                Task::none()
-            }
+            pages::Message::Screensaver(msg) => self.handle_screensaver_message(msg),
         }
     }
 
@@ -470,6 +467,182 @@ impl App {
                 Task::none()
             }
         }
+    }
+
+    /// Handle screensaver page messages
+    #[allow(clippy::cognitive_complexity)]
+    fn handle_screensaver_message(&mut self, message: pages::ScreensaverMessage) -> Task<Message> {
+        match message {
+            pages::ScreensaverMessage::SetEnabled(enabled) => {
+                self.screensaver_config.enabled = enabled;
+                Task::none()
+            }
+            pages::ScreensaverMessage::SetIdleTimeout(seconds) => {
+                self.screensaver_config.idle_timeout = seconds;
+                Task::none()
+            }
+            pages::ScreensaverMessage::SetLockTimeout(seconds) => {
+                self.screensaver_config.lock_timeout = seconds;
+                Task::none()
+            }
+            pages::ScreensaverMessage::SetDpmsTimeout(seconds) => {
+                self.screensaver_config.dpms_timeout = seconds;
+                Task::none()
+            }
+            pages::ScreensaverMessage::SetFrameRate(index) => {
+                let rates: [u32; 3] = [30, 60, 120];
+                if let Some(&rate) = rates.get(index) {
+                    self.screensaver_config.frame_rate = rate;
+                }
+                Task::none()
+            }
+            pages::ScreensaverMessage::SetExcludeEffects(text) => {
+                self.screensaver_config.exclude_effects = text;
+                Task::none()
+            }
+            pages::ScreensaverMessage::SetIncludeEffects(text) => {
+                self.screensaver_config.include_effects = text;
+                Task::none()
+            }
+            pages::ScreensaverMessage::SetFadeInEffect(index) => {
+                let effects = Self::fade_effect_values();
+                if let Some(effect) = effects.get(index) {
+                    self.screensaver_config.fade_in_effect = effect.clone();
+                }
+                Task::none()
+            }
+            pages::ScreensaverMessage::SetFadeOutEffect(index) => {
+                let effects = Self::fade_effect_values();
+                if let Some(effect) = effects.get(index) {
+                    self.screensaver_config.fade_out_effect = effect.clone();
+                }
+                Task::none()
+            }
+            pages::ScreensaverMessage::SetShowClock(enabled) => {
+                self.screensaver_config.show_clock = enabled;
+                Task::none()
+            }
+            pages::ScreensaverMessage::SetClockDuration(index) => {
+                let durations: [u32; 4] = [3, 5, 10, 15];
+                if let Some(&dur) = durations.get(index) {
+                    self.screensaver_config.clock_duration = dur;
+                }
+                Task::none()
+            }
+            pages::ScreensaverMessage::SetClockFormat(index) => {
+                let formats = ["%H:%M", "%H:%M:%S", "%I:%M %p", "%I:%M:%S %p"];
+                if let Some(&fmt) = formats.get(index) {
+                    self.screensaver_config.clock_format = fmt.to_string();
+                }
+                Task::none()
+            }
+            pages::ScreensaverMessage::SetDisableOnBattery(enabled) => {
+                self.screensaver_config.disable_on_battery = enabled;
+                Task::none()
+            }
+            pages::ScreensaverMessage::SetBatteryIdleTimeout(index) => {
+                let timeouts: [u32; 4] = [300, 600, 900, 1800];
+                if let Some(&t) = timeouts.get(index) {
+                    self.screensaver_config.battery_idle_timeout = t;
+                }
+                Task::none()
+            }
+            pages::ScreensaverMessage::SetTerminal(index) => {
+                let terminals = ["ghostty", "cosmic-term"];
+                if let Some(&term) = terminals.get(index) {
+                    self.screensaver_config.terminal = term.to_string();
+                }
+                Task::none()
+            }
+            pages::ScreensaverMessage::SelectLogoDialog => cosmic::task::future(async move {
+                let result = Self::run_logo_select().await;
+                Message::Page(pages::Message::Screensaver(
+                    pages::ScreensaverMessage::SelectLogoComplete(result),
+                ))
+            }),
+            pages::ScreensaverMessage::SelectLogoComplete(result) => {
+                match &result {
+                    Ok(path) => {
+                        self.screensaver_config.logo_file = path.clone();
+                        tracing::info!("Logo selected: {path}");
+                    }
+                    Err(e) => {
+                        if e != "cancelled" {
+                            tracing::error!("Logo selection failed: {e}");
+                        }
+                    }
+                }
+                Task::none()
+            }
+            pages::ScreensaverMessage::SaveConfig => {
+                let config = self.screensaver_config.clone();
+                let ctl_path = ScreensaverConfig::ctl_path();
+                cosmic::task::future(async move {
+                    let result = tokio::task::spawn_blocking(move || {
+                        config.save().map_err(|e| e.to_string())?;
+                        // Reload the screensaver service
+                        if ctl_path.exists() {
+                            let _ = std::process::Command::new(&ctl_path).arg("reload").status();
+                        }
+                        Ok(())
+                    })
+                    .await
+                    .map_err(|e| e.to_string())
+                    .and_then(|r| r);
+                    Message::Page(pages::Message::Screensaver(
+                        pages::ScreensaverMessage::SaveComplete(result),
+                    ))
+                })
+            }
+            pages::ScreensaverMessage::SaveComplete(result) => {
+                match &result {
+                    Ok(()) => tracing::info!("Screensaver config saved and reloaded"),
+                    Err(e) => tracing::error!("Failed to save screensaver config: {e}"),
+                }
+                Task::none()
+            }
+            pages::ScreensaverMessage::Test => {
+                let ctl_path = ScreensaverConfig::ctl_path();
+                if ctl_path.exists() {
+                    let _ = std::process::Command::new(&ctl_path).arg("test").spawn();
+                } else {
+                    tracing::warn!("screensaver-ctl not found at {}", ctl_path.display());
+                }
+                Task::none()
+            }
+        }
+    }
+
+    /// Logo file picker dialog
+    async fn run_logo_select() -> Result<String, String> {
+        use cosmic::dialog::file_chooser;
+
+        let dialog = file_chooser::open::Dialog::new()
+            .title(fl!("screensaver-logo"))
+            .filter(file_chooser::FileFilter::new("Text files").glob("*.txt"));
+
+        let response = match dialog.open_file().await {
+            Ok(r) => r,
+            Err(file_chooser::Error::Cancelled) => return Err("cancelled".to_string()),
+            Err(e) => return Err(format!("Dialog error: {e}")),
+        };
+
+        let url = response.url();
+        let path = url
+            .to_file_path()
+            .map_err(|_| "Invalid file path".to_string())?;
+
+        Ok(path.to_string_lossy().to_string())
+    }
+
+    /// Fade effect option values (empty string = None)
+    fn fade_effect_values() -> Vec<String> {
+        vec![
+            String::new(),
+            "fade".to_string(),
+            "slide".to_string(),
+            "matrix".to_string(),
+        ]
     }
 
     /// Apply a wallpaper: read current config, update source, write back
@@ -1259,11 +1432,174 @@ impl App {
     }
 
     /// View for the Screensaver page
+    #[allow(clippy::cognitive_complexity)]
     fn view_screensaver_page(&self) -> Element<'_, Message> {
         let spacing = cosmic::theme::spacing();
         let cfg = &self.screensaver_config;
 
-        widget::column()
+        // --- Timeout dropdown data ---
+        let idle_options: Vec<String> = vec![
+            fl!("screensaver-timeout-1min"),
+            fl!("screensaver-timeout-2min"),
+            fl!("screensaver-timeout-5min"),
+            fl!("screensaver-timeout-10min"),
+            fl!("screensaver-timeout-15min"),
+            fl!("screensaver-timeout-30min"),
+        ];
+        let idle_values: [u32; 6] = [60, 120, 300, 600, 900, 1800];
+        let idle_selected = idle_values.iter().position(|&v| v == cfg.idle_timeout);
+        let idle_dropdown = widget::dropdown(idle_options, idle_selected, move |index| {
+            let seconds = idle_values.get(index).copied().unwrap_or(300);
+            Message::Page(pages::Message::Screensaver(
+                pages::ScreensaverMessage::SetIdleTimeout(seconds),
+            ))
+        });
+
+        let lock_options: Vec<String> = vec![
+            fl!("screensaver-timeout-disabled"),
+            fl!("screensaver-timeout-1min"),
+            fl!("screensaver-timeout-5min"),
+            fl!("screensaver-timeout-10min"),
+            fl!("screensaver-timeout-15min"),
+            fl!("screensaver-timeout-30min"),
+        ];
+        let lock_values: [u32; 6] = [0, 60, 300, 600, 900, 1800];
+        let lock_selected = lock_values.iter().position(|&v| v == cfg.lock_timeout);
+        let lock_dropdown = widget::dropdown(lock_options, lock_selected, move |index| {
+            let seconds = lock_values.get(index).copied().unwrap_or(600);
+            Message::Page(pages::Message::Screensaver(
+                pages::ScreensaverMessage::SetLockTimeout(seconds),
+            ))
+        });
+
+        let dpms_options: Vec<String> = vec![
+            fl!("screensaver-timeout-disabled"),
+            fl!("screensaver-timeout-5min"),
+            fl!("screensaver-timeout-10min"),
+            fl!("screensaver-timeout-15min"),
+            fl!("screensaver-timeout-30min"),
+            fl!("screensaver-timeout-1hour"),
+        ];
+        let dpms_values: [u32; 6] = [0, 300, 600, 900, 1800, 3600];
+        let dpms_selected = dpms_values.iter().position(|&v| v == cfg.dpms_timeout);
+        let dpms_dropdown = widget::dropdown(dpms_options, dpms_selected, move |index| {
+            let seconds = dpms_values.get(index).copied().unwrap_or(900);
+            Message::Page(pages::Message::Screensaver(
+                pages::ScreensaverMessage::SetDpmsTimeout(seconds),
+            ))
+        });
+
+        // --- Frame rate dropdown ---
+        let fps_options: Vec<String> = vec![
+            fl!("screensaver-fps-30"),
+            fl!("screensaver-fps-60"),
+            fl!("screensaver-fps-120"),
+        ];
+        let fps_values: [u32; 3] = [30, 60, 120];
+        let fps_selected = fps_values.iter().position(|&v| v == cfg.frame_rate);
+        let fps_dropdown = widget::dropdown(fps_options, fps_selected, |index| {
+            Message::Page(pages::Message::Screensaver(
+                pages::ScreensaverMessage::SetFrameRate(index),
+            ))
+        });
+
+        // --- Fade effect dropdowns ---
+        let fade_labels: Vec<String> = vec![
+            fl!("screensaver-fade-none"),
+            "fade".to_string(),
+            "slide".to_string(),
+            "matrix".to_string(),
+        ];
+        let fade_values = Self::fade_effect_values();
+        let fade_in_selected = fade_values.iter().position(|v| v == &cfg.fade_in_effect);
+        let fade_out_selected = fade_values.iter().position(|v| v == &cfg.fade_out_effect);
+
+        let fade_in_labels = fade_labels.clone();
+        let fade_in_dropdown = widget::dropdown(fade_in_labels, fade_in_selected, |index| {
+            Message::Page(pages::Message::Screensaver(
+                pages::ScreensaverMessage::SetFadeInEffect(index),
+            ))
+        });
+        let fade_out_dropdown = widget::dropdown(fade_labels, fade_out_selected, |index| {
+            Message::Page(pages::Message::Screensaver(
+                pages::ScreensaverMessage::SetFadeOutEffect(index),
+            ))
+        });
+
+        // --- Clock dropdowns ---
+        let clock_fmt_options: Vec<String> = vec![
+            fl!("screensaver-clock-24h"),
+            fl!("screensaver-clock-24h-sec"),
+            fl!("screensaver-clock-12h"),
+            fl!("screensaver-clock-12h-sec"),
+        ];
+        let clock_fmt_values = ["%H:%M", "%H:%M:%S", "%I:%M %p", "%I:%M:%S %p"];
+        let clock_fmt_selected = clock_fmt_values.iter().position(|&v| v == cfg.clock_format);
+        let clock_fmt_dropdown = widget::dropdown(clock_fmt_options, clock_fmt_selected, |index| {
+            Message::Page(pages::Message::Screensaver(
+                pages::ScreensaverMessage::SetClockFormat(index),
+            ))
+        });
+
+        let clock_dur_options: Vec<String> = vec![
+            fl!("screensaver-clock-3sec"),
+            fl!("screensaver-clock-5sec"),
+            fl!("screensaver-clock-10sec"),
+            fl!("screensaver-clock-15sec"),
+        ];
+        let clock_dur_values: [u32; 4] = [3, 5, 10, 15];
+        let clock_dur_selected = clock_dur_values
+            .iter()
+            .position(|&v| v == cfg.clock_duration);
+        let clock_dur_dropdown = widget::dropdown(clock_dur_options, clock_dur_selected, |index| {
+            Message::Page(pages::Message::Screensaver(
+                pages::ScreensaverMessage::SetClockDuration(index),
+            ))
+        });
+
+        // --- Terminal dropdown ---
+        let terminal_options: Vec<String> = vec![
+            fl!("screensaver-terminal-ghostty"),
+            fl!("screensaver-terminal-cosmic-term"),
+        ];
+        let terminal_values = ["ghostty", "cosmic-term"];
+        let terminal_selected = terminal_values.iter().position(|&v| v == cfg.terminal);
+        let terminal_dropdown = widget::dropdown(terminal_options, terminal_selected, |index| {
+            Message::Page(pages::Message::Screensaver(
+                pages::ScreensaverMessage::SetTerminal(index),
+            ))
+        });
+
+        // --- Battery idle timeout dropdown ---
+        let bat_options: Vec<String> = vec![
+            fl!("screensaver-timeout-5min"),
+            fl!("screensaver-timeout-10min"),
+            fl!("screensaver-timeout-15min"),
+            fl!("screensaver-timeout-30min"),
+        ];
+        let bat_values: [u32; 4] = [300, 600, 900, 1800];
+        let bat_selected = bat_values
+            .iter()
+            .position(|&v| v == cfg.battery_idle_timeout);
+        let bat_dropdown = widget::dropdown(bat_options, bat_selected, |index| {
+            Message::Page(pages::Message::Screensaver(
+                pages::ScreensaverMessage::SetBatteryIdleTimeout(index),
+            ))
+        });
+
+        // --- Logo row ---
+        let logo_row = widget::row()
+            .spacing(spacing.space_s)
+            .align_y(cosmic::iced::Alignment::Center)
+            .push(widget::text::body(cfg.logo_name()))
+            .push(
+                widget::button::standard(fl!("screensaver-select-logo")).on_press(Message::Page(
+                    pages::Message::Screensaver(pages::ScreensaverMessage::SelectLogoDialog),
+                )),
+            );
+
+        // --- Build page ---
+        let column = widget::column()
             .spacing(spacing.space_m)
             .padding(spacing.space_m)
             .push(widget::text::title2(fl!("screensaver")))
@@ -1274,20 +1610,17 @@ impl App {
                     .title(fl!("screensaver-status"))
                     .add(widget::settings::item(
                         fl!("screensaver-enabled"),
-                        widget::text::body(if cfg.enabled {
-                            fl!("enabled")
-                        } else {
-                            fl!("disabled")
+                        widget::toggler(cfg.enabled).on_toggle(|enabled| {
+                            Message::Page(pages::Message::Screensaver(
+                                pages::ScreensaverMessage::SetEnabled(enabled),
+                            ))
                         }),
                     ))
                     .add(widget::settings::item(
                         fl!("screensaver-terminal"),
-                        widget::text::body(&cfg.terminal),
+                        terminal_dropdown,
                     ))
-                    .add(widget::settings::item(
-                        fl!("screensaver-logo"),
-                        widget::text::body(cfg.logo_name()),
-                    )),
+                    .add(widget::settings::item(fl!("screensaver-logo"), logo_row)),
             )
             // Timeouts section
             .push(
@@ -1295,15 +1628,15 @@ impl App {
                     .title(fl!("screensaver-timeouts"))
                     .add(widget::settings::item(
                         fl!("screensaver-idle-timeout"),
-                        widget::text::body(ScreensaverConfig::format_timeout(cfg.idle_timeout)),
+                        idle_dropdown,
                     ))
                     .add(widget::settings::item(
                         fl!("screensaver-lock-timeout"),
-                        widget::text::body(ScreensaverConfig::format_timeout(cfg.lock_timeout)),
+                        lock_dropdown,
                     ))
                     .add(widget::settings::item(
                         fl!("screensaver-dpms-timeout"),
-                        widget::text::body(ScreensaverConfig::format_timeout(cfg.dpms_timeout)),
+                        dpms_dropdown,
                     )),
             )
             // Effects section
@@ -1312,23 +1645,36 @@ impl App {
                     .title(fl!("screensaver-effects"))
                     .add(widget::settings::item(
                         fl!("screensaver-frame-rate"),
-                        widget::text::body(format!("{} fps", cfg.frame_rate)),
+                        fps_dropdown,
                     ))
                     .add(widget::settings::item(
                         fl!("screensaver-effects-exclude"),
-                        widget::text::body(if cfg.exclude_effects.is_empty() {
-                            fl!("screensaver-effects-none")
-                        } else {
-                            cfg.exclude_effects.clone()
-                        }),
+                        widget::text_input(fl!("screensaver-effects-none"), &cfg.exclude_effects)
+                            .on_input(|text| {
+                                Message::Page(pages::Message::Screensaver(
+                                    pages::ScreensaverMessage::SetExcludeEffects(text),
+                                ))
+                            }),
                     ))
                     .add(widget::settings::item(
                         fl!("screensaver-effects-include"),
-                        widget::text::body(if cfg.include_effects.is_empty() {
-                            fl!("screensaver-effects-all-except")
-                        } else {
-                            cfg.include_effects.clone()
+                        widget::text_input(
+                            fl!("screensaver-effects-all-except"),
+                            &cfg.include_effects,
+                        )
+                        .on_input(|text| {
+                            Message::Page(pages::Message::Screensaver(
+                                pages::ScreensaverMessage::SetIncludeEffects(text),
+                            ))
                         }),
+                    ))
+                    .add(widget::settings::item(
+                        fl!("screensaver-fade-in"),
+                        fade_in_dropdown,
+                    ))
+                    .add(widget::settings::item(
+                        fl!("screensaver-fade-out"),
+                        fade_out_dropdown,
                     )),
             )
             // Clock section
@@ -1337,19 +1683,19 @@ impl App {
                     .title(fl!("screensaver-clock"))
                     .add(widget::settings::item(
                         fl!("screensaver-clock-enabled"),
-                        widget::text::body(if cfg.show_clock {
-                            fl!("yes")
-                        } else {
-                            fl!("no")
+                        widget::toggler(cfg.show_clock).on_toggle(|enabled| {
+                            Message::Page(pages::Message::Screensaver(
+                                pages::ScreensaverMessage::SetShowClock(enabled),
+                            ))
                         }),
                     ))
                     .add(widget::settings::item(
                         fl!("screensaver-clock-duration"),
-                        widget::text::body(format!("{} {}", cfg.clock_duration, fl!("seconds"))),
+                        clock_dur_dropdown,
                     ))
                     .add(widget::settings::item(
                         fl!("screensaver-clock-format"),
-                        widget::text::body(&cfg.clock_format),
+                        clock_fmt_dropdown,
                     )),
             )
             // Power section
@@ -1358,19 +1704,33 @@ impl App {
                     .title(fl!("screensaver-power"))
                     .add(widget::settings::item(
                         fl!("screensaver-disable-on-battery"),
-                        widget::text::body(if cfg.disable_on_battery {
-                            fl!("yes")
-                        } else {
-                            fl!("no")
+                        widget::toggler(cfg.disable_on_battery).on_toggle(|enabled| {
+                            Message::Page(pages::Message::Screensaver(
+                                pages::ScreensaverMessage::SetDisableOnBattery(enabled),
+                            ))
                         }),
                     ))
                     .add(widget::settings::item(
                         fl!("screensaver-battery-idle-timeout"),
-                        widget::text::body(ScreensaverConfig::format_timeout(
-                            cfg.battery_idle_timeout,
-                        )),
+                        bat_dropdown,
                     )),
             )
-            .into()
+            // Action buttons
+            .push(
+                widget::row()
+                    .spacing(spacing.space_s)
+                    .push(
+                        widget::button::suggested(fl!("screensaver-save-reload")).on_press(
+                            Message::Page(pages::Message::Screensaver(
+                                pages::ScreensaverMessage::SaveConfig,
+                            )),
+                        ),
+                    )
+                    .push(widget::button::standard(fl!("screensaver-test")).on_press(
+                        Message::Page(pages::Message::Screensaver(pages::ScreensaverMessage::Test)),
+                    )),
+            );
+
+        widget::scrollable(column).into()
     }
 }

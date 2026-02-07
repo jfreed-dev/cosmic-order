@@ -123,15 +123,15 @@ Documentation is maintained alongside code development.
 
 - [x] Read screensaver configuration
 - [x] Display current screensaver settings
-- [ ] Configure idle timeout
-- [ ] Configure lock timeout
-- [ ] Configure DPMS timeout
-- [ ] Select screensaver logo
-- [ ] Configure effects (include/exclude)
-- [ ] Configure fade transitions
-- [ ] Configure clock display
-- [ ] Test screensaver preview
-- [ ] Enable/disable screensaver service
+- [x] Configure idle timeout
+- [x] Configure lock timeout
+- [x] Configure DPMS timeout
+- [x] Select screensaver logo
+- [x] Configure effects (include/exclude)
+- [x] Configure fade transitions
+- [x] Configure clock display
+- [x] Test screensaver preview
+- [x] Enable/disable screensaver service
 
 ### Deliverables
 
