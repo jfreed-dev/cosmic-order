@@ -174,25 +174,26 @@ Documentation is maintained alongside code development.
 
 ---
 
-## Phase 4B: Enhanced Cursor & Input Handling
+## Phase 4B: Enhanced Cursor & Input Handling ✓
 
-**Goal**: Reliable cursor hiding and input wake detection.
+**Goal**: Configurable cursor hiding and input dismiss behavior.
 
 ### Tasks
 
-- [ ] Verify fullscreen cursor behavior on COSMIC
-- [ ] Document actual cursor hiding behavior
-- [ ] Implement pointer confinement if needed
-- [ ] Ensure clean cursor restore on wake
-- [ ] Test wake on mouse movement
-- [ ] Test wake on keyboard input
-- [ ] Add configurable wake sensitivity
+- [x] Add cursor_hide, hide_mouse, dismiss_on_key config fields
+- [x] Add UI togglers in Cursor & Dismiss settings section
+- [x] Make cursor/echo hiding conditional in cosmic-screensaver.sh
+- [x] Make keyboard dismiss conditional in animation loop
+- [x] Make mouse hiding conditional in Ghostty config generation
+- [x] Add config defaults to screensaver-ctl.sh
+- [x] Update tests for new fields (parse, roundtrip, defaults)
 
 ### Deliverables
 
-- Cursor reliably hidden during screensaver
-- Clean input wake handling
-- Configurable behavior
+- Configurable cursor hiding during screensaver
+- Configurable keyboard dismiss behavior
+- Configurable mouse pointer hiding
+- All settings persist through config file
 
 ---
 

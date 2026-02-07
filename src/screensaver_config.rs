@@ -55,6 +55,12 @@ pub struct ScreensaverConfig {
     pub effects_battery: String,
     /// Effect profile override for Minimal power mode (empty = use default)
     pub effects_minimal: String,
+    /// Hide text cursor during screensaver
+    pub cursor_hide: bool,
+    /// Hide mouse pointer via terminal config
+    pub hide_mouse: bool,
+    /// Keyboard input dismisses screensaver
+    pub dismiss_on_key: bool,
 }
 
 impl ScreensaverConfig {
@@ -134,6 +140,9 @@ impl ScreensaverConfig {
             effects_balanced: values.get("EFFECTS_BALANCED").cloned().unwrap_or_default(),
             effects_battery: values.get("EFFECTS_BATTERY").cloned().unwrap_or_default(),
             effects_minimal: values.get("EFFECTS_MINIMAL").cloned().unwrap_or_default(),
+            cursor_hide: Self::parse_bool(&values, "CURSOR_HIDE", true),
+            hide_mouse: Self::parse_bool(&values, "HIDE_MOUSE", true),
+            dismiss_on_key: Self::parse_bool(&values, "DISMISS_ON_KEY", true),
         })
     }
 
@@ -177,6 +186,9 @@ impl ScreensaverConfig {
             effects_balanced: String::new(),
             effects_battery: String::new(),
             effects_minimal: String::new(),
+            cursor_hide: true,
+            hide_mouse: true,
+            dismiss_on_key: true,
         }
     }
 
@@ -205,6 +217,9 @@ EFFECTS_PERFORMANCE="{}"
 EFFECTS_BALANCED="{}"
 EFFECTS_BATTERY="{}"
 EFFECTS_MINIMAL="{}"
+CURSOR_HIDE="{}"
+HIDE_MOUSE="{}"
+DISMISS_ON_KEY="{}"
 "#,
             bool_str(self.enabled),
             self.idle_timeout,
@@ -227,6 +242,9 @@ EFFECTS_MINIMAL="{}"
             self.effects_balanced,
             self.effects_battery,
             self.effects_minimal,
+            bool_str(self.cursor_hide),
+            bool_str(self.hide_mouse),
+            bool_str(self.dismiss_on_key),
         )
     }
 
@@ -387,6 +405,9 @@ IDLE_TIMEOUT="300"
 LOCK_TIMEOUT="600"
 SHOW_CLOCK="false"
 LOGO_FILE="/home/user/.config/cosmic-screensaver/logo.txt"
+CURSOR_HIDE="false"
+HIDE_MOUSE="true"
+DISMISS_ON_KEY="false"
 "#;
 
         let config = ScreensaverConfig::parse(content).unwrap();
@@ -395,6 +416,21 @@ LOGO_FILE="/home/user/.config/cosmic-screensaver/logo.txt"
         assert_eq!(config.lock_timeout, 600);
         assert!(!config.show_clock);
         assert!(config.logo_file.contains("logo.txt"));
+        assert!(!config.cursor_hide);
+        assert!(config.hide_mouse);
+        assert!(!config.dismiss_on_key);
+    }
+
+    #[test]
+    fn test_parse_config_defaults_for_new_fields() {
+        let content = r#"
+ENABLED="true"
+IDLE_TIMEOUT="300"
+"#;
+        let config = ScreensaverConfig::parse(content).unwrap();
+        assert!(config.cursor_hide);
+        assert!(config.hide_mouse);
+        assert!(config.dismiss_on_key);
     }
 
     #[test]
@@ -421,6 +457,9 @@ LOGO_FILE="/home/user/.config/cosmic-screensaver/logo.txt"
             effects_balanced: "matrix,rain".to_string(),
             effects_battery: "clock".to_string(),
             effects_minimal: "blank".to_string(),
+            cursor_hide: false,
+            hide_mouse: true,
+            dismiss_on_key: false,
         };
 
         let serialized = config.serialize();
@@ -447,6 +486,9 @@ LOGO_FILE="/home/user/.config/cosmic-screensaver/logo.txt"
         assert_eq!(parsed.effects_balanced, config.effects_balanced);
         assert_eq!(parsed.effects_battery, config.effects_battery);
         assert_eq!(parsed.effects_minimal, config.effects_minimal);
+        assert_eq!(parsed.cursor_hide, config.cursor_hide);
+        assert_eq!(parsed.hide_mouse, config.hide_mouse);
+        assert_eq!(parsed.dismiss_on_key, config.dismiss_on_key);
     }
 
     #[test]

@@ -600,6 +600,18 @@ impl App {
                 }
                 Task::none()
             }
+            pages::ScreensaverMessage::SetCursorHide(enabled) => {
+                self.screensaver_config.cursor_hide = enabled;
+                Task::none()
+            }
+            pages::ScreensaverMessage::SetHideMouse(enabled) => {
+                self.screensaver_config.hide_mouse = enabled;
+                Task::none()
+            }
+            pages::ScreensaverMessage::SetDismissOnKey(enabled) => {
+                self.screensaver_config.dismiss_on_key = enabled;
+                Task::none()
+            }
             pages::ScreensaverMessage::SelectLogo(path) => {
                 self.screensaver_config.logo_file = path;
                 Task::none()
@@ -1837,6 +1849,35 @@ impl App {
                     .add(widget::settings::item(
                         fl!("screensaver-clock-format"),
                         clock_fmt_dropdown,
+                    )),
+            )
+            // Cursor & Dismiss section
+            .push(
+                widget::settings::section()
+                    .title(fl!("screensaver-cursor-section"))
+                    .add(widget::settings::item(
+                        fl!("screensaver-cursor-hide"),
+                        widget::toggler(cfg.cursor_hide).on_toggle(|enabled| {
+                            Message::Page(pages::Message::Screensaver(
+                                pages::ScreensaverMessage::SetCursorHide(enabled),
+                            ))
+                        }),
+                    ))
+                    .add(widget::settings::item(
+                        fl!("screensaver-hide-mouse"),
+                        widget::toggler(cfg.hide_mouse).on_toggle(|enabled| {
+                            Message::Page(pages::Message::Screensaver(
+                                pages::ScreensaverMessage::SetHideMouse(enabled),
+                            ))
+                        }),
+                    ))
+                    .add(widget::settings::item(
+                        fl!("screensaver-dismiss-on-key"),
+                        widget::toggler(cfg.dismiss_on_key).on_toggle(|enabled| {
+                            Message::Page(pages::Message::Screensaver(
+                                pages::ScreensaverMessage::SetDismissOnKey(enabled),
+                            ))
+                        }),
                     )),
             )
             // Action buttons + status

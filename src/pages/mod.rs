@@ -126,6 +126,12 @@ pub enum ScreensaverMessage {
     SelectLogoDialog,
     /// Logo selection completed
     SelectLogoComplete(Result<String, String>),
+    /// Toggle cursor hiding
+    SetCursorHide(bool),
+    /// Toggle mouse pointer hiding
+    SetHideMouse(bool),
+    /// Toggle dismiss on keypress
+    SetDismissOnKey(bool),
     /// Save configuration and reload service
     SaveConfig,
     /// Save completed (bool = launch test after save)

@@ -141,6 +141,15 @@ screensaver-effect-simple = Simple Effects
 screensaver-effect-minimal = Minimal Effects
 screensaver-effect-skip = Screensaver Disabled (low battery)
 
+# Screensaver Cursor & Dismiss
+screensaver-cursor-section = Cursor & Dismiss
+screensaver-cursor-hide = Hide text cursor
+screensaver-cursor-hide-desc = Hide the blinking terminal cursor during screensaver
+screensaver-hide-mouse = Hide mouse pointer
+screensaver-hide-mouse-desc = Hide the mouse pointer when screensaver is active
+screensaver-dismiss-on-key = Dismiss on keypress
+screensaver-dismiss-on-key-desc = Any keyboard input exits the screensaver immediately
+
 # Screensaver Fade Effects
 screensaver-fade-none = None
 
