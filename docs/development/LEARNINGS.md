@@ -42,7 +42,8 @@ Each theme directory contains individual RON files:
 - `background` - Background colors
 - `name` - Theme name string
 - `is_dark` - Boolean
-- `palette` - Full color palette (gray_1, gray_2, neutral_0-10, bright colors)
+- `palette` - Full color palette (gray_1, gray_2, neutral_0-10,
+  bright colors)
 
 ### Background Config Format (RON)
 
@@ -76,7 +77,8 @@ TERMINAL="ghostty"
 ### System Wallpaper Location
 
 - Path: `/usr/share/backgrounds/`
-- Structure: One directory per theme (catppuccin, gruvbox, nord, etc.)
+- Structure: One directory per theme (catppuccin, gruvbox, nord,
+  etc.)
 - Current system: 15 themes, 299 total wallpapers
 
 ### libcosmic UI Patterns
@@ -106,7 +108,8 @@ widget::column()
 
 ### Clippy Strictness
 
-Project uses strict clippy with `-D warnings`. Common allows needed for placeholder code:
+Project uses strict clippy with `-D warnings`. Common allows
+needed for placeholder code:
 
 ```rust
 #[allow(dead_code)]           // Unused fields/functions for future use
@@ -116,8 +119,8 @@ Project uses strict clippy with `-D warnings`. Common allows needed for placehol
 
 ### Rust 2024 Edition
 
-Project uses `edition = "2024"` which requires Rust 1.85+. Some rustfmt options
-are nightly-only and were commented out:
+Project uses `edition = "2024"` which requires Rust 1.85+. Some
+rustfmt options are nightly-only and were commented out:
 
 - `imports_granularity`
 - `group_imports`
@@ -149,7 +152,9 @@ widget::flex_row(cards)
     .width(Length::Fill)
 ```
 
-Key methods: `.column_spacing()`, `.row_spacing()`, `.spacing()` (both), `.width()`, `.min_item_width()`, `.align_items()`, `.justify_content()`.
+Key methods: `.column_spacing()`, `.row_spacing()`, `.spacing()`
+(both), `.width()`, `.min_item_width()`, `.align_items()`,
+`.justify_content()`.
 
 **`widget::button::image`** — image button with selection support:
 
@@ -161,7 +166,8 @@ widget::button::image(Handle::from_path(path))
     .on_press(Message::Select(id))
 ```
 
-Key methods: `.selected(bool)`, `.on_press()`, `.on_remove()`, `.width()`, `.height()`.
+Key methods: `.selected(bool)`, `.on_press()`, `.on_remove()`,
+`.width()`, `.height()`.
 
 **`widget::dropdown`** — popover select menu:
 
@@ -176,9 +182,13 @@ widget::dropdown(options, selected_index, move |index| {
 
 ### Performance: Image Grid Rendering
 
-**Problem**: Loading full-resolution wallpapers (5120x2880, ~1.4 MB each) as `button::image` thumbnails causes the UI to freeze. Even 24 images overwhelm the iced renderer.
+**Problem**: Loading full-resolution wallpapers (5120x2880,
+~1.4 MB each) as `button::image` thumbnails causes the UI to
+freeze. Even 24 images overwhelm the iced renderer.
 
-**Root cause**: `Handle::from_path` loads the full image into GPU memory. The visual display size (160x100) doesn't reduce the decode/upload cost.
+**Root cause**: `Handle::from_path` loads the full image into GPU
+memory. The visual display size (160x100) doesn't reduce the
+decode/upload cost.
 
 **Solution — thumbnail cache + pagination**:
 
@@ -186,17 +196,23 @@ widget::dropdown(options, selected_index, move |index| {
    - Uses `image` crate to generate 160x100 thumbnails
    - Stored at `~/.cache/cosmic-order/thumbnails/`
    - Cache key: `{theme}__{filename}` (avoids collisions)
-   - Failed thumbnails cached as empty marker files (0 bytes) to prevent retry on every `view()` frame
+   - Failed thumbnails cached as empty marker files (0 bytes) to
+     prevent retry on every `view()` frame
    - Falls back to original path on failure
 
 2. **Pagination** (12 per page):
-   - `flex_row` layout with large element counts is expensive even with small images
+   - `flex_row` layout with large element counts is expensive even
+     with small images
    - 12 thumbnails per page keeps rendering smooth
    - `<` / `>` nav buttons with page counter
 
-3. **No "All" option**: removed aggregate view entirely — too many images regardless of caching
+3. **No "All" option**: removed aggregate view entirely — too many
+   images regardless of caching
 
-**Key lesson**: In iced's Elm architecture, `view()` runs on every frame. Any I/O or computation in `view()` blocks the UI thread. Thumbnail generation must be cached, and failure must be cached too (otherwise corrupt files retry every frame).
+**Key lesson**: In iced's Elm architecture, `view()` runs on every
+frame. Any I/O or computation in `view()` blocks the UI thread.
+Thumbnail generation must be cached, and failure must be cached
+too (otherwise corrupt files retry every frame).
 
 ### RON Serialization for COSMIC Background Config
 
@@ -224,7 +240,8 @@ if let Ok(entry) = ron::from_str::<CosmicBgEntry>(content) {
 
 ### Async Patterns for File Operations
 
-Theme export/import established the pattern; wallpaper apply/import follows it:
+Theme export/import established the pattern; wallpaper
+apply/import follows it:
 
 ```rust
 // In update handler:
@@ -237,7 +254,8 @@ cosmic::task::future(async move {
 use cosmic::dialog::file_chooser;
 let dialog = file_chooser::open::Dialog::new()
     .title("Title")
-    .filter(file_chooser::FileFilter::new("Images").glob("*.png").glob("*.jpg"));
+    .filter(file_chooser::FileFilter::new("Images")
+        .glob("*.png").glob("*.jpg"));
 match dialog.open_file().await {
     Ok(response) => { /* use response.url().to_file_path() */ }
     Err(file_chooser::Error::Cancelled) => { /* user cancelled */ }
@@ -247,7 +265,10 @@ match dialog.open_file().await {
 
 ### App ID Mismatch (PR-01)
 
-`main.rs` defined `APP_ID = "com.github.jfreed-dev.CosmicOrder"` but `config.rs` used a separate hardcoded `"com.system76.CosmicOrder"`. Config state was split across two namespaces. Fix: `config.rs` now uses `crate::APP_ID`.
+`main.rs` defined `APP_ID = "com.github.jfreed-dev.CosmicOrder"`
+but `config.rs` used a separate hardcoded
+`"com.system76.CosmicOrder"`. Config state was split across two
+namespaces. Fix: `config.rs` now uses `crate::APP_ID`.
 
 ### Dependencies Added
 
@@ -259,9 +280,9 @@ match dialog.open_file().await {
 
 | File | Changes |
 |------|---------|
-| `src/wallpaper_config.rs` | RON structs, `WallpaperError`, `save()`, `set_wallpaper()`, `user_wallpapers_dir()`, `ThumbnailCache`, user wallpaper scanning |
-| `src/pages/mod.rs` | Full `WallpapersMessage` enum (11 variants + pagination) |
-| `src/app.rs` | Wallpaper state fields, `handle_wallpapers_message()`, async helpers, full page view with grid/pagination/dropdown/rotation |
+| `src/wallpaper_config.rs` | RON structs, errors, save/set, thumbnails, scanning |
+| `src/pages/mod.rs` | `WallpapersMessage` enum (11 variants + pagination) |
+| `src/app.rs` | Wallpaper state, message handler, async helpers, grid view |
 | `i18n/en/cosmic_order.ftl` | 11 new wallpaper i18n strings |
 | `src/config.rs` | Unified app ID (PR-01) |
 | `Cargo.toml` | Added `image` crate |
@@ -270,11 +291,18 @@ match dialog.open_file().await {
 
 ## Next Session TODO
 
-- [x] ~~Investigate theme label display issue~~ — Resolved: stale incremental build; `RustEmbed` embeds `.ftl` files at compile time and cargo may not detect `.ftl` changes. Fix: `cargo clean` forces re-embed.
-- [x] Update dependencies (`cargo update`) — libcosmic updated to `#3e78eb23`, now requires Rust 1.90+
-- [x] Fix clippy `manual_div_ceil` warning — replaced manual ceiling division with `.div_ceil()`
+- [x] ~~Investigate theme label display issue~~ — Resolved:
+  stale incremental build; `RustEmbed` embeds `.ftl` files at
+  compile time and cargo may not detect `.ftl` changes.
+  Fix: `cargo clean` forces re-embed.
+- [x] Update dependencies (`cargo update`) — libcosmic updated
+  to `#3e78eb23`, now requires Rust 1.90+
+- [x] Fix clippy `manual_div_ceil` warning — replaced manual
+  ceiling division with `.div_ceil()`
 - [ ] PR-02: Full theme palette application (deferred to Phase 5)
 - [ ] Phase 4: Screensaver configuration (interactive controls)
 - [ ] Consider async thumbnail generation (move off UI thread)
-- [ ] Test wallpaper Apply flow end-to-end (select → apply → verify config file)
-- [ ] Test wallpaper Import flow (file picker → copy → grid refresh)
+- [ ] Test wallpaper Apply flow end-to-end
+  (select -> apply -> verify config file)
+- [ ] Test wallpaper Import flow
+  (file picker -> copy -> grid refresh)

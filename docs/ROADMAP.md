@@ -197,9 +197,6 @@ Documentation is maintained alongside code development.
 
 ---
 
-
----
-
 ## Phase 4C: Caffeine Mode (Idle Inhibitor)
 
 **Goal**: Allow users to temporarily prevent screen blanking and screensaver activation.
@@ -317,9 +314,6 @@ Documentation is maintained alongside code development.
 
 ---
 
-
----
-
 ## Phase 6C: CPU Performance Management
 
 **Goal**: Provide quick access to CPU turbo/performance settings.
@@ -393,4 +387,3 @@ Each phase is complete when:
 3. Code passes linting (`cargo clippy`)
 4. Application builds without warnings
 5. Features work on Pop!_OS with COSMIC Desktop
-

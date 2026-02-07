@@ -205,15 +205,17 @@ impl WallpaperConfig {
             if line.starts_with("source:") {
                 if let Some(start) = line.find('"')
                     && let Some(end) = line.rfind('"')
-                        && start < end {
-                            self.current_source = line[start + 1..end].to_string();
-                        }
+                    && start < end
+                {
+                    self.current_source = line[start + 1..end].to_string();
+                }
             } else if line.starts_with("rotation_frequency:") {
                 if let Some(value) = line.strip_prefix("rotation_frequency:")
-                    && let Ok(freq) = value.trim().trim_end_matches(',').parse() {
-                        self.rotation_frequency = freq;
-                        self.rotation_enabled = self.rotation_frequency > 0;
-                    }
+                    && let Ok(freq) = value.trim().trim_end_matches(',').parse()
+                {
+                    self.rotation_frequency = freq;
+                    self.rotation_enabled = self.rotation_frequency > 0;
+                }
             } else if line.starts_with("scaling_mode:") {
                 if let Some(value) = line.strip_prefix("scaling_mode:") {
                     let val = value.trim().trim_end_matches(',');
@@ -225,9 +227,10 @@ impl WallpaperConfig {
                     };
                 }
             } else if line.starts_with("filter_by_theme:")
-                && let Some(value) = line.strip_prefix("filter_by_theme:") {
-                    self.filter_by_theme = value.trim().trim_end_matches(',') == "true";
-                }
+                && let Some(value) = line.strip_prefix("filter_by_theme:")
+            {
+                self.filter_by_theme = value.trim().trim_end_matches(',') == "true";
+            }
         }
     }
 
@@ -324,20 +327,21 @@ impl WallpaperConfig {
             for entry in entries.flatten() {
                 let path = entry.path();
                 if path.is_dir()
-                    && let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                        let wallpapers = Self::list_wallpapers_in_dir(&path);
-                        let count = wallpapers.len();
+                    && let Some(name) = path.file_name().and_then(|n| n.to_str())
+                {
+                    let wallpapers = Self::list_wallpapers_in_dir(&path);
+                    let count = wallpapers.len();
 
-                        self.available_themes.insert(
-                            name.to_string(),
-                            ThemeWallpapers {
-                                name: name.to_string(),
-                                path,
-                                count,
-                                wallpapers,
-                            },
-                        );
-                    }
+                    self.available_themes.insert(
+                        name.to_string(),
+                        ThemeWallpapers {
+                            name: name.to_string(),
+                            path,
+                            count,
+                            wallpapers,
+                        },
+                    );
+                }
             }
         }
     }
@@ -350,16 +354,17 @@ impl WallpaperConfig {
             for entry in entries.flatten() {
                 let path = entry.path();
                 if path.is_file()
-                    && let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-                        let ext_lower = ext.to_lowercase();
-                        if matches!(
-                            ext_lower.as_str(),
-                            "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp"
-                        )
-                            && let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                                wallpapers.push(name.to_string());
-                            }
+                    && let Some(ext) = path.extension().and_then(|e| e.to_str())
+                {
+                    let ext_lower = ext.to_lowercase();
+                    if matches!(
+                        ext_lower.as_str(),
+                        "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp"
+                    ) && let Some(name) = path.file_name().and_then(|n| n.to_str())
+                    {
+                        wallpapers.push(name.to_string());
                     }
+                }
             }
         }
 

@@ -4,6 +4,6 @@ Tracks internal code review suggestions and their resolution.
 
 | PR | Title | Status | Resolution |
 |----|-------|--------|------------|
-| 01 | Fix app ID mismatch for config persistence | Implemented | Unified `config.rs` to use `crate::APP_ID` instead of hardcoded `com.system76.CosmicOrder` |
-| 02 | Apply theme presets and imports fully | Deferred | Theme preview only toggles dark/light mode; full palette application requires deeper `ThemeBuilder` integration — revisit in Phase 5 polish |
-| 03 | Localize theme labels on Themes page | Implemented | Replaced hardcoded "Dark"/"Light" with `fl!("theme-mode-dark")` / `fl!("theme-mode-light")` |
+| 01 | Fix app ID mismatch | Implemented | `config.rs` uses `crate::APP_ID` now |
+| 02 | Apply theme presets fully | Deferred | Needs `ThemeBuilder` integration (Phase 5) |
+| 03 | Localize theme labels | Implemented | Uses `fl!("theme-mode-dark/light")` |
