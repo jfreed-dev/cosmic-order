@@ -240,9 +240,9 @@ impl App {
                     self.theme_config.is_dark = is_dark;
                     // Update theme name to match mode
                     self.theme_config.name = if is_dark {
-                        "COSMIC Dark".to_string()
+                        fl!("theme-mode-dark")
                     } else {
-                        "COSMIC Light".to_string()
+                        fl!("theme-mode-light")
                     };
                     tracing::info!("Dark mode set to: {is_dark}");
                 }
@@ -297,14 +297,12 @@ impl App {
                 }
                 Task::none()
             }
-            pages::ThemesMessage::Import => {
-                cosmic::task::future(async move {
-                    let result = Self::run_theme_import().await;
-                    Message::Page(pages::Message::Themes(
-                        pages::ThemesMessage::ImportComplete(result),
-                    ))
-                })
-            }
+            pages::ThemesMessage::Import => cosmic::task::future(async move {
+                let result = Self::run_theme_import().await;
+                Message::Page(pages::Message::Themes(
+                    pages::ThemesMessage::ImportComplete(result),
+                ))
+            }),
             pages::ThemesMessage::ImportComplete(result) => {
                 match &result {
                     Ok(path) => {
@@ -440,14 +438,12 @@ impl App {
                 }
                 Task::none()
             }
-            pages::WallpapersMessage::ImportFromFile => {
-                cosmic::task::future(async move {
-                    let result = Self::run_wallpaper_import().await;
-                    Message::Page(pages::Message::Wallpapers(
-                        pages::WallpapersMessage::ImportComplete(result),
-                    ))
-                })
-            }
+            pages::WallpapersMessage::ImportFromFile => cosmic::task::future(async move {
+                let result = Self::run_wallpaper_import().await;
+                Message::Page(pages::Message::Wallpapers(
+                    pages::WallpapersMessage::ImportComplete(result),
+                ))
+            }),
             pages::WallpapersMessage::ImportComplete(result) => {
                 match &result {
                     Ok(path) => {
@@ -575,7 +571,9 @@ impl App {
             Err(e) => return Err(format!("Dialog error: {e}")),
         };
 
-        let url = response.url().ok_or_else(|| "No file URL returned".to_string())?;
+        let url = response
+            .url()
+            .ok_or_else(|| "No file URL returned".to_string())?;
         let path = url
             .to_file_path()
             .map_err(|_| "Invalid file path".to_string())?;
@@ -660,25 +658,17 @@ impl App {
                         widget::column()
                             .spacing(spacing.space_xs)
                             .push(widget::text::body(fl!("theme-export-description")))
-                            .push(
-                                widget::button::standard(fl!("theme-export")).on_press(
-                                    Message::Page(pages::Message::Themes(
-                                        pages::ThemesMessage::Export,
-                                    )),
-                                ),
-                            ),
+                            .push(widget::button::standard(fl!("theme-export")).on_press(
+                                Message::Page(pages::Message::Themes(pages::ThemesMessage::Export)),
+                            )),
                     )
                     .add(
                         widget::column()
                             .spacing(spacing.space_xs)
                             .push(widget::text::body(fl!("theme-import-description")))
-                            .push(
-                                widget::button::standard(fl!("theme-import")).on_press(
-                                    Message::Page(pages::Message::Themes(
-                                        pages::ThemesMessage::Import,
-                                    )),
-                                ),
-                            ),
+                            .push(widget::button::standard(fl!("theme-import")).on_press(
+                                Message::Page(pages::Message::Themes(pages::ThemesMessage::Import)),
+                            )),
                     ),
             );
 
@@ -751,10 +741,7 @@ impl App {
         let spacing = cosmic::theme::spacing();
 
         let is_previewing = self.theme_preview_backup.is_some();
-        let previewing_id = self
-            .theme_preview_backup
-            .as_ref()
-            .map(|b| b.previewing_id);
+        let previewing_id = self.theme_preview_backup.as_ref().map(|b| b.previewing_id);
 
         // Only show Dark and Light (skip high contrast for now)
         let themes: Vec<_> = crate::theme_config::ThemePreview::built_in_themes()
@@ -797,20 +784,17 @@ impl App {
                     .padding(6)
                     // Accent bar at top (simulates a header/titlebar)
                     .push(
-                        widget::container(widget::Space::new(
-                            Length::Fill,
-                            Length::Fixed(6.0),
-                        ))
-                        .class(cosmic::theme::Container::custom(move |_| {
-                            widget::container::Style {
-                                background: Some(cosmic::iced::Background::Color(accent)),
-                                border: cosmic::iced::Border {
-                                    radius: 2.0.into(),
+                        widget::container(widget::Space::new(Length::Fill, Length::Fixed(6.0)))
+                            .class(cosmic::theme::Container::custom(move |_| {
+                                widget::container::Style {
+                                    background: Some(cosmic::iced::Background::Color(accent)),
+                                    border: cosmic::iced::Border {
+                                        radius: 2.0.into(),
+                                        ..Default::default()
+                                    },
                                     ..Default::default()
-                                },
-                                ..Default::default()
-                            }
-                        })),
+                                }
+                            })),
                     )
                     // Text line 1 (wider)
                     .push(
@@ -818,8 +802,8 @@ impl App {
                             Length::Fixed(80.0),
                             Length::Fixed(4.0),
                         ))
-                        .class(cosmic::theme::Container::custom(move |_| {
-                            widget::container::Style {
+                        .class(cosmic::theme::Container::custom(
+                            move |_| widget::container::Style {
                                 background: Some(cosmic::iced::Background::Color(
                                     cosmic::iced::Color {
                                         a: 0.7,
@@ -831,8 +815,8 @@ impl App {
                                     ..Default::default()
                                 },
                                 ..Default::default()
-                            }
-                        })),
+                            },
+                        )),
                     )
                     // Text line 2 (shorter)
                     .push(
@@ -840,8 +824,8 @@ impl App {
                             Length::Fixed(56.0),
                             Length::Fixed(4.0),
                         ))
-                        .class(cosmic::theme::Container::custom(move |_| {
-                            widget::container::Style {
+                        .class(cosmic::theme::Container::custom(
+                            move |_| widget::container::Style {
                                 background: Some(cosmic::iced::Background::Color(
                                     cosmic::iced::Color {
                                         a: 0.5,
@@ -853,8 +837,8 @@ impl App {
                                     ..Default::default()
                                 },
                                 ..Default::default()
-                            }
-                        })),
+                            },
+                        )),
                     )
                     // Text line 3 (medium)
                     .push(
@@ -862,8 +846,8 @@ impl App {
                             Length::Fixed(66.0),
                             Length::Fixed(4.0),
                         ))
-                        .class(cosmic::theme::Container::custom(move |_| {
-                            widget::container::Style {
+                        .class(cosmic::theme::Container::custom(
+                            move |_| widget::container::Style {
                                 background: Some(cosmic::iced::Background::Color(
                                     cosmic::iced::Color {
                                         a: 0.4,
@@ -875,8 +859,8 @@ impl App {
                                     ..Default::default()
                                 },
                                 ..Default::default()
-                            }
-                        })),
+                            },
+                        )),
                     )
                     // Small accent button mockup at bottom
                     .push(
@@ -884,21 +868,18 @@ impl App {
                             Length::Fixed(36.0),
                             Length::Fixed(8.0),
                         ))
-                        .class(cosmic::theme::Container::custom(move |_| {
-                            widget::container::Style {
+                        .class(cosmic::theme::Container::custom(
+                            move |_| widget::container::Style {
                                 background: Some(cosmic::iced::Background::Color(
-                                    cosmic::iced::Color {
-                                        a: 0.8,
-                                        ..accent
-                                    },
+                                    cosmic::iced::Color { a: 0.8, ..accent },
                                 )),
                                 border: cosmic::iced::Border {
                                     radius: 3.0.into(),
                                     ..Default::default()
                                 },
                                 ..Default::default()
-                            }
-                        })),
+                            },
+                        )),
                     ),
             )
             .width(Length::Fixed(120.0))
@@ -975,12 +956,9 @@ impl App {
         .class(cosmic::theme::Container::custom(|theme| {
             let accent = theme.cosmic().accent.base;
             widget::container::Style {
-                background: Some(cosmic::iced::Background::Color(cosmic::iced::Color::from_rgba(
-                    accent.red,
-                    accent.green,
-                    accent.blue,
-                    0.15,
-                ))),
+                background: Some(cosmic::iced::Background::Color(
+                    cosmic::iced::Color::from_rgba(accent.red, accent.green, accent.blue, 0.15),
+                )),
                 border: cosmic::iced::Border {
                     radius: 8.0.into(),
                     width: 1.0,
@@ -1096,19 +1074,22 @@ impl App {
         let cfg = &self.wallpaper_config;
 
         // Collect wallpapers for the selected collection
-        let wallpapers: Vec<(String, String)> =
-            if let Some(theme) = self.wallpaper_selected_collection.as_ref().and_then(|c| cfg.available_themes.get(c)) {
-                theme
-                    .wallpapers
-                    .iter()
-                    .map(|filename| {
-                        let full = theme.path.join(filename);
-                        (full.to_string_lossy().to_string(), filename.clone())
-                    })
-                    .collect()
-            } else {
-                Vec::new()
-            };
+        let wallpapers: Vec<(String, String)> = if let Some(theme) = self
+            .wallpaper_selected_collection
+            .as_ref()
+            .and_then(|c| cfg.available_themes.get(c))
+        {
+            theme
+                .wallpapers
+                .iter()
+                .map(|filename| {
+                    let full = theme.path.join(filename);
+                    (full.to_string_lossy().to_string(), filename.clone())
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
 
         if wallpapers.is_empty() {
             return widget::container(widget::text::body(fl!("wallpaper-no-wallpapers")))
@@ -1143,11 +1124,9 @@ impl App {
             .align_y(cosmic::iced::Alignment::Center);
 
         if page > 0 {
-            nav_row = nav_row.push(
-                widget::button::standard("<").on_press(Message::Page(
-                    pages::Message::Wallpapers(pages::WallpapersMessage::GridPrevPage),
-                )),
-            );
+            nav_row = nav_row.push(widget::button::standard("<").on_press(Message::Page(
+                pages::Message::Wallpapers(pages::WallpapersMessage::GridPrevPage),
+            )));
         } else {
             nav_row = nav_row.push(widget::button::standard("<"));
         }
@@ -1159,11 +1138,9 @@ impl App {
         )));
 
         if page + 1 < total_pages {
-            nav_row = nav_row.push(
-                widget::button::standard(">").on_press(Message::Page(
-                    pages::Message::Wallpapers(pages::WallpapersMessage::GridNextPage),
-                )),
-            );
+            nav_row = nav_row.push(widget::button::standard(">").on_press(Message::Page(
+                pages::Message::Wallpapers(pages::WallpapersMessage::GridNextPage),
+            )));
         } else {
             nav_row = nav_row.push(widget::button::standard(">"));
         }
@@ -1176,20 +1153,13 @@ impl App {
     }
 
     /// Single wallpaper thumbnail card
-    fn view_wallpaper_card<'a>(
-        &'a self,
-        full_path: &str,
-        filename: &str,
-    ) -> Element<'a, Message> {
+    fn view_wallpaper_card<'a>(&'a self, full_path: &str, filename: &str) -> Element<'a, Message> {
         use cosmic::iced::Length;
         use cosmic::widget::image::Handle;
 
         let spacing = cosmic::theme::spacing();
         let is_current = self.wallpaper_config.current_source == full_path;
-        let is_selected = self
-            .wallpaper_selected_path
-            .as_deref()
-            == Some(full_path);
+        let is_selected = self.wallpaper_selected_path.as_deref() == Some(full_path);
 
         let path_owned = full_path.to_string();
 
@@ -1259,12 +1229,11 @@ impl App {
             .iter()
             .position(|m| *m == cfg.scaling_mode);
 
-        let scaling_dropdown =
-            widget::dropdown(scaling_options, scaling_selected, |index| {
-                Message::Page(pages::Message::Wallpapers(
-                    pages::WallpapersMessage::SetScalingMode(index),
-                ))
-            });
+        let scaling_dropdown = widget::dropdown(scaling_options, scaling_selected, |index| {
+            Message::Page(pages::Message::Wallpapers(
+                pages::WallpapersMessage::SetScalingMode(index),
+            ))
+        });
 
         // Save button
         let save_button = widget::button::suggested(fl!("save")).on_press(Message::Page(
@@ -1285,11 +1254,7 @@ impl App {
                 fl!("wallpaper-scaling"),
                 scaling_dropdown,
             ))
-            .add(
-                widget::row()
-                    .spacing(spacing.space_s)
-                    .push(save_button),
-            )
+            .add(widget::row().spacing(spacing.space_s).push(save_button))
             .into()
     }
 
@@ -1306,57 +1271,61 @@ impl App {
             // Status section
             .push(
                 widget::settings::section()
-                    .title("Status")
+                    .title(fl!("screensaver-status"))
                     .add(widget::settings::item(
-                        "Screensaver",
-                        widget::text::body(if cfg.enabled { "Enabled" } else { "Disabled" }),
+                        fl!("screensaver-enabled"),
+                        widget::text::body(if cfg.enabled {
+                            fl!("enabled")
+                        } else {
+                            fl!("disabled")
+                        }),
                     ))
                     .add(widget::settings::item(
-                        "Terminal",
+                        fl!("screensaver-terminal"),
                         widget::text::body(&cfg.terminal),
                     ))
                     .add(widget::settings::item(
-                        "Logo",
+                        fl!("screensaver-logo"),
                         widget::text::body(cfg.logo_name()),
                     )),
             )
             // Timeouts section
             .push(
                 widget::settings::section()
-                    .title("Timeouts")
+                    .title(fl!("screensaver-timeouts"))
                     .add(widget::settings::item(
-                        "Idle timeout",
+                        fl!("screensaver-idle-timeout"),
                         widget::text::body(ScreensaverConfig::format_timeout(cfg.idle_timeout)),
                     ))
                     .add(widget::settings::item(
-                        "Lock timeout",
+                        fl!("screensaver-lock-timeout"),
                         widget::text::body(ScreensaverConfig::format_timeout(cfg.lock_timeout)),
                     ))
                     .add(widget::settings::item(
-                        "Screen off (DPMS)",
+                        fl!("screensaver-dpms-timeout"),
                         widget::text::body(ScreensaverConfig::format_timeout(cfg.dpms_timeout)),
                     )),
             )
             // Effects section
             .push(
                 widget::settings::section()
-                    .title("Effects")
+                    .title(fl!("screensaver-effects"))
                     .add(widget::settings::item(
-                        "Frame rate",
+                        fl!("screensaver-frame-rate"),
                         widget::text::body(format!("{} fps", cfg.frame_rate)),
                     ))
                     .add(widget::settings::item(
-                        "Excluded effects",
+                        fl!("screensaver-effects-exclude"),
                         widget::text::body(if cfg.exclude_effects.is_empty() {
-                            "None".to_string()
+                            fl!("screensaver-effects-none")
                         } else {
                             cfg.exclude_effects.clone()
                         }),
                     ))
                     .add(widget::settings::item(
-                        "Included effects",
+                        fl!("screensaver-effects-include"),
                         widget::text::body(if cfg.include_effects.is_empty() {
-                            "All (except excluded)".to_string()
+                            fl!("screensaver-effects-all-except")
                         } else {
                             cfg.include_effects.clone()
                         }),
@@ -1365,30 +1334,38 @@ impl App {
             // Clock section
             .push(
                 widget::settings::section()
-                    .title("Clock Display")
+                    .title(fl!("screensaver-clock"))
                     .add(widget::settings::item(
-                        "Show clock",
-                        widget::text::body(if cfg.show_clock { "Yes" } else { "No" }),
+                        fl!("screensaver-clock-enabled"),
+                        widget::text::body(if cfg.show_clock {
+                            fl!("yes")
+                        } else {
+                            fl!("no")
+                        }),
                     ))
                     .add(widget::settings::item(
-                        "Clock duration",
-                        widget::text::body(format!("{} seconds", cfg.clock_duration)),
+                        fl!("screensaver-clock-duration"),
+                        widget::text::body(format!("{} {}", cfg.clock_duration, fl!("seconds"))),
                     ))
                     .add(widget::settings::item(
-                        "Clock format",
+                        fl!("screensaver-clock-format"),
                         widget::text::body(&cfg.clock_format),
                     )),
             )
             // Power section
             .push(
                 widget::settings::section()
-                    .title("Power Settings")
+                    .title(fl!("screensaver-power"))
                     .add(widget::settings::item(
-                        "Disable on battery",
-                        widget::text::body(if cfg.disable_on_battery { "Yes" } else { "No" }),
+                        fl!("screensaver-disable-on-battery"),
+                        widget::text::body(if cfg.disable_on_battery {
+                            fl!("yes")
+                        } else {
+                            fl!("no")
+                        }),
                     ))
                     .add(widget::settings::item(
-                        "Battery idle timeout",
+                        fl!("screensaver-battery-idle-timeout"),
                         widget::text::body(ScreensaverConfig::format_timeout(
                             cfg.battery_idle_timeout,
                         )),

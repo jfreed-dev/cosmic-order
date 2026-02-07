@@ -261,8 +261,7 @@ impl WallpaperConfig {
 
         let config_path = Self::config_path();
         if let Some(parent) = config_path.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| WallpaperError::CreateDir(e.to_string()))?;
+            fs::create_dir_all(parent).map_err(|e| WallpaperError::CreateDir(e.to_string()))?;
         }
 
         fs::write(&config_path, serialized)
@@ -487,7 +486,10 @@ impl ThumbnailCache {
 
         if thumb_path.exists() {
             // Check for failure marker (empty file)
-            if fs::metadata(&thumb_path).map(|m| m.len() == 0).unwrap_or(false) {
+            if fs::metadata(&thumb_path)
+                .map(|m| m.len() == 0)
+                .unwrap_or(false)
+            {
                 return source.to_path_buf();
             }
             return thumb_path;
@@ -506,11 +508,9 @@ impl ThumbnailCache {
     }
 
     fn generate_thumbnail(&self, source: &Path, dest: &Path) -> Result<(), String> {
-        fs::create_dir_all(&self.cache_dir)
-            .map_err(|e| format!("Create cache dir: {e}"))?;
+        fs::create_dir_all(&self.cache_dir).map_err(|e| format!("Create cache dir: {e}"))?;
 
-        let img = image::open(source)
-            .map_err(|e| format!("Open image: {e}"))?;
+        let img = image::open(source).map_err(|e| format!("Open image: {e}"))?;
 
         let thumb = img.thumbnail(Self::THUMB_WIDTH, Self::THUMB_HEIGHT);
 
@@ -593,8 +593,7 @@ mod tests {
         };
 
         let pretty = ron::ser::PrettyConfig::default();
-        let serialized =
-            ron::ser::to_string_pretty(&entry, pretty).expect("Failed to serialize");
+        let serialized = ron::ser::to_string_pretty(&entry, pretty).expect("Failed to serialize");
         let deserialized: CosmicBgEntry =
             ron::from_str(&serialized).expect("Failed to deserialize");
 

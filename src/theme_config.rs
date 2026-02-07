@@ -93,11 +93,13 @@ impl ThemePreview {
     }
 
     /// Format accent color as hex
+    #[allow(dead_code)] // Used in Phase 6 tool sync
     pub fn accent_hex(&self) -> String {
         ThemeConfig::color_to_hex(&self.accent)
     }
 
     /// Format background color as hex
+    #[allow(dead_code)] // Used in Phase 6 tool sync
     pub fn background_hex(&self) -> String {
         ThemeConfig::color_to_hex(&self.background)
     }
@@ -260,6 +262,7 @@ impl ThemeConfig {
     }
 
     /// Format a color as hex string
+    #[allow(dead_code)] // Used in Phase 6 tool sync
     pub fn color_to_hex(color: &Srgba) -> String {
         format!(
             "#{:02X}{:02X}{:02X}",
@@ -281,16 +284,19 @@ impl ThemeConfig {
     }
 
     /// Get accent color as hex
+    #[allow(dead_code)] // Used in Phase 6 tool sync
     pub fn accent_hex(&self) -> String {
         Self::color_to_hex(&self.accent_color)
     }
 
     /// Get background color as hex
+    #[allow(dead_code)] // Used in Phase 6 tool sync
     pub fn background_hex(&self) -> String {
         Self::color_to_hex(&self.background_color)
     }
 
     /// Get text color as hex
+    #[allow(dead_code)] // Used in Phase 6 tool sync
     pub fn text_hex(&self) -> String {
         Self::color_to_hex(&self.text_color)
     }
