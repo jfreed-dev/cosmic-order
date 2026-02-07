@@ -11,6 +11,7 @@ use cosmic::{Application, Element};
 use crate::config::Config;
 use crate::fl;
 use crate::pages::{self, PageId};
+use crate::power;
 use crate::screensaver_config::ScreensaverConfig;
 use crate::theme_config::{ThemeConfig, ThemePreviewState};
 use crate::wallpaper_config::{ThumbnailCache, WallpaperConfig};
@@ -41,6 +42,8 @@ pub struct App {
     wallpaper_grid_page: usize,
     /// Thumbnail cache for wallpaper grid performance
     thumbnail_cache: ThumbnailCache,
+    /// Live power state from D-Bus (None until first update)
+    power_state: Option<power::PowerState>,
 }
 
 /// Application messages
@@ -53,6 +56,8 @@ pub enum Message {
     Page(pages::Message),
     /// Configuration changed
     ConfigChanged(Config),
+    /// Power state updated from D-Bus subscription
+    PowerStateUpdate(power::PowerState),
 }
 
 impl Application for App {
@@ -148,6 +153,7 @@ impl Application for App {
             wallpaper_selected_path: None,
             wallpaper_grid_page: 0,
             thumbnail_cache: ThumbnailCache::new(),
+            power_state: None,
         };
 
         (app, Task::none())
@@ -182,12 +188,31 @@ impl Application for App {
         Task::none()
     }
 
+    fn subscription(&self) -> cosmic::iced::Subscription<Self::Message> {
+        power::power_subscription().map(Message::PowerStateUpdate)
+    }
+
     fn update(&mut self, message: Self::Message) -> Task<Message> {
         match message {
             Message::NavSelect(id) => self.on_nav_select(id),
             Message::Page(page_message) => self.handle_page_message(page_message),
             Message::ConfigChanged(config) => {
                 self.config = config;
+                Task::none()
+            }
+            Message::PowerStateUpdate(state) => {
+                // Write power-state.env for screensaver-ctl (fire-and-forget)
+                let env_content = state.to_env_format();
+                let env_path = ScreensaverConfig::power_env_path();
+                tokio::spawn(async move {
+                    if let Some(parent) = env_path.parent() {
+                        let _ = tokio::fs::create_dir_all(parent).await;
+                    }
+                    if let Err(e) = tokio::fs::write(&env_path, env_content).await {
+                        tracing::warn!("Failed to write power-state.env: {e}");
+                    }
+                });
+                self.power_state = Some(state);
                 Task::none()
             }
         }
@@ -1702,6 +1727,20 @@ impl App {
             .push(
                 widget::settings::section()
                     .title(fl!("screensaver-power"))
+                    .add(widget::settings::item(
+                        fl!("screensaver-power-status"),
+                        widget::text::body(self.power_state.as_ref().map_or_else(
+                            || fl!("screensaver-power-unknown"),
+                            |s| s.display_string(),
+                        )),
+                    ))
+                    .add(widget::settings::item(
+                        fl!("screensaver-effect-profile"),
+                        widget::text::body(self.power_state.as_ref().map_or_else(
+                            || fl!("screensaver-power-unknown"),
+                            |s| s.effect_profile().display_name(),
+                        )),
+                    ))
                     .add(widget::settings::item(
                         fl!("screensaver-disable-on-battery"),
                         widget::toggler(cfg.disable_on_battery).on_toggle(|enabled| {

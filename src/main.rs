@@ -9,6 +9,7 @@ mod app;
 mod config;
 mod localize;
 mod pages;
+mod power;
 mod screensaver_config;
 mod theme_config;
 mod wallpaper_config;

@@ -47,6 +47,14 @@ pub struct ScreensaverConfig {
     pub battery_idle_timeout: u32,
     /// Terminal emulator to use
     pub terminal: String,
+    /// Effect profile override for Performance power mode (empty = use default)
+    pub effects_performance: String,
+    /// Effect profile override for Balanced power mode (empty = use default)
+    pub effects_balanced: String,
+    /// Effect profile override for Battery power mode (empty = use default)
+    pub effects_battery: String,
+    /// Effect profile override for Minimal power mode (empty = use default)
+    pub effects_minimal: String,
 }
 
 impl ScreensaverConfig {
@@ -119,6 +127,13 @@ impl ScreensaverConfig {
                 .get("TERMINAL")
                 .cloned()
                 .unwrap_or_else(|| "ghostty".to_string()),
+            effects_performance: values
+                .get("EFFECTS_PERFORMANCE")
+                .cloned()
+                .unwrap_or_default(),
+            effects_balanced: values.get("EFFECTS_BALANCED").cloned().unwrap_or_default(),
+            effects_battery: values.get("EFFECTS_BATTERY").cloned().unwrap_or_default(),
+            effects_minimal: values.get("EFFECTS_MINIMAL").cloned().unwrap_or_default(),
         })
     }
 
@@ -158,6 +173,10 @@ impl ScreensaverConfig {
             disable_on_battery: false,
             battery_idle_timeout: 600,
             terminal: "ghostty".to_string(),
+            effects_performance: String::new(),
+            effects_balanced: String::new(),
+            effects_battery: String::new(),
+            effects_minimal: String::new(),
         }
     }
 
@@ -182,6 +201,10 @@ LOGO_FILE="{}"
 DISABLE_ON_BATTERY="{}"
 BATTERY_IDLE_TIMEOUT="{}"
 TERMINAL="{}"
+EFFECTS_PERFORMANCE="{}"
+EFFECTS_BALANCED="{}"
+EFFECTS_BATTERY="{}"
+EFFECTS_MINIMAL="{}"
 "#,
             bool_str(self.enabled),
             self.idle_timeout,
@@ -200,6 +223,10 @@ TERMINAL="{}"
             bool_str(self.disable_on_battery),
             self.battery_idle_timeout,
             self.terminal,
+            self.effects_performance,
+            self.effects_balanced,
+            self.effects_battery,
+            self.effects_minimal,
         )
     }
 
@@ -213,6 +240,15 @@ TERMINAL="{}"
         fs::write(&path, self.serialize())
             .map_err(|e| ConfigError::Write(format!("write file: {e}")))?;
         Ok(())
+    }
+
+    /// Path to the power state env file (sourced by screensaver-ctl)
+    pub fn power_env_path() -> PathBuf {
+        BaseDirs::new()
+            .map(|dirs| dirs.config_dir().to_path_buf())
+            .unwrap_or_else(|| PathBuf::from(".config"))
+            .join("cosmic-screensaver")
+            .join("power-state.env")
     }
 
     /// Path to the screensaver-ctl script
@@ -309,6 +345,10 @@ LOGO_FILE="/home/user/.config/cosmic-screensaver/logo.txt"
             disable_on_battery: true,
             battery_idle_timeout: 120,
             terminal: "cosmic-term".to_string(),
+            effects_performance: "matrix,rain,fire".to_string(),
+            effects_balanced: "matrix,rain".to_string(),
+            effects_battery: "clock".to_string(),
+            effects_minimal: "blank".to_string(),
         };
 
         let serialized = config.serialize();
@@ -331,6 +371,10 @@ LOGO_FILE="/home/user/.config/cosmic-screensaver/logo.txt"
         assert_eq!(parsed.disable_on_battery, config.disable_on_battery);
         assert_eq!(parsed.battery_idle_timeout, config.battery_idle_timeout);
         assert_eq!(parsed.terminal, config.terminal);
+        assert_eq!(parsed.effects_performance, config.effects_performance);
+        assert_eq!(parsed.effects_balanced, config.effects_balanced);
+        assert_eq!(parsed.effects_battery, config.effects_battery);
+        assert_eq!(parsed.effects_minimal, config.effects_minimal);
     }
 
     #[test]

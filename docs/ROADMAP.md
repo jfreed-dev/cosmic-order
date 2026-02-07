@@ -146,20 +146,20 @@ Documentation is maintained alongside code development.
 
 ---
 
-## Phase 4A: Power-Aware Screensaver
+## Phase 4A: Power-Aware Screensaver ✓
 
 **Goal**: Integrate with system power management for intelligent behavior.
 
 ### Tasks
 
-- [ ] Add zbus and upower_dbus dependencies
-- [ ] Create power monitoring service
-- [ ] Detect AC power vs battery state
-- [ ] Read system76-power profile (performance/balanced/battery)
-- [ ] Create effect profiles for each power state
-- [ ] Adjust effect complexity based on power profile
-- [ ] Skip screensaver on critical battery (<10%)
-- [ ] Display power state in screensaver settings UI
+- [x] Add zbus and upower_dbus dependencies
+- [x] Create power monitoring service
+- [x] Detect AC power vs battery state
+- [x] Read system76-power profile (performance/balanced/battery)
+- [x] Create effect profiles for each power state
+- [x] Adjust effect complexity based on power profile
+- [x] Skip screensaver on critical battery (<10%)
+- [x] Display power state in screensaver settings UI
 
 ### Deliverables
 

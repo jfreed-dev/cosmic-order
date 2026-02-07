@@ -46,6 +46,9 @@ anyhow = "1"
 # Image processing (thumbnail generation)
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
 
+# D-Bus (power monitoring via UPower)
+zbus = { version = "5", default-features = false, features = ["tokio"] }
+
 # Utilities
 directories = "5"
 once_cell = "1"
