@@ -196,6 +196,35 @@ Documentation is maintained alongside code development.
 
 ---
 
+
+---
+
+## Phase 4C: Caffeine Mode (Idle Inhibitor)
+
+**Goal**: Allow users to temporarily prevent screen blanking and screensaver activation.
+
+### Tasks
+
+- [ ] Create idle inhibitor service using wayland idle-inhibit protocol
+- [ ] Add Caffeine toggle button to main UI header
+- [ ] Add tray/panel indicator when Caffeine is active
+- [ ] Implement timeout options (30min, 1hr, 2hr, until disabled)
+- [ ] Auto-disable Caffeine on low battery
+- [ ] Persist Caffeine state across app restarts (optional)
+- [ ] Add keyboard shortcut for quick toggle
+
+### Deliverables
+
+- One-click idle inhibitor toggle
+- Visual indicator when active
+- Configurable auto-timeout
+- Battery-aware behavior
+
+### Documentation
+
+- Wayland idle-inhibit protocol usage
+- Integration with cosmic-idle/swayidle
+
 ## Phase 5: Polish and Integration
 
 **Goal**: Refine the application for release.
@@ -287,6 +316,34 @@ Documentation is maintained alongside code development.
 
 ---
 
+
+---
+
+## Phase 6C: CPU Performance Management
+
+**Goal**: Provide quick access to CPU turbo/performance settings.
+
+### Tasks
+
+- [ ] Detect system76-power availability
+- [ ] Read current CPU performance profile
+- [ ] Add CPU Turbo toggle button
+- [ ] Display current CPU frequency/governor
+- [ ] Integrate with system76-power profiles (performance/balanced/battery)
+- [ ] Add power profile quick-switcher
+- [ ] Show thermal status indicator (optional)
+
+### Deliverables
+
+- CPU Turbo on/off toggle
+- Power profile switcher
+- Current performance status display
+
+### Documentation
+
+- system76-power D-Bus interface
+- CPU governor integration
+
 ## Phase 7: Deep Compositor Integration (Future)
 
 **Goal**: Native COSMIC compositor integration for advanced screensaver features.
@@ -320,8 +377,10 @@ See [SCREENSAVER-INTEGRATION.md](SCREENSAVER-INTEGRATION.md) for detailed resear
 | 0.4.0 | 4 | Screensaver configuration |
 | 0.5.0 | 4A | Power-aware screensaver |
 | 0.6.0 | 4B | Enhanced cursor/input handling |
+| 0.6.5 | 4C | Caffeine mode (idle inhibitor) |
 | 0.7.0 | 6 | Tool theme synchronization |
 | 0.8.0 | 6A | Real-time theme sync |
+| 0.8.5 | 6C | CPU performance management |
 | 1.0.0 | 5 | First stable release |
 
 ## Success Criteria
@@ -333,3 +392,4 @@ Each phase is complete when:
 3. Code passes linting (`cargo clippy`)
 4. Application builds without warnings
 5. Features work on Pop!_OS with COSMIC Desktop
+
