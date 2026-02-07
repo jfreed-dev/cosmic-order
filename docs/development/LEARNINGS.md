@@ -270,7 +270,9 @@ match dialog.open_file().await {
 
 ## Next Session TODO
 
-- [ ] Investigate theme label display issue (fl!("theme-mode-dark") returns correct string but labels may not render visibly — needs visual debugging)
+- [x] ~~Investigate theme label display issue~~ — Resolved: stale incremental build; `RustEmbed` embeds `.ftl` files at compile time and cargo may not detect `.ftl` changes. Fix: `cargo clean` forces re-embed.
+- [x] Update dependencies (`cargo update`) — libcosmic updated to `#3e78eb23`, now requires Rust 1.90+
+- [x] Fix clippy `manual_div_ceil` warning — replaced manual ceiling division with `.div_ceil()`
 - [ ] PR-02: Full theme palette application (deferred to Phase 5)
 - [ ] Phase 4: Screensaver configuration (interactive controls)
 - [ ] Consider async thumbnail generation (move off UI thread)

@@ -1118,7 +1118,7 @@ impl App {
         }
 
         let total = wallpapers.len();
-        let total_pages = (total + PER_PAGE - 1) / PER_PAGE;
+        let total_pages = total.div_ceil(PER_PAGE);
         let page = self.wallpaper_grid_page.min(total_pages.saturating_sub(1));
         let start = page * PER_PAGE;
         let end = (start + PER_PAGE).min(total);
