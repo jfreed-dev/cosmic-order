@@ -118,20 +118,18 @@ pub enum ScreensaverMessage {
     SetClockDuration(usize),
     /// Set clock format (dropdown index)
     SetClockFormat(usize),
-    /// Toggle disable on battery
-    SetDisableOnBattery(bool),
-    /// Set battery idle timeout (dropdown index)
-    SetBatteryIdleTimeout(usize),
     /// Set terminal emulator (dropdown index)
     SetTerminal(usize),
+    /// Select a logo from the grid by its file path
+    SelectLogo(String),
     /// Open file dialog to select logo
     SelectLogoDialog,
     /// Logo selection completed
     SelectLogoComplete(Result<String, String>),
     /// Save configuration and reload service
     SaveConfig,
-    /// Save completed
-    SaveComplete(Result<(), String>),
-    /// Test screensaver
-    Test,
+    /// Save completed (bool = launch test after save)
+    SaveComplete(Result<(), String>, bool),
+    /// Save and launch screensaver test
+    SaveAndTest,
 }

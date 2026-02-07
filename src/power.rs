@@ -43,6 +43,7 @@ impl PowerState {
     }
 
     /// Format power state for UI display using localized strings
+    #[allow(dead_code)]
     pub fn display_string(&self) -> String {
         let source = match (self.on_battery, self.battery_percent) {
             (false, None) => fl!("screensaver-power-no-battery"),
@@ -120,6 +121,7 @@ impl fmt::Display for EffectProfile {
 
 impl EffectProfile {
     /// Localized display name for the UI
+    #[allow(dead_code)]
     pub fn display_name(self) -> String {
         match self {
             Self::Full => fl!("screensaver-effect-full"),

@@ -279,17 +279,88 @@ EFFECTS_MINIMAL="{}"
         }
     }
 
-    /// Get the logo name from the file path
-    pub fn logo_name(&self) -> String {
-        if self.logo_file.is_empty() {
-            return "None".to_string();
-        }
+    /// Path to the fullscreen launcher script (sibling of screensaver-ctl)
+    pub fn fullscreen_launcher_path() -> PathBuf {
+        let ctl = Self::ctl_path();
+        fs::read_link(&ctl)
+            .ok()
+            .and_then(|link| {
+                if link.is_absolute() {
+                    Some(link)
+                } else {
+                    ctl.parent().map(|p| p.join(&link))
+                }
+            })
+            .and_then(|p| fs::canonicalize(p).ok())
+            .and_then(|p| p.parent().map(|d| d.join("launch-fullscreen.sh")))
+            .unwrap_or_else(|| PathBuf::from("launch-fullscreen.sh"))
+    }
 
-        PathBuf::from(&self.logo_file)
+    /// Derive a display name from a logo file path (stem with separators → title case)
+    pub fn display_name_from_path(path: &str) -> String {
+        PathBuf::from(path)
             .file_stem()
             .and_then(|s| s.to_str())
-            .map(|s| s.replace(['-', '_'], " "))
+            .map(|s| {
+                s.split(['-', '_'])
+                    .map(|word| {
+                        let mut chars = word.chars();
+                        match chars.next() {
+                            Some(c) => {
+                                let upper: String = c.to_uppercase().collect();
+                                format!("{upper}{}", chars.as_str())
+                            }
+                            None => String::new(),
+                        }
+                    })
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            })
             .unwrap_or_else(|| "Custom".to_string())
+    }
+
+    /// Resolve the logos directory by following the screensaver-ctl symlink
+    pub fn logos_dir() -> Option<PathBuf> {
+        let ctl = Self::ctl_path();
+        let resolved = fs::read_link(&ctl)
+            .ok()
+            .and_then(|link| {
+                if link.is_absolute() {
+                    Some(link)
+                } else {
+                    ctl.parent().map(|p| p.join(&link))
+                }
+            })
+            .and_then(|p| fs::canonicalize(p).ok())?;
+
+        let dir = resolved.parent()?.join("logos");
+        if dir.is_dir() { Some(dir) } else { None }
+    }
+
+    /// Scan available logo files from the logos directory
+    pub fn scan_logos() -> Vec<(String, PathBuf)> {
+        let dir = match Self::logos_dir() {
+            Some(d) => d,
+            None => return Vec::new(),
+        };
+
+        let mut logos: Vec<(String, PathBuf)> = Vec::new();
+
+        let entries = match fs::read_dir(&dir) {
+            Ok(e) => e,
+            Err(_) => return Vec::new(),
+        };
+
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) == Some("txt") {
+                let name = Self::display_name_from_path(&path.to_string_lossy());
+                logos.push((name, path));
+            }
+        }
+
+        logos.sort_by(|a, b| a.0.cmp(&b.0));
+        logos
     }
 }
 

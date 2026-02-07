@@ -15,6 +15,7 @@ use crate::power;
 use crate::screensaver_config::ScreensaverConfig;
 use crate::theme_config::{ThemeConfig, ThemePreviewState};
 use crate::wallpaper_config::{ThumbnailCache, WallpaperConfig};
+use std::path::PathBuf;
 
 /// Application state
 pub struct App {
@@ -44,6 +45,10 @@ pub struct App {
     thumbnail_cache: ThumbnailCache,
     /// Live power state from D-Bus (None until first update)
     power_state: Option<power::PowerState>,
+    /// Available logos scanned from the logos directory
+    available_logos: Vec<(String, PathBuf)>,
+    /// Status message shown after save/reload (cleared on next action)
+    screensaver_status_msg: Option<String>,
 }
 
 /// Application messages
@@ -75,6 +80,7 @@ impl Application for App {
         &mut self.core
     }
 
+    #[allow(clippy::cognitive_complexity)]
     fn init(core: Core, _flags: Self::Flags) -> (Self, Task<Message>) {
         // Load configuration
         let config = Config::load().unwrap_or_default();
@@ -139,6 +145,10 @@ impl Application for App {
         };
         nav_model.activate_position(position);
 
+        // Scan available logos
+        let available_logos = ScreensaverConfig::scan_logos();
+        tracing::info!("Found {} available logos", available_logos.len());
+
         let initial_collection = wallpaper_config.current_theme_name();
         let app = Self {
             core,
@@ -154,6 +164,8 @@ impl Application for App {
             wallpaper_grid_page: 0,
             thumbnail_cache: ThumbnailCache::new(),
             power_state: None,
+            available_logos,
+            screensaver_status_msg: None,
         };
 
         (app, Task::none())
@@ -561,22 +573,15 @@ impl App {
                 }
                 Task::none()
             }
-            pages::ScreensaverMessage::SetDisableOnBattery(enabled) => {
-                self.screensaver_config.disable_on_battery = enabled;
-                Task::none()
-            }
-            pages::ScreensaverMessage::SetBatteryIdleTimeout(index) => {
-                let timeouts: [u32; 4] = [300, 600, 900, 1800];
-                if let Some(&t) = timeouts.get(index) {
-                    self.screensaver_config.battery_idle_timeout = t;
-                }
-                Task::none()
-            }
             pages::ScreensaverMessage::SetTerminal(index) => {
                 let terminals = ["ghostty", "cosmic-term"];
                 if let Some(&term) = terminals.get(index) {
                     self.screensaver_config.terminal = term.to_string();
                 }
+                Task::none()
+            }
+            pages::ScreensaverMessage::SelectLogo(path) => {
+                self.screensaver_config.logo_file = path;
                 Task::none()
             }
             pages::ScreensaverMessage::SelectLogoDialog => cosmic::task::future(async move {
@@ -600,42 +605,58 @@ impl App {
                 Task::none()
             }
             pages::ScreensaverMessage::SaveConfig => {
-                let config = self.screensaver_config.clone();
-                let ctl_path = ScreensaverConfig::ctl_path();
-                cosmic::task::future(async move {
-                    let result = tokio::task::spawn_blocking(move || {
-                        config.save().map_err(|e| e.to_string())?;
-                        // Reload the screensaver service
-                        if ctl_path.exists() {
-                            let _ = std::process::Command::new(&ctl_path).arg("reload").status();
-                        }
-                        Ok(())
-                    })
-                    .await
-                    .map_err(|e| e.to_string())
-                    .and_then(|r| r);
-                    Message::Page(pages::Message::Screensaver(
-                        pages::ScreensaverMessage::SaveComplete(result),
-                    ))
-                })
+                self.screensaver_status_msg = None;
+                Self::save_screensaver_config(self.screensaver_config.clone(), false)
             }
-            pages::ScreensaverMessage::SaveComplete(result) => {
+            pages::ScreensaverMessage::SaveAndTest => {
+                self.screensaver_status_msg = None;
+                Self::save_screensaver_config(self.screensaver_config.clone(), true)
+            }
+            pages::ScreensaverMessage::SaveComplete(result, launch_test) => {
                 match &result {
-                    Ok(()) => tracing::info!("Screensaver config saved and reloaded"),
-                    Err(e) => tracing::error!("Failed to save screensaver config: {e}"),
+                    Ok(()) => {
+                        tracing::info!("Screensaver config saved and reloaded");
+                        self.screensaver_status_msg = Some(fl!("screensaver-save-success"));
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to save screensaver config: {e}");
+                        self.screensaver_status_msg = Some(fl!("screensaver-save-error"));
+                    }
                 }
-                Task::none()
-            }
-            pages::ScreensaverMessage::Test => {
-                let ctl_path = ScreensaverConfig::ctl_path();
-                if ctl_path.exists() {
-                    let _ = std::process::Command::new(&ctl_path).arg("test").spawn();
-                } else {
-                    tracing::warn!("screensaver-ctl not found at {}", ctl_path.display());
+                if launch_test && result.is_ok() {
+                    let launcher = ScreensaverConfig::fullscreen_launcher_path();
+                    if launcher.exists() {
+                        if let Err(e) = std::process::Command::new(&launcher).arg("launch").spawn()
+                        {
+                            tracing::error!("Failed to launch screensaver test: {e}");
+                        }
+                    } else {
+                        tracing::warn!("launch-fullscreen.sh not found at {}", launcher.display());
+                    }
                 }
                 Task::none()
             }
         }
+    }
+
+    /// Save screensaver config and reload service, optionally launching test after
+    fn save_screensaver_config(config: ScreensaverConfig, launch_test: bool) -> Task<Message> {
+        let ctl_path = ScreensaverConfig::ctl_path();
+        cosmic::task::future(async move {
+            let result = tokio::task::spawn_blocking(move || {
+                config.save().map_err(|e| e.to_string())?;
+                if ctl_path.exists() {
+                    let _ = std::process::Command::new(&ctl_path).arg("reload").status();
+                }
+                Ok(())
+            })
+            .await
+            .map_err(|e| e.to_string())
+            .and_then(|r| r);
+            Message::Page(pages::Message::Screensaver(
+                pages::ScreensaverMessage::SaveComplete(result, launch_test),
+            ))
+        })
     }
 
     /// Logo file picker dialog
@@ -1456,6 +1477,54 @@ impl App {
             .into()
     }
 
+    /// Build the logo section: dropdown selector + from-file button
+    fn view_screensaver_logo_section(&self) -> Element<'_, Message> {
+        let spacing = cosmic::theme::spacing();
+
+        // Logo dropdown: list of available logos
+        let logo_options: Vec<String> = self
+            .available_logos
+            .iter()
+            .map(|(name, _)| name.clone())
+            .collect();
+
+        let logo_selected = self
+            .available_logos
+            .iter()
+            .position(|(_, path)| path.to_string_lossy() == self.screensaver_config.logo_file);
+
+        let logos_for_closure = self.available_logos.clone();
+        let logo_dropdown = widget::dropdown(logo_options, logo_selected, move |index| {
+            let path = logos_for_closure
+                .get(index)
+                .map(|(_, p)| p.to_string_lossy().to_string())
+                .unwrap_or_default();
+            Message::Page(pages::Message::Screensaver(
+                pages::ScreensaverMessage::SelectLogo(path),
+            ))
+        });
+
+        // From File button
+        let from_file_button = widget::button::standard(fl!("screensaver-logo-from-file"))
+            .on_press(Message::Page(pages::Message::Screensaver(
+                pages::ScreensaverMessage::SelectLogoDialog,
+            )));
+
+        let selector_row = widget::row()
+            .spacing(spacing.space_s)
+            .align_y(cosmic::iced::Alignment::Center)
+            .push(logo_dropdown)
+            .push(from_file_button);
+
+        widget::settings::section()
+            .title(fl!("screensaver-logo"))
+            .add(widget::settings::item(
+                fl!("screensaver-logo-available"),
+                selector_row,
+            ))
+            .into()
+    }
+
     /// View for the Screensaver page
     #[allow(clippy::cognitive_complexity)]
     fn view_screensaver_page(&self) -> Element<'_, Message> {
@@ -1595,34 +1664,6 @@ impl App {
             ))
         });
 
-        // --- Battery idle timeout dropdown ---
-        let bat_options: Vec<String> = vec![
-            fl!("screensaver-timeout-5min"),
-            fl!("screensaver-timeout-10min"),
-            fl!("screensaver-timeout-15min"),
-            fl!("screensaver-timeout-30min"),
-        ];
-        let bat_values: [u32; 4] = [300, 600, 900, 1800];
-        let bat_selected = bat_values
-            .iter()
-            .position(|&v| v == cfg.battery_idle_timeout);
-        let bat_dropdown = widget::dropdown(bat_options, bat_selected, |index| {
-            Message::Page(pages::Message::Screensaver(
-                pages::ScreensaverMessage::SetBatteryIdleTimeout(index),
-            ))
-        });
-
-        // --- Logo row ---
-        let logo_row = widget::row()
-            .spacing(spacing.space_s)
-            .align_y(cosmic::iced::Alignment::Center)
-            .push(widget::text::body(cfg.logo_name()))
-            .push(
-                widget::button::standard(fl!("screensaver-select-logo")).on_press(Message::Page(
-                    pages::Message::Screensaver(pages::ScreensaverMessage::SelectLogoDialog),
-                )),
-            );
-
         // --- Build page ---
         let column = widget::column()
             .spacing(spacing.space_m)
@@ -1644,9 +1685,10 @@ impl App {
                     .add(widget::settings::item(
                         fl!("screensaver-terminal"),
                         terminal_dropdown,
-                    ))
-                    .add(widget::settings::item(fl!("screensaver-logo"), logo_row)),
+                    )),
             )
+            // Logo section
+            .push(self.view_screensaver_logo_section())
             // Timeouts section
             .push(
                 widget::settings::section()
@@ -1723,52 +1765,34 @@ impl App {
                         clock_fmt_dropdown,
                     )),
             )
-            // Power section
-            .push(
-                widget::settings::section()
-                    .title(fl!("screensaver-power"))
-                    .add(widget::settings::item(
-                        fl!("screensaver-power-status"),
-                        widget::text::body(self.power_state.as_ref().map_or_else(
-                            || fl!("screensaver-power-unknown"),
-                            |s| s.display_string(),
-                        )),
-                    ))
-                    .add(widget::settings::item(
-                        fl!("screensaver-effect-profile"),
-                        widget::text::body(self.power_state.as_ref().map_or_else(
-                            || fl!("screensaver-power-unknown"),
-                            |s| s.effect_profile().display_name(),
-                        )),
-                    ))
-                    .add(widget::settings::item(
-                        fl!("screensaver-disable-on-battery"),
-                        widget::toggler(cfg.disable_on_battery).on_toggle(|enabled| {
-                            Message::Page(pages::Message::Screensaver(
-                                pages::ScreensaverMessage::SetDisableOnBattery(enabled),
-                            ))
-                        }),
-                    ))
-                    .add(widget::settings::item(
-                        fl!("screensaver-battery-idle-timeout"),
-                        bat_dropdown,
-                    )),
-            )
-            // Action buttons
-            .push(
-                widget::row()
-                    .spacing(spacing.space_s)
-                    .push(
-                        widget::button::suggested(fl!("screensaver-save-reload")).on_press(
+            // Action buttons + status
+            .push({
+                let mut action_col = widget::column().spacing(spacing.space_s);
+
+                // Status message (if any)
+                if let Some(ref msg) = self.screensaver_status_msg {
+                    action_col = action_col.push(widget::text::body(msg.clone()));
+                }
+
+                action_col = action_col.push(
+                    widget::row()
+                        .spacing(spacing.space_s)
+                        .push(widget::button::suggested(fl!("screensaver-save")).on_press(
                             Message::Page(pages::Message::Screensaver(
                                 pages::ScreensaverMessage::SaveConfig,
                             )),
+                        ))
+                        .push(
+                            widget::button::standard(fl!("screensaver-save-test")).on_press(
+                                Message::Page(pages::Message::Screensaver(
+                                    pages::ScreensaverMessage::SaveAndTest,
+                                )),
+                            ),
                         ),
-                    )
-                    .push(widget::button::standard(fl!("screensaver-test")).on_press(
-                        Message::Page(pages::Message::Screensaver(pages::ScreensaverMessage::Test)),
-                    )),
-            );
+                );
+
+                action_col
+            });
 
         widget::scrollable(column).into()
     }
