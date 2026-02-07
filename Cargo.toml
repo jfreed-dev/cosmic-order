@@ -2,7 +2,7 @@
 name = "cosmic-order"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.90"
 license = "GPL-3.0-only"
 description = "OMARCHY-inspired workflow and aesthetics for COSMIC Desktop - establishing order in the chaos"
 repository = "https://github.com/jfreed-dev/cosmic-order"

@@ -30,11 +30,10 @@ struct Localizations;
 pub static LANGUAGE_LOADER: LazyLock<FluentLanguageLoader> = LazyLock::new(|| {
     let loader: FluentLanguageLoader = fluent_language_loader!();
 
-    // Critical initialization - application cannot function without translations
-    #[allow(clippy::expect_used)]
-    loader
-        .load_fallback_language(&Localizations)
-        .expect("Error while loading fallback language");
+    if let Err(e) = loader.load_fallback_language(&Localizations) {
+        eprintln!("FATAL: failed to load fallback language: {e}");
+        std::process::abort();
+    }
 
     loader
 });

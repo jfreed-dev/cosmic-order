@@ -265,7 +265,7 @@ EFFECTS_MINIMAL="{}"
             "Disabled".to_string()
         } else if seconds < 60 {
             format!("{} seconds", seconds)
-        } else if seconds % 60 == 0 {
+        } else if seconds.is_multiple_of(60) {
             let minutes = seconds / 60;
             if minutes == 1 {
                 "1 minute".to_string()
@@ -374,6 +374,7 @@ pub enum ConfigError {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

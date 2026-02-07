@@ -59,7 +59,7 @@ for the development plan.
 ## Requirements
 
 - Pop!_OS 24.04+ with COSMIC Desktop
-- Rust 1.85+
+- Rust 1.90+
 - System dependencies (see [docs/development/SETUP.md](docs/development/SETUP.md))
 
 ## Building

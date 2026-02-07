@@ -203,20 +203,17 @@ impl WallpaperConfig {
             let line = line.trim();
 
             if line.starts_with("source:") {
-                if let Some(start) = line.find('"') {
-                    if let Some(end) = line.rfind('"') {
-                        if start < end {
+                if let Some(start) = line.find('"')
+                    && let Some(end) = line.rfind('"')
+                        && start < end {
                             self.current_source = line[start + 1..end].to_string();
                         }
-                    }
-                }
             } else if line.starts_with("rotation_frequency:") {
-                if let Some(value) = line.strip_prefix("rotation_frequency:") {
-                    if let Ok(freq) = value.trim().trim_end_matches(',').parse() {
+                if let Some(value) = line.strip_prefix("rotation_frequency:")
+                    && let Ok(freq) = value.trim().trim_end_matches(',').parse() {
                         self.rotation_frequency = freq;
                         self.rotation_enabled = self.rotation_frequency > 0;
                     }
-                }
             } else if line.starts_with("scaling_mode:") {
                 if let Some(value) = line.strip_prefix("scaling_mode:") {
                     let val = value.trim().trim_end_matches(',');
@@ -227,11 +224,10 @@ impl WallpaperConfig {
                         _ => ScalingMode::Zoom,
                     };
                 }
-            } else if line.starts_with("filter_by_theme:") {
-                if let Some(value) = line.strip_prefix("filter_by_theme:") {
+            } else if line.starts_with("filter_by_theme:")
+                && let Some(value) = line.strip_prefix("filter_by_theme:") {
                     self.filter_by_theme = value.trim().trim_end_matches(',') == "true";
                 }
-            }
         }
     }
 
@@ -327,8 +323,8 @@ impl WallpaperConfig {
         if let Ok(entries) = fs::read_dir(dir) {
             for entry in entries.flatten() {
                 let path = entry.path();
-                if path.is_dir() {
-                    if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                if path.is_dir()
+                    && let Some(name) = path.file_name().and_then(|n| n.to_str()) {
                         let wallpapers = Self::list_wallpapers_in_dir(&path);
                         let count = wallpapers.len();
 
@@ -342,7 +338,6 @@ impl WallpaperConfig {
                             },
                         );
                     }
-                }
             }
         }
     }
@@ -354,19 +349,17 @@ impl WallpaperConfig {
         if let Ok(entries) = fs::read_dir(dir) {
             for entry in entries.flatten() {
                 let path = entry.path();
-                if path.is_file() {
-                    if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                if path.is_file()
+                    && let Some(ext) = path.extension().and_then(|e| e.to_str()) {
                         let ext_lower = ext.to_lowercase();
                         if matches!(
                             ext_lower.as_str(),
                             "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp"
-                        ) {
-                            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                        )
+                            && let Some(name) = path.file_name().and_then(|n| n.to_str()) {
                                 wallpapers.push(name.to_string());
                             }
-                        }
                     }
-                }
             }
         }
 
@@ -420,7 +413,7 @@ impl WallpaperConfig {
             "Disabled".to_string()
         } else if self.rotation_frequency < 60 {
             format!("{} seconds", self.rotation_frequency)
-        } else if self.rotation_frequency % 60 == 0 {
+        } else if self.rotation_frequency.is_multiple_of(60) {
             let minutes = self.rotation_frequency / 60;
             if minutes == 1 {
                 "1 minute".to_string()
@@ -529,6 +522,7 @@ impl ThumbnailCache {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
