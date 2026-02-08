@@ -181,6 +181,15 @@ none = None
 seconds = seconds
 minutes = minutes
 
+# File Dialog Filters
+filter-text-files = Text files
+filter-images = Images
+filter-ron-theme = RON Theme
+
+# Timeout Display
+timeout-hours = { $hours } hr
+timeout-minutes = { $minutes } min
+
 # Errors
 error-load-config = Failed to load configuration
 error-save-config = Failed to save configuration

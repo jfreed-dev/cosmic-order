@@ -856,7 +856,7 @@ impl App {
 
         let dialog = file_chooser::open::Dialog::new()
             .title(fl!("screensaver-logo"))
-            .filter(file_chooser::FileFilter::new("Text files").glob("*.txt"));
+            .filter(file_chooser::FileFilter::new(&fl!("filter-text-files")).glob("*.txt"));
 
         let response = match dialog.open_file().await {
             Ok(r) => r,
@@ -898,9 +898,9 @@ impl App {
         let value_label = if minutes == 0 {
             fl!("screensaver-timeout-disabled")
         } else if minutes >= 60 {
-            format!("{} hr", minutes / 60)
+            fl!("timeout-hours", hours = (minutes / 60).to_string())
         } else {
-            format!("{minutes} min")
+            fl!("timeout-minutes", minutes = minutes.to_string())
         };
 
         let ticks_owned = *ticks;
@@ -975,7 +975,7 @@ impl App {
         let dialog = file_chooser::open::Dialog::new()
             .title(fl!("wallpaper-add-file"))
             .filter(
-                file_chooser::FileFilter::new("Images")
+                file_chooser::FileFilter::new(&fl!("filter-images"))
                     .glob("*.png")
                     .glob("*.jpg")
                     .glob("*.jpeg")
@@ -1019,7 +1019,7 @@ impl App {
         let dialog = file_chooser::save::Dialog::new()
             .title(fl!("theme-export"))
             .file_name(default_name)
-            .filter(file_chooser::FileFilter::new("RON Theme").glob("*.ron"));
+            .filter(file_chooser::FileFilter::new(&fl!("filter-ron-theme")).glob("*.ron"));
 
         let response = match dialog.save_file().await {
             Ok(r) => r,
@@ -1045,7 +1045,7 @@ impl App {
 
         let dialog = file_chooser::open::Dialog::new()
             .title(fl!("theme-import"))
-            .filter(file_chooser::FileFilter::new("RON Theme").glob("*.ron"));
+            .filter(file_chooser::FileFilter::new(&fl!("filter-ron-theme")).glob("*.ron"));
 
         let response = match dialog.open_file().await {
             Ok(r) => r,
