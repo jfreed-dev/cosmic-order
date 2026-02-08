@@ -10,24 +10,31 @@ workflow you love, on the desktop you deserve.
 
 ## Key Commands
 
+Uses `just` (follows cosmic-app-template conventions):
+
 ```bash
 # Build
-cargo build --release
+just                    # build-release (default)
+just build-debug        # debug profile
 
 # Run
-cargo run --release
+just run                # release with info logging
+just run-debug          # debug build with debug logging
+just run-trace          # trace logging
 
-# Run with debug logging
-RUST_LOG=cosmic_order=debug cargo run
+# Quality
+just check              # clippy (pedantic)
+just fmt                # format code
+just fmt-check          # check formatting
+just lint               # clippy + fmt-check + doc warnings
+just test               # run tests
+just pre-commit         # fmt-check + clippy + tests
 
-# Check code quality
-cargo clippy --all-features
-
-# Format code
-cargo fmt
-
-# Run tests
-cargo test
+# Install / Package
+just install            # install binary, desktop file, icon
+just uninstall          # remove installed files
+just vendor             # vendor dependencies for offline builds
+just build-vendored     # build with vendored deps
 ```
 
 ## Architecture
@@ -112,6 +119,7 @@ widget::text::title2(fl!("page-title"))
 - [docs/research/](docs/research/) - libcosmic and COSMIC research
 - [docs/development/](docs/development/) - Development guides
 - [docs/development/WORKFLOW.md](docs/development/WORKFLOW.md) - Git workflow
+- [docs/development/NATIVE-MIGRATION.md](docs/development/NATIVE-MIGRATION.md) - Native API migration plan
 
 ## Development Phase
 
