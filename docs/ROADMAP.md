@@ -390,6 +390,6 @@ Each phase is complete when:
 
 1. All tasks are checked off
 2. Documentation is updated
-3. Code passes linting (`cargo clippy`)
+3. Code passes linting (`just check`)
 4. Application builds without warnings
 5. Features work on Pop!_OS with COSMIC Desktop

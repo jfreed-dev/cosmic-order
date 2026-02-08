@@ -32,17 +32,17 @@ git checkout -b fix/issue-description
 ### 3. Test Your Changes
 
 ```bash
-# Run lints
-cargo clippy --all-features
+# Run all lints (clippy + format + doc warnings)
+just lint
 
-# Run formatter
-cargo fmt
+# Format code
+just fmt
 
 # Run tests
-cargo test
+just test
 
 # Test the application
-cargo run --release
+just run
 ```
 
 ### 4. Commit
@@ -77,7 +77,7 @@ Prefixes:
 ### Rust Style
 
 - Follow `rustfmt` defaults
-- Use `cargo clippy` warnings as errors
+- Use `just check` (clippy pedantic) to catch lint issues
 - Prefer explicit error handling over panics
 
 ### File Headers

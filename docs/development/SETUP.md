@@ -65,13 +65,13 @@ cd cosmic-order
 
 ```bash
 # Debug build (faster compilation)
-cargo build
+just build-debug
 
 # Release build (optimized)
-cargo build --release
+just
 
 # Run the application
-cargo run --release
+just run
 ```
 
 ## IDE Setup
@@ -117,40 +117,40 @@ require('lspconfig').rust_analyzer.setup({
 ### Running During Development
 
 ```bash
+# Run with info logging (release build)
+just run
+
 # Run with debug logging
-RUST_LOG=debug cargo run
+just run-debug
 
-# Run with specific log level
-RUST_LOG=cosmic_order=trace cargo run
-
-# Run release build
-cargo run --release
+# Run with trace logging
+just run-trace
 ```
 
 ### Checking Code Quality
 
 ```bash
-# Run clippy lints
-cargo clippy --all-features
+# Run clippy (pedantic)
+just check
 
 # Format code
-cargo fmt
+just fmt
 
-# Check without building
-cargo check --all-features
+# Run all lints (clippy + format + doc warnings)
+just lint
 ```
 
 ### Running Tests
 
 ```bash
 # Run all tests
-cargo test
+just test
 
 # Run specific test
-cargo test test_name
+just test -- test_name
 
 # Run with output
-cargo test -- --nocapture
+just test-verbose
 ```
 
 ## Troubleshooting
@@ -195,19 +195,19 @@ systemctl --user status cosmic-config-daemon
 
 ```bash
 # Clean build artifacts
-cargo clean
+just clean
 
 # Update dependencies
-cargo update
+just update
 
 # Generate documentation
-cargo doc --open
+just doc
 
 # Check dependency tree
-cargo tree
+just deps
 
 # Security audit
-cargo audit
+just audit
 ```
 
 ## Next Steps

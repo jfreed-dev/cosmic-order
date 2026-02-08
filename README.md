@@ -70,10 +70,10 @@ sudo apt install cargo cmake just libexpat1-dev libfontconfig-dev \
   libfreetype-dev libxkbcommon-dev pkg-config
 
 # Build
-cargo build --release
+just
 
 # Run
-cargo run --release
+just run
 ```
 
 ## Acknowledgments

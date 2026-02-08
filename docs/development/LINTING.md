@@ -20,8 +20,8 @@ We use multiple tools to ensure code quality:
 just lint
 
 # Run specific lints
-just lint-clippy    # Clippy only
-just lint-fmt       # Format check only
+just check          # Clippy (pedantic)
+just fmt-check      # Format check only
 just lint-docs      # Documentation warnings
 
 # Auto-fix formatting
@@ -180,10 +180,10 @@ Or use `just pre-commit` manually before committing.
 
 The following checks run in CI:
 
-1. `cargo fmt -- --check` - Formatting
-2. `cargo clippy -- -D warnings` - Lints (warnings as errors)
-3. `cargo test` - Tests
-4. `cargo doc` - Documentation builds
+1. `just fmt-check` - Formatting
+2. `just check` - Clippy (pedantic)
+3. `just test` - Tests
+4. `just lint-docs` - Documentation builds
 
 All checks must pass for PRs to be merged.
 
@@ -197,8 +197,6 @@ cargo install cargo-audit
 
 # Run audit
 just audit
-# or
-cargo audit
 ```
 
 ## IDE Integration
