@@ -757,21 +757,34 @@ impl App {
 
     /// Save screensaver config and reload service, optionally launching test after
     fn save_screensaver_config(config: ScreensaverConfig, launch_test: bool) -> Task<Message> {
-        let ctl_path = ScreensaverConfig::ctl_path();
         let dpms_timeout = config.dpms_timeout;
         cosmic::task::future(async move {
-            let result = tokio::task::spawn_blocking(move || {
-                config.save().map_err(|e| e.to_string())?;
-                if ctl_path.exists() {
-                    let _ = std::process::Command::new(&ctl_path).arg("reload").status();
+            let result: Result<(), String> = async {
+                // Save config + generate swayidle conf (blocking I/O)
+                let config_clone = config.clone();
+                tokio::task::spawn_blocking(move || {
+                    config_clone.save().map_err(|e| e.to_string())?;
+                    config_clone
+                        .generate_swayidle_config()
+                        .map_err(|e| e.to_string())?;
+                    crate::cosmic_idle::write_screen_off_time(dpms_timeout);
+                    Ok(())
+                })
+                .await
+                .map_err(|e| e.to_string())
+                .and_then(|r| r)?;
+
+                // Restart swayidle service via D-Bus
+                if let Err(e) =
+                    crate::systemd::restart_user_unit("cosmic-screensaver-idle.service").await
+                {
+                    tracing::warn!("Service restart failed (swayidle may not be running): {e}");
                 }
-                // Sync DPMS to system config so COSMIC Settings stays aligned
-                crate::cosmic_idle::write_screen_off_time(dpms_timeout);
+
                 Ok(())
-            })
-            .await
-            .map_err(|e| e.to_string())
-            .and_then(|r| r);
+            }
+            .await;
+
             Message::Page(pages::Message::Screensaver(
                 pages::ScreensaverMessage::SaveComplete(result, launch_test),
             ))

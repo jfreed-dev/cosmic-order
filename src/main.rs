@@ -13,6 +13,7 @@ mod localize;
 mod pages;
 mod power;
 mod screensaver_config;
+mod systemd;
 mod theme_config;
 mod wallpaper_config;
 
