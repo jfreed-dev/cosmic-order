@@ -301,30 +301,32 @@ See [NATIVE-MIGRATION.md](development/NATIVE-MIGRATION.md) for details.
 
 ---
 
-## Phase 6C: CLI Tools + Hook System
+## Phase 6C: CLI Tools + Hook System ✅
 
 **Goal**: CLI tool color export and extensibility.
 
 ### Tasks
 
-- [ ] Add CLI tools color export (fzf, lazygit)
-- [ ] Create hook system for extensibility
-- [ ] Real-time theme propagation (Neovim RPC, Ghostty OSC)
+- [x] Add fzf theme generator with shell integration toggle
+- [x] Add lazygit theme generator with comment-marker config update
+- [x] Create hook system (`~/.config/cosmic-order/hooks.d/`)
 
 ### Deliverables
 
-- CLI tool theme sync (fzf, lazygit)
-- Hook system for custom generators
-- Real-time theme updates where supported
+- `~/.config/cosmic-order/fzf-theme.sh` — fzf color theme (shell source)
+- `~/.config/lazygit/config.yml` — lazygit gui.theme block
+- `~/.config/cosmic-order/hooks.d/` — user-defined hook scripts
+- Per-tool togglers for fzf, lazygit, and custom hooks
 
 ---
 
-## Phase 6D: Advanced Features
+## Phase 6D: Real-time Propagation + Advanced Features
 
-**Goal**: Additional features based on user feedback.
+**Goal**: Real-time theme propagation and additional features.
 
 ### Potential Features
 
+- [ ] Real-time theme propagation (Neovim RPC, Ghostty OSC)
 - [ ] Theme creation wizard
 - [ ] Online theme repository integration
 - [ ] Wallpaper slideshow scheduling

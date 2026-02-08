@@ -23,10 +23,22 @@ pub struct ToolSyncConfig {
     pub nvim_enabled: bool,
     #[serde(default = "default_true")]
     pub zellij_enabled: bool,
+    #[serde(default = "default_true")]
+    pub fzf_enabled: bool,
+    #[serde(default = "default_false")]
+    pub fzf_shell_integration: bool,
+    #[serde(default = "default_true")]
+    pub lazygit_enabled: bool,
+    #[serde(default = "default_true")]
+    pub hooks_enabled: bool,
 }
 
 const fn default_true() -> bool {
     true
+}
+
+const fn default_false() -> bool {
+    false
 }
 
 impl Default for ToolSyncConfig {
@@ -36,6 +48,10 @@ impl Default for ToolSyncConfig {
             btop_enabled: true,
             nvim_enabled: true,
             zellij_enabled: true,
+            fzf_enabled: true,
+            fzf_shell_integration: false,
+            lazygit_enabled: true,
+            hooks_enabled: true,
         }
     }
 }
@@ -70,6 +86,9 @@ pub struct SyncResult {
     pub btop_synced: bool,
     pub nvim_synced: bool,
     pub zellij_synced: bool,
+    pub fzf_synced: bool,
+    pub lazygit_synced: bool,
+    pub hooks_result: Option<crate::hooks::HookResults>,
 }
 
 /// Run the full sync pipeline for all enabled tools
@@ -85,6 +104,8 @@ pub async fn sync_tools(config: &ToolSyncConfig) -> Result<SyncResult, String> {
     let mut btop_synced = false;
     let mut nvim_synced = false;
     let mut zellij_synced = false;
+    let mut fzf_synced = false;
+    let mut lazygit_synced = false;
 
     if config.ghostty_enabled {
         generators::ghostty::write_theme(&palette)
@@ -126,12 +147,37 @@ pub async fn sync_tools(config: &ToolSyncConfig) -> Result<SyncResult, String> {
         zellij_synced = true;
     }
 
+    if config.fzf_enabled {
+        generators::fzf::write_theme(&palette)
+            .await
+            .map_err(|e| format!("Failed to write fzf theme: {e}"))?;
+
+        fzf_synced = true;
+    }
+
+    if config.lazygit_enabled {
+        generators::lazygit::write_theme(&palette)
+            .await
+            .map_err(|e| format!("Failed to write lazygit theme: {e}"))?;
+
+        lazygit_synced = true;
+    }
+
+    let hooks_result = if config.hooks_enabled {
+        Some(crate::hooks::run_hooks(&palette, &colors_path).await)
+    } else {
+        None
+    };
+
     Ok(SyncResult {
         colors_path,
         ghostty_synced,
         btop_synced,
         nvim_synced,
         zellij_synced,
+        fzf_synced,
+        lazygit_synced,
+        hooks_result,
     })
 }
 
@@ -156,6 +202,10 @@ mod tests {
         assert!(config.btop_enabled);
         assert!(config.nvim_enabled);
         assert!(config.zellij_enabled);
+        assert!(config.fzf_enabled);
+        assert!(!config.fzf_shell_integration);
+        assert!(config.lazygit_enabled);
+        assert!(config.hooks_enabled);
     }
 
     #[test]
@@ -165,6 +215,10 @@ mod tests {
             btop_enabled: true,
             nvim_enabled: false,
             zellij_enabled: true,
+            fzf_enabled: true,
+            fzf_shell_integration: true,
+            lazygit_enabled: false,
+            hooks_enabled: true,
         };
         let serialized = toml::to_string_pretty(&config).unwrap();
         let deserialized: ToolSyncConfig = toml::from_str(&serialized).unwrap();
@@ -172,6 +226,10 @@ mod tests {
         assert!(deserialized.btop_enabled);
         assert!(!deserialized.nvim_enabled);
         assert!(deserialized.zellij_enabled);
+        assert!(deserialized.fzf_enabled);
+        assert!(deserialized.fzf_shell_integration);
+        assert!(!deserialized.lazygit_enabled);
+        assert!(deserialized.hooks_enabled);
     }
 
     #[test]
@@ -180,9 +238,13 @@ mod tests {
         let old_config = "ghostty_enabled = false\n";
         let config: ToolSyncConfig = toml::from_str(old_config).unwrap();
         assert!(!config.ghostty_enabled);
-        // New fields should default to true
+        // New fields should default to true (except fzf_shell_integration)
         assert!(config.btop_enabled);
         assert!(config.nvim_enabled);
         assert!(config.zellij_enabled);
+        assert!(config.fzf_enabled);
+        assert!(!config.fzf_shell_integration);
+        assert!(config.lazygit_enabled);
+        assert!(config.hooks_enabled);
     }
 }

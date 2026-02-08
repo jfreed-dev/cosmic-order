@@ -1,0 +1,265 @@
+// SPDX-License-Identifier: GPL-3.0-only
+
+//! lazygit theme generator
+//!
+//! Generates a lazygit `gui.theme` YAML block from the COSMIC palette
+//! and updates the user's lazygit config using a comment-marker approach.
+
+use std::path::PathBuf;
+
+use crate::colors::ColorPalette;
+
+/// Comment marker for detecting our managed block
+const MARKER: &str = "# COSMIC ORDER theme — auto-generated";
+
+/// Generate the lazygit gui.theme YAML block
+pub fn generate_theme_block(palette: &ColorPalette) -> String {
+    let mut out = String::with_capacity(512);
+    out.push_str(MARKER);
+    out.push('\n');
+    out.push_str("gui:\n");
+    out.push_str("  theme:\n");
+    out.push_str(&format!(
+        "    activeBorderColor:\n      - \"{}\"\n      - bold\n",
+        palette.accent
+    ));
+    out.push_str(&format!(
+        "    inactiveBorderColor:\n      - \"{}\"\n",
+        palette.colors[8]
+    ));
+    out.push_str(&format!(
+        "    searchingActiveBorderColor:\n      - \"{}\"\n      - bold\n",
+        palette.accent
+    ));
+    out.push_str(&format!(
+        "    optionsTextColor:\n      - \"{}\"\n",
+        palette.colors[4]
+    ));
+    out.push_str(&format!(
+        "    selectedLineBgColor:\n      - \"{}\"\n",
+        palette.colors[0]
+    ));
+    out.push_str(&format!(
+        "    cherryPickedCommitFgColor:\n      - \"{}\"\n",
+        palette.colors[4]
+    ));
+    out.push_str(&format!(
+        "    cherryPickedCommitBgColor:\n      - \"{}\"\n",
+        palette.colors[5]
+    ));
+    out.push_str(&format!(
+        "    markedBaseCommitFgColor:\n      - \"{}\"\n",
+        palette.colors[4]
+    ));
+    out.push_str(&format!(
+        "    markedBaseCommitBgColor:\n      - \"{}\"\n",
+        palette.colors[3]
+    ));
+    out.push_str(&format!(
+        "    unstagedChangesColor:\n      - \"{}\"\n",
+        palette.colors[1]
+    ));
+    out.push_str(&format!(
+        "    defaultFgColor:\n      - \"{}\"\n",
+        palette.foreground
+    ));
+
+    out
+}
+
+/// Write theme to `~/.config/lazygit/config.yml`
+///
+/// Uses comment-marker approach to detect and replace our managed block.
+pub async fn write_theme(palette: &ColorPalette) -> Result<PathBuf, std::io::Error> {
+    let config_path = lazygit_config_path();
+
+    if let Some(parent) = config_path.parent() {
+        tokio::fs::create_dir_all(parent).await?;
+    }
+
+    let contents = match tokio::fs::read_to_string(&config_path).await {
+        Ok(c) => c,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => String::new(),
+        Err(e) => return Err(e),
+    };
+
+    let theme_block = generate_theme_block(palette);
+    let new_contents = update_config(&contents, &theme_block);
+
+    tokio::fs::write(&config_path, new_contents).await?;
+    Ok(config_path)
+}
+
+/// Update config: replace existing COSMIC block or append at end
+fn update_config(contents: &str, theme_block: &str) -> String {
+    let mut lines: Vec<String> = Vec::new();
+    let mut skip_block = false;
+    let mut found_block = false;
+
+    for line in contents.lines() {
+        let trimmed = line.trim();
+
+        // Detect our marker
+        if trimmed == MARKER {
+            skip_block = true;
+            found_block = true;
+            continue;
+        }
+
+        if skip_block {
+            // Skip indented lines (part of our gui: theme: block)
+            // Stop skipping when we hit a non-indented, non-empty line
+            // that isn't a continuation of the YAML block
+            if trimmed.is_empty() || line.starts_with(' ') || line.starts_with('\t') {
+                continue;
+            }
+            // Also skip the `gui:` line that's part of our block
+            if trimmed == "gui:" {
+                continue;
+            }
+            skip_block = false;
+        }
+
+        lines.push(line.to_string());
+    }
+
+    // Append the new block
+    if !found_block {
+        if lines.last().is_some_and(|l| !l.is_empty()) {
+            lines.push(String::new());
+        }
+    }
+
+    // Trim trailing empty lines before appending
+    while lines.last().is_some_and(|l| l.is_empty()) {
+        lines.pop();
+    }
+
+    if !lines.is_empty() {
+        lines.push(String::new());
+    }
+    lines.push(theme_block.trim_end().to_string());
+
+    // Ensure trailing newline
+    lines.push(String::new());
+    lines.join("\n")
+}
+
+fn lazygit_config_path() -> PathBuf {
+    directories::BaseDirs::new()
+        .map(|d| d.config_dir().join("lazygit").join("config.yml"))
+        .unwrap_or_else(|| {
+            let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
+            PathBuf::from(home).join(".config/lazygit/config.yml")
+        })
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+
+    fn sample_palette() -> ColorPalette {
+        ColorPalette {
+            accent: "#63D1D6".to_string(),
+            cursor: "#FFFFFF".to_string(),
+            foreground: "#FFFFFF".to_string(),
+            background: "#1B1B1B".to_string(),
+            selection_foreground: "#1B1B1B".to_string(),
+            selection_background: "#FFFFFF".to_string(),
+            colors: [
+                "#3B3B3B".to_string(),
+                "#FF6B6B".to_string(),
+                "#87D687".to_string(),
+                "#FFD93D".to_string(),
+                "#6B9FFF".to_string(),
+                "#B87DFF".to_string(),
+                "#63D1D6".to_string(),
+                "#D4D4D4".to_string(),
+                "#5A5A5A".to_string(),
+                "#FF6B6B".to_string(),
+                "#87D687".to_string(),
+                "#FFD93D".to_string(),
+                "#6B9FFF".to_string(),
+                "#B87DFF".to_string(),
+                "#63D1D6".to_string(),
+                "#E8E8E8".to_string(),
+            ],
+        }
+    }
+
+    #[test]
+    fn test_generate_theme_block_format() {
+        let palette = sample_palette();
+        let block = generate_theme_block(&palette);
+
+        assert!(block.starts_with(MARKER));
+        assert!(block.contains("gui:"));
+        assert!(block.contains("  theme:"));
+        assert!(block.contains("activeBorderColor:"));
+        assert!(block.contains("defaultFgColor:"));
+    }
+
+    #[test]
+    fn test_generate_theme_block_colors() {
+        let palette = sample_palette();
+        let block = generate_theme_block(&palette);
+
+        // Accent for active border
+        assert!(block.contains("\"#63D1D6\""));
+        // Bright black for inactive border
+        assert!(block.contains("\"#5A5A5A\""));
+        // Red for unstaged changes
+        assert!(block.contains("\"#FF6B6B\""));
+        // Blue for options text
+        assert!(block.contains("\"#6B9FFF\""));
+        // Foreground for default fg
+        assert!(block.contains("\"#FFFFFF\""));
+    }
+
+    #[test]
+    fn test_generate_theme_block_has_11_keys() {
+        let palette = sample_palette();
+        let block = generate_theme_block(&palette);
+
+        let key_lines: Vec<&str> = block
+            .lines()
+            .filter(|l| {
+                let t = l.trim();
+                t.ends_with(':') && t != "gui:" && t != "theme:"
+            })
+            .collect();
+        assert_eq!(key_lines.len(), 11);
+    }
+
+    #[test]
+    fn test_update_config_fresh() {
+        let block = "# COSMIC ORDER theme — auto-generated\ngui:\n  theme:\n    defaultFgColor:\n      - \"#FFFFFF\"";
+        let result = update_config("", block);
+        assert!(result.contains(MARKER));
+        assert!(result.contains("defaultFgColor:"));
+    }
+
+    #[test]
+    fn test_update_config_preserves_other_settings() {
+        let existing = "notATheme:\n  someSetting: true\n\nother: value\n";
+        let block = "# COSMIC ORDER theme — auto-generated\ngui:\n  theme:\n    defaultFgColor:\n      - \"#FFFFFF\"";
+        let result = update_config(existing, block);
+        assert!(result.contains("notATheme:"));
+        assert!(result.contains("someSetting: true"));
+        assert!(result.contains("other: value"));
+        assert!(result.contains(MARKER));
+    }
+
+    #[test]
+    fn test_update_config_replaces_old_block() {
+        let existing = "someOther: true\n\n# COSMIC ORDER theme — auto-generated\ngui:\n  theme:\n    defaultFgColor:\n      - \"#000000\"\n\nanotherSetting: yes\n";
+        let block = "# COSMIC ORDER theme — auto-generated\ngui:\n  theme:\n    defaultFgColor:\n      - \"#FFFFFF\"";
+        let result = update_config(existing, block);
+
+        assert!(result.contains("\"#FFFFFF\""));
+        assert!(!result.contains("\"#000000\""));
+        assert!(result.contains("someOther: true"));
+        assert!(result.contains("anotherSetting: yes"));
+    }
+}

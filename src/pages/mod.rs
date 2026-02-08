@@ -66,6 +66,14 @@ pub enum ThemesMessage {
     SetNvimSync(bool),
     /// Toggle Zellij theme sync
     SetZellijSync(bool),
+    /// Toggle fzf theme sync
+    SetFzfSync(bool),
+    /// Toggle fzf shell integration (source line in rc files)
+    SetFzfShellIntegration(bool),
+    /// Toggle lazygit theme sync
+    SetLazygitSync(bool),
+    /// Toggle custom hooks
+    SetHooksEnabled(bool),
     /// Run theme sync for all enabled tools
     SyncTools,
     /// Sync completed with result

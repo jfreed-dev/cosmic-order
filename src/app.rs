@@ -524,6 +524,62 @@ impl App {
                     )))
                 })
             }
+            pages::ThemesMessage::SetFzfSync(enabled) => {
+                self.tool_sync_config.fzf_enabled = enabled;
+                let config = self.tool_sync_config.clone();
+                cosmic::task::future(async move {
+                    if let Err(e) = config.save().await {
+                        tracing::warn!("Failed to save tool sync config: {e}");
+                    }
+                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SyncComplete(
+                        Ok(String::new()),
+                    )))
+                })
+            }
+            pages::ThemesMessage::SetFzfShellIntegration(enabled) => {
+                self.tool_sync_config.fzf_shell_integration = enabled;
+                let config = self.tool_sync_config.clone();
+                cosmic::task::future(async move {
+                    if let Err(e) = config.save().await {
+                        tracing::warn!("Failed to save tool sync config: {e}");
+                    }
+                    let shell_result = if enabled {
+                        crate::generators::fzf::enable_shell_integration().await
+                    } else {
+                        crate::generators::fzf::disable_shell_integration().await
+                    };
+                    if let Err(e) = shell_result {
+                        tracing::warn!("Failed to update fzf shell integration: {e}");
+                    }
+                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SyncComplete(
+                        Ok(String::new()),
+                    )))
+                })
+            }
+            pages::ThemesMessage::SetLazygitSync(enabled) => {
+                self.tool_sync_config.lazygit_enabled = enabled;
+                let config = self.tool_sync_config.clone();
+                cosmic::task::future(async move {
+                    if let Err(e) = config.save().await {
+                        tracing::warn!("Failed to save tool sync config: {e}");
+                    }
+                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SyncComplete(
+                        Ok(String::new()),
+                    )))
+                })
+            }
+            pages::ThemesMessage::SetHooksEnabled(enabled) => {
+                self.tool_sync_config.hooks_enabled = enabled;
+                let config = self.tool_sync_config.clone();
+                cosmic::task::future(async move {
+                    if let Err(e) = config.save().await {
+                        tracing::warn!("Failed to save tool sync config: {e}");
+                    }
+                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SyncComplete(
+                        Ok(String::new()),
+                    )))
+                })
+            }
             pages::ThemesMessage::SyncTools => {
                 self.tool_sync_status = None;
                 let config = self.tool_sync_config.clone();
@@ -544,6 +600,20 @@ impl App {
                             }
                             if r.zellij_synced {
                                 parts.push("Zellij: synced".to_string());
+                            }
+                            if r.fzf_synced {
+                                parts.push("fzf: synced".to_string());
+                            }
+                            if r.lazygit_synced {
+                                parts.push("lazygit: synced".to_string());
+                            }
+                            if let Some(ref hr) = r.hooks_result {
+                                if hr.hooks_run > 0 {
+                                    parts.push(format!(
+                                        "hooks: {}/{} ok",
+                                        hr.hooks_succeeded, hr.hooks_run
+                                    ));
+                                }
                             }
                             Ok(parts.join(", "))
                         }
@@ -1335,6 +1405,38 @@ impl App {
                     Message::Page(pages::Message::Themes(pages::ThemesMessage::SetZellijSync(
                         enabled,
                     )))
+                }),
+            ))
+            .add(widget::settings::item(
+                fl!("tool-sync-fzf"),
+                widget::toggler(self.tool_sync_config.fzf_enabled).on_toggle(|enabled| {
+                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SetFzfSync(
+                        enabled,
+                    )))
+                }),
+            ))
+            .add(widget::settings::item(
+                fl!("tool-sync-fzf-shell"),
+                widget::toggler(self.tool_sync_config.fzf_shell_integration).on_toggle(|enabled| {
+                    Message::Page(pages::Message::Themes(
+                        pages::ThemesMessage::SetFzfShellIntegration(enabled),
+                    ))
+                }),
+            ))
+            .add(widget::settings::item(
+                fl!("tool-sync-lazygit"),
+                widget::toggler(self.tool_sync_config.lazygit_enabled).on_toggle(|enabled| {
+                    Message::Page(pages::Message::Themes(
+                        pages::ThemesMessage::SetLazygitSync(enabled),
+                    ))
+                }),
+            ))
+            .add(widget::settings::item(
+                fl!("tool-sync-hooks"),
+                widget::toggler(self.tool_sync_config.hooks_enabled).on_toggle(|enabled| {
+                    Message::Page(pages::Message::Themes(
+                        pages::ThemesMessage::SetHooksEnabled(enabled),
+                    ))
                 }),
             ));
 
