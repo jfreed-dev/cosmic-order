@@ -85,7 +85,7 @@ Documentation is maintained alongside code development.
 
 ---
 
-## Phase 3: Wallpaper Management (Current)
+## Phase 3: Wallpaper Management
 
 **Goal**: Organize and manage wallpapers with theme association.
 
@@ -114,7 +114,7 @@ Documentation is maintained alongside code development.
 
 ---
 
-## Phase 4: Screensaver Configuration
+## Phase 4: Screensaver Configuration ✓
 
 **Goal**: Configure the terminal-based screensaver from the existing
 `laptop-configs-popos/screensaver` implementation.
@@ -187,12 +187,18 @@ Documentation is maintained alongside code development.
 - [x] Make mouse hiding conditional in Ghostty config generation
 - [x] Add config defaults to screensaver-ctl.sh
 - [x] Update tests for new fields (parse, roundtrip, defaults)
+- [x] Reliable fullscreen via ydotool (kernel-level input injection)
+- [x] Compositor interference management (autotile, focus_follows_cursor)
+- [x] Mouse pointer hiding via ydotool mousemove
+- [x] Mouse tracking dismiss (ESC sequence detection)
+- [x] GUI Save & Test end-to-end verified
 
 ### Deliverables
 
 - Configurable cursor hiding during screensaver
 - Configurable keyboard dismiss behavior
 - Configurable mouse pointer hiding
+- Reliable fullscreen on COSMIC/Wayland via ydotool
 - All settings persist through config file
 
 ---
