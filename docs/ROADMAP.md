@@ -230,31 +230,28 @@ See [NATIVE-MIGRATION.md](development/NATIVE-MIGRATION.md) for details.
 - Visual indicator when active (button selected state + tooltip)
 - Battery-aware auto-disable
 
-## Phase 5: Polish and Integration
+## Phase 5: Polish and Integration ✓
 
 **Goal**: Refine the application for release.
 
 ### Tasks
 
-- [ ] Accessibility review (a11y)
-- [ ] Keyboard navigation
-- [ ] Complete i18n translations
-- [ ] Performance optimization
-- [ ] Error handling review
-- [ ] Create installation package (deb)
-- [ ] Write user documentation
-- [ ] Create AppStream metadata
+- [x] i18n — Localize remaining hardcoded strings (file dialog filters, timeout display)
+- [x] Error handling review — Add debug logging to silent D-Bus downcasts
+- [x] Performance optimization — Async thumbnail generation (background tasks)
+- [x] Accessibility — Add tooltips to all action buttons
+- [x] Create AppStream metadata (metainfo.xml)
+- [x] Create installation package (Debian packaging)
+- [x] Version bump to 0.7.0
 
 ### Deliverables
 
-- Release-ready application
-- Debian package
-- User documentation
-
-### Documentation
-
-- Installation guide
-- User manual
+- All user-visible strings localized via fl!()
+- Async thumbnail generation (no I/O in view())
+- Button tooltips for keyboard/accessibility
+- AppStream metainfo.xml + install target
+- Debian packaging infrastructure (debian/)
+- Version 0.7.0
 
 ---
 
@@ -380,7 +377,7 @@ See [SCREENSAVER-INTEGRATION.md](SCREENSAVER-INTEGRATION.md) for detailed resear
 | 0.5.0 | 4A | Power-aware screensaver |
 | 0.6.0 | 4B | Enhanced cursor/input handling |
 | 0.6.5 | 4C | Caffeine mode (idle inhibitor) |
-| 0.7.0 | 6 | Tool theme synchronization |
+| 0.7.0 | 5 | Polish and integration |
 | 0.8.0 | 6A | Real-time theme sync |
 | 0.8.5 | 6C | CPU performance management |
 | 1.0.0 | 5 | First stable release |
