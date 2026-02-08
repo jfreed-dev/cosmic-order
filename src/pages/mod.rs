@@ -74,6 +74,8 @@ pub enum ThemesMessage {
     SetLazygitSync(bool),
     /// Toggle custom hooks
     SetHooksEnabled(bool),
+    /// Toggle auto-sync on theme change
+    SetAutoSync(bool),
     /// Run theme sync for all enabled tools
     SyncTools,
     /// Sync completed with result

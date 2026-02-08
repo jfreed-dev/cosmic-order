@@ -97,6 +97,32 @@ impl Application for App {
         &mut self.core
     }
 
+    fn system_theme_update(
+        &mut self,
+        _keys: &[&'static str],
+        _new_theme: &cosmic::cosmic_theme::Theme,
+    ) -> Task<Message> {
+        if self.tool_sync_config.auto_sync {
+            return self.update(Message::Page(pages::Message::Themes(
+                pages::ThemesMessage::SyncTools,
+            )));
+        }
+        Task::none()
+    }
+
+    fn system_theme_mode_update(
+        &mut self,
+        _keys: &[&'static str],
+        _new_theme: &cosmic::cosmic_theme::ThemeMode,
+    ) -> Task<Message> {
+        if self.tool_sync_config.auto_sync {
+            return self.update(Message::Page(pages::Message::Themes(
+                pages::ThemesMessage::SyncTools,
+            )));
+        }
+        Task::none()
+    }
+
     #[allow(clippy::cognitive_complexity)]
     fn init(core: Core, _flags: Self::Flags) -> (Self, Task<Message>) {
         // Load configuration
@@ -580,6 +606,18 @@ impl App {
                     )))
                 })
             }
+            pages::ThemesMessage::SetAutoSync(enabled) => {
+                self.tool_sync_config.auto_sync = enabled;
+                let config = self.tool_sync_config.clone();
+                cosmic::task::future(async move {
+                    if let Err(e) = config.save().await {
+                        tracing::warn!("Failed to save tool sync config: {e}");
+                    }
+                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SyncComplete(
+                        Ok(String::new()),
+                    )))
+                })
+            }
             pages::ThemesMessage::SyncTools => {
                 self.tool_sync_status = None;
                 let config = self.tool_sync_config.clone();
@@ -587,6 +625,8 @@ impl App {
                     let result = crate::tool_sync::sync_tools(&config).await;
                     let msg = match result {
                         Ok(r) => {
+                            let live = crate::tool_sync::signal_running_apps(&config).await;
+
                             let mut parts =
                                 vec![format!("colors.toml: {}", r.colors_path.display())];
                             if r.ghostty_synced {
@@ -614,6 +654,9 @@ impl App {
                                         hr.hooks_succeeded, hr.hooks_run
                                     ));
                                 }
+                            }
+                            if !live.is_empty() {
+                                parts.push(format!("live: {}", live.join(", ")));
                             }
                             Ok(parts.join(", "))
                         }
@@ -1375,6 +1418,14 @@ impl App {
 
         let mut section = widget::settings::section()
             .title(fl!("tool-sync"))
+            .add(widget::settings::item(
+                fl!("tool-sync-auto"),
+                widget::toggler(self.tool_sync_config.auto_sync).on_toggle(|enabled| {
+                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SetAutoSync(
+                        enabled,
+                    )))
+                }),
+            ))
             .add(widget::settings::item(
                 fl!("tool-sync-ghostty"),
                 widget::toggler(self.tool_sync_config.ghostty_enabled).on_toggle(|enabled| {

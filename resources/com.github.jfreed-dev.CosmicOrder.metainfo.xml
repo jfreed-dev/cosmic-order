@@ -34,6 +34,11 @@
   </categories>
   <content_rating type="oars-1.1" />
   <releases>
+    <release version="0.11.0" date="2026-02-08">
+      <description>
+        <p>Phase 6D: Real-time theme propagation with auto-sync on COSMIC theme change and live reload of Ghostty, Neovim, and btop.</p>
+      </description>
+    </release>
     <release version="0.10.0" date="2026-02-08">
       <description>
         <p>Phase 6C: fzf and lazygit theme generators plus a hook system for user-defined custom generators.</p>

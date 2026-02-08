@@ -320,13 +320,20 @@ See [NATIVE-MIGRATION.md](development/NATIVE-MIGRATION.md) for details.
 
 ---
 
-## Phase 6D: Real-time Propagation + Advanced Features
+## Phase 6D: Real-time Propagation ✅ (v0.11.0)
 
-**Goal**: Real-time theme propagation and additional features.
+**Goal**: Real-time theme propagation when COSMIC desktop theme changes.
 
-### Potential Features
+### Completed
 
-- [ ] Real-time theme propagation (Neovim RPC, Ghostty OSC)
+- [x] Auto-sync on COSMIC theme change via `system_theme_update()` / `system_theme_mode_update()`
+- [x] Live reload of Ghostty via SIGUSR2
+- [x] Live reload of btop via SIGUSR2
+- [x] Live reload of Neovim via `--remote-send` to unix sockets
+- [x] "Auto-sync on theme change" toggler (opt-in, default off)
+
+### Future Ideas
+
 - [ ] Theme creation wizard
 - [ ] Online theme repository integration
 - [ ] Wallpaper slideshow scheduling

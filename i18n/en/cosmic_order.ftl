@@ -175,6 +175,7 @@ tool-sync-fzf = fzf theme
 tool-sync-fzf-shell = fzf shell integration
 tool-sync-lazygit = lazygit theme
 tool-sync-hooks = Custom hooks
+tool-sync-auto = Auto-sync on theme change
 tool-sync-now = Sync Now
 tool-sync-success = Theme synced successfully
 tool-sync-error = Theme sync failed

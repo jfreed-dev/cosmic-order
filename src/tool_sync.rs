@@ -31,6 +31,8 @@ pub struct ToolSyncConfig {
     pub lazygit_enabled: bool,
     #[serde(default = "default_true")]
     pub hooks_enabled: bool,
+    #[serde(default = "default_false")]
+    pub auto_sync: bool,
 }
 
 const fn default_true() -> bool {
@@ -52,6 +54,7 @@ impl Default for ToolSyncConfig {
             fzf_shell_integration: false,
             lazygit_enabled: true,
             hooks_enabled: true,
+            auto_sync: false,
         }
     }
 }
@@ -181,6 +184,96 @@ pub async fn sync_tools(config: &ToolSyncConfig) -> Result<SyncResult, String> {
     })
 }
 
+/// Send reload signals to running applications after theme sync.
+///
+/// Best-effort: logs warnings on failure but never returns an error.
+pub async fn signal_running_apps(config: &ToolSyncConfig) -> Vec<String> {
+    let mut reloaded = Vec::new();
+
+    // Ghostty: SIGUSR2 triggers config reload
+    if config.ghostty_enabled {
+        match std::process::Command::new("pkill")
+            .args(["-USR2", "ghostty"])
+            .output()
+        {
+            Ok(output) if output.status.success() => {
+                tracing::debug!("Sent SIGUSR2 to Ghostty");
+                reloaded.push("Ghostty".to_string());
+            }
+            Ok(_) => tracing::debug!("No running Ghostty process found"),
+            Err(e) => tracing::warn!("Failed to signal Ghostty: {e}"),
+        }
+    }
+
+    // btop: SIGUSR2 triggers theme reload
+    if config.btop_enabled {
+        match std::process::Command::new("pkill")
+            .args(["-USR2", "btop"])
+            .output()
+        {
+            Ok(output) if output.status.success() => {
+                tracing::debug!("Sent SIGUSR2 to btop");
+                reloaded.push("btop".to_string());
+            }
+            Ok(_) => tracing::debug!("No running btop process found"),
+            Err(e) => tracing::warn!("Failed to signal btop: {e}"),
+        }
+    }
+
+    // Neovim: send colorscheme command via --remote-send
+    if config.nvim_enabled {
+        if let Some(runtime_dir) = std::env::var_os("XDG_RUNTIME_DIR") {
+            let runtime_path = PathBuf::from(&runtime_dir);
+            let mut nvim_count = 0u32;
+            if let Ok(entries) = std::fs::read_dir(&runtime_path) {
+                for entry in entries.flatten() {
+                    let name = entry.file_name();
+                    let name_str = name.to_string_lossy();
+                    if name_str.starts_with("nvim.") && name_str.ends_with(".0") {
+                        let socket = entry.path();
+                        match std::process::Command::new("nvim")
+                            .args([
+                                "--server",
+                                &socket.to_string_lossy(),
+                                "--remote-send",
+                                ":colorscheme tokyonight<CR>",
+                            ])
+                            .output()
+                        {
+                            Ok(output) if output.status.success() => {
+                                nvim_count += 1;
+                            }
+                            Ok(output) => {
+                                tracing::warn!(
+                                    "Neovim remote-send failed for {}: {}",
+                                    socket.display(),
+                                    String::from_utf8_lossy(&output.stderr)
+                                );
+                            }
+                            Err(e) => {
+                                tracing::warn!(
+                                    "Failed to send to Neovim at {}: {e}",
+                                    socket.display()
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+            if nvim_count > 0 {
+                tracing::debug!("Reloaded {nvim_count} Neovim instance(s)");
+                reloaded.push(if nvim_count == 1 {
+                    "Neovim".to_string()
+                } else {
+                    format!("Neovim ({nvim_count})")
+                });
+            }
+        }
+    }
+
+    reloaded
+}
+
 fn config_path() -> PathBuf {
     directories::BaseDirs::new()
         .map(|d| d.config_dir().join("cosmic-order").join("tool-sync.toml"))
@@ -206,6 +299,7 @@ mod tests {
         assert!(!config.fzf_shell_integration);
         assert!(config.lazygit_enabled);
         assert!(config.hooks_enabled);
+        assert!(!config.auto_sync);
     }
 
     #[test]
@@ -219,6 +313,7 @@ mod tests {
             fzf_shell_integration: true,
             lazygit_enabled: false,
             hooks_enabled: true,
+            auto_sync: true,
         };
         let serialized = toml::to_string_pretty(&config).unwrap();
         let deserialized: ToolSyncConfig = toml::from_str(&serialized).unwrap();
@@ -230,6 +325,7 @@ mod tests {
         assert!(deserialized.fzf_shell_integration);
         assert!(!deserialized.lazygit_enabled);
         assert!(deserialized.hooks_enabled);
+        assert!(deserialized.auto_sync);
     }
 
     #[test]
@@ -246,5 +342,6 @@ mod tests {
         assert!(!config.fzf_shell_integration);
         assert!(config.lazygit_enabled);
         assert!(config.hooks_enabled);
+        assert!(!config.auto_sync);
     }
 }
