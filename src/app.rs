@@ -658,7 +658,10 @@ impl App {
                 if launch_test && result.is_ok() {
                     let launcher = ScreensaverConfig::fullscreen_launcher_path();
                     if launcher.exists() {
-                        if let Err(e) = std::process::Command::new(&launcher).arg("launch").spawn()
+                        if let Err(e) = std::process::Command::new(&launcher)
+                            .arg("launch")
+                            .arg("force")
+                            .spawn()
                         {
                             tracing::error!("Failed to launch screensaver test: {e}");
                         }
