@@ -17,6 +17,7 @@ cargo-target-dir := env('CARGO_TARGET_DIR', 'target')
 # Resource file names
 desktop := appid + '.desktop'
 icon-svg := appid + '.svg'
+metainfo := appid + '.metainfo.xml'
 
 # Install destinations
 base-dir := absolute_path(clean(rootdir / prefix))
@@ -24,6 +25,7 @@ bin-dst := base-dir / 'bin' / name
 desktop-dst := base-dir / 'share' / 'applications' / desktop
 icons-dst := base-dir / 'share' / 'icons' / 'hicolor'
 icon-svg-dst := icons-dst / 'scalable' / 'apps' / icon-svg
+metainfo-dst := base-dir / 'share' / 'metainfo' / metainfo
 
 # Default recipe
 default: build-release
@@ -94,17 +96,19 @@ clean-vendor:
 # Full clean (build artifacts + vendored deps)
 clean-dist: clean clean-vendor
 
-# Install binary, desktop file, and icon
+# Install binary, desktop file, icon, and metainfo
 install:
     install -Dm0755 {{cargo-target-dir / 'release' / name}} {{bin-dst}}
     install -Dm0644 {{'resources' / desktop}} {{desktop-dst}}
     install -Dm0644 {{'resources' / 'icons' / icon-svg}} {{icon-svg-dst}}
+    install -Dm0644 {{'resources' / metainfo}} {{metainfo-dst}}
 
 # Uninstall installed files
 uninstall:
     rm -f {{bin-dst}}
     rm -f {{desktop-dst}}
     rm -f {{icon-svg-dst}}
+    rm -f {{metainfo-dst}}
 
 # Vendor dependencies locally
 vendor:
