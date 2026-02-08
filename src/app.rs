@@ -189,7 +189,8 @@ impl Application for App {
             caffeine_active: false,
         };
 
-        (app, Task::none())
+        let init_task = app.spawn_thumbnail_generation();
+        (app, init_task)
     }
 
     fn nav_model(&self) -> Option<&nav_bar::Model> {
@@ -479,7 +480,7 @@ impl App {
                 self.wallpaper_selected_collection = collection;
                 self.wallpaper_selected_path = None;
                 self.wallpaper_grid_page = 0;
-                Task::none()
+                self.spawn_thumbnail_generation()
             }
             pages::WallpapersMessage::SelectWallpaper(path) => {
                 self.wallpaper_selected_path = Some(path);
@@ -566,10 +567,14 @@ impl App {
             }
             pages::WallpapersMessage::GridNextPage => {
                 self.wallpaper_grid_page += 1;
-                Task::none()
+                self.spawn_thumbnail_generation()
             }
             pages::WallpapersMessage::GridPrevPage => {
                 self.wallpaper_grid_page = self.wallpaper_grid_page.saturating_sub(1);
+                self.spawn_thumbnail_generation()
+            }
+            pages::WallpapersMessage::ThumbnailsReady => {
+                // Re-render will pick up newly cached thumbnails
                 Task::none()
             }
         }
@@ -926,6 +931,56 @@ impl App {
             "slide".to_string(),
             "matrix".to_string(),
         ]
+    }
+
+    /// Collect the visible wallpaper paths for the current page and spawn
+    /// background thumbnail generation for any that are not yet cached.
+    fn spawn_thumbnail_generation(&self) -> Task<Message> {
+        const PER_PAGE: usize = 12;
+
+        let paths: Vec<String> = if let Some(theme) = self
+            .wallpaper_selected_collection
+            .as_ref()
+            .and_then(|c| self.wallpaper_config.available_themes.get(c))
+        {
+            let total = theme.wallpapers.len();
+            let total_pages = total.div_ceil(PER_PAGE);
+            let page = self.wallpaper_grid_page.min(total_pages.saturating_sub(1));
+            let start = page * PER_PAGE;
+            let end = (start + PER_PAGE).min(total);
+            theme.wallpapers[start..end]
+                .iter()
+                .map(|filename| theme.path.join(filename).to_string_lossy().to_string())
+                .collect()
+        } else {
+            Vec::new()
+        };
+
+        // Filter to only those not yet cached
+        let missing: Vec<String> = paths
+            .into_iter()
+            .filter(|p| self.thumbnail_cache.get_cached(p).is_none())
+            .collect();
+
+        if missing.is_empty() {
+            return Task::none();
+        }
+
+        let cache = ThumbnailCache {
+            cache_dir: self.thumbnail_cache.cache_dir.clone(),
+        };
+
+        cosmic::task::future(async move {
+            tokio::task::spawn_blocking(move || {
+                cache.generate_batch(&missing);
+            })
+            .await
+            .ok();
+
+            Message::Page(pages::Message::Wallpapers(
+                pages::WallpapersMessage::ThumbnailsReady,
+            ))
+        })
     }
 
     /// Apply a wallpaper: read current config, update source, write back
@@ -1619,14 +1674,26 @@ impl App {
 
         let path_owned = full_path.to_string();
 
-        let thumb_path = self.thumbnail_cache.get_or_create(full_path);
-        let image_button = widget::button::image(Handle::from_path(thumb_path))
+        let image_button = if let Some(thumb_path) = self.thumbnail_cache.get_cached(full_path) {
+            widget::button::image(Handle::from_path(thumb_path))
+                .width(Length::Fixed(160.0))
+                .height(Length::Fixed(100.0))
+                .selected(is_current || is_selected)
+                .on_press(Message::Page(pages::Message::Wallpapers(
+                    pages::WallpapersMessage::SelectWallpaper(path_owned),
+                )))
+        } else {
+            // Placeholder — thumbnail will be generated in background
+            widget::button::image(Handle::from_path(
+                PathBuf::from("/usr/share/icons/hicolor/scalable/apps/image-missing.svg"),
+            ))
             .width(Length::Fixed(160.0))
             .height(Length::Fixed(100.0))
             .selected(is_current || is_selected)
             .on_press(Message::Page(pages::Message::Wallpapers(
                 pages::WallpapersMessage::SelectWallpaper(path_owned),
-            )));
+            )))
+        };
 
         // Truncate filename for display
         let display_name = if filename.len() > 20 {

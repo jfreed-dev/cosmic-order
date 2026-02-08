@@ -439,7 +439,8 @@ impl WallpaperConfig {
 /// load full 5K images for 160px cards. Failures are cached as empty
 /// marker files to avoid retrying on every frame.
 pub struct ThumbnailCache {
-    cache_dir: PathBuf,
+    /// Cache directory path (public for background task access)
+    pub cache_dir: PathBuf,
 }
 
 impl ThumbnailCache {
@@ -453,6 +454,71 @@ impl ThumbnailCache {
             .join("cosmic-order")
             .join("thumbnails");
         Self { cache_dir }
+    }
+
+    /// Check if a thumbnail exists on disk (no I/O generation).
+    /// Returns `Some(thumb_path)` if cached, `None` if not yet generated.
+    pub fn get_cached(&self, source_path: &str) -> Option<PathBuf> {
+        let thumb_path = self.thumb_path_for(source_path);
+
+        if thumb_path.exists() {
+            // Check for failure marker (empty file) — return None so
+            // the caller uses a placeholder icon
+            if fs::metadata(&thumb_path)
+                .map(|m| m.len() == 0)
+                .unwrap_or(false)
+            {
+                return None;
+            }
+            return Some(thumb_path);
+        }
+
+        None
+    }
+
+    /// Compute the cache key path for a source image.
+    fn thumb_path_for(&self, source_path: &str) -> PathBuf {
+        let source = Path::new(source_path);
+        let key = source
+            .parent()
+            .and_then(|p| p.file_name())
+            .and_then(|n| n.to_str())
+            .map(|parent| {
+                let fname = source
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("unknown");
+                format!("{parent}__{fname}")
+            })
+            .unwrap_or_else(|| {
+                source
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("unknown")
+                    .to_string()
+            });
+        self.cache_dir.join(&key)
+    }
+
+    /// Generate thumbnails for a batch of source paths (blocking I/O).
+    /// Returns the number of thumbnails generated.
+    pub fn generate_batch(&self, source_paths: &[String]) -> usize {
+        let mut count = 0;
+        for source_path in source_paths {
+            let thumb_path = self.thumb_path_for(source_path);
+            if thumb_path.exists() {
+                continue;
+            }
+            let source = Path::new(source_path.as_str());
+            if let Err(e) = self.generate_thumbnail(source, &thumb_path) {
+                tracing::warn!("Thumbnail generation failed for {source_path}: {e}");
+                let _ = fs::create_dir_all(&self.cache_dir);
+                let _ = fs::write(&thumb_path, b"");
+            } else {
+                count += 1;
+            }
+        }
+        count
     }
 
     /// Get the thumbnail path for a wallpaper. Generates it if missing.

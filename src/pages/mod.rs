@@ -89,6 +89,8 @@ pub enum WallpapersMessage {
     GridNextPage,
     /// Show previous page of wallpaper thumbnails
     GridPrevPage,
+    /// Background thumbnail generation completed for the visible page
+    ThumbnailsReady,
 }
 
 /// Screensaver page messages
