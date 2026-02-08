@@ -1169,16 +1169,28 @@ impl App {
                         widget::column()
                             .spacing(spacing.space_xs)
                             .push(widget::text::body(fl!("theme-export-description")))
-                            .push(widget::button::standard(fl!("theme-export")).on_press(
-                                Message::Page(pages::Message::Themes(pages::ThemesMessage::Export)),
+                            .push(widget::tooltip(
+                                widget::button::standard(fl!("theme-export")).on_press(
+                                    Message::Page(pages::Message::Themes(
+                                        pages::ThemesMessage::Export,
+                                    )),
+                                ),
+                                widget::text::body(fl!("tooltip-export")),
+                                widget::tooltip::Position::Top,
                             )),
                     )
                     .add(
                         widget::column()
                             .spacing(spacing.space_xs)
                             .push(widget::text::body(fl!("theme-import-description")))
-                            .push(widget::button::standard(fl!("theme-import")).on_press(
-                                Message::Page(pages::Message::Themes(pages::ThemesMessage::Import)),
+                            .push(widget::tooltip(
+                                widget::button::standard(fl!("theme-import")).on_press(
+                                    Message::Page(pages::Message::Themes(
+                                        pages::ThemesMessage::Import,
+                                    )),
+                                ),
+                                widget::text::body(fl!("tooltip-import")),
+                                widget::tooltip::Position::Top,
                             )),
                     ),
             );
@@ -1426,11 +1438,13 @@ impl App {
                 .align_x(cosmic::iced::Alignment::Center)
                 .push(mockup)
                 .push(widget::text::body(display_name))
-                .push(
+                .push(widget::tooltip(
                     widget::button::standard(fl!("theme-try")).on_press(Message::Page(
                         pages::Message::Themes(pages::ThemesMessage::PreviewTheme(theme_id)),
                     )),
-                );
+                    widget::text::body(fl!("tooltip-try")),
+                    widget::tooltip::Position::Top,
+                ));
 
             row = row.push(card);
         }
@@ -1532,13 +1546,25 @@ impl App {
         } else {
             widget::button::suggested(fl!("wallpaper-set"))
         };
+        let apply_with_tooltip = widget::tooltip(
+            apply_button,
+            widget::text::body(fl!("tooltip-apply")),
+            widget::tooltip::Position::Top,
+        );
 
         let import_button =
             widget::button::standard(fl!("wallpaper-add-file")).on_press(Message::Page(
                 pages::Message::Wallpapers(pages::WallpapersMessage::ImportFromFile),
             ));
+        let import_with_tooltip = widget::tooltip(
+            import_button,
+            widget::text::body(fl!("tooltip-import")),
+            widget::tooltip::Position::Top,
+        );
 
-        buttons_row = buttons_row.push(apply_button).push(import_button);
+        buttons_row = buttons_row
+            .push(apply_with_tooltip)
+            .push(import_with_tooltip);
 
         section = section.add(buttons_row);
 
@@ -1635,9 +1661,13 @@ impl App {
             .align_y(cosmic::iced::Alignment::Center);
 
         if page > 0 {
-            nav_row = nav_row.push(widget::button::standard("<").on_press(Message::Page(
-                pages::Message::Wallpapers(pages::WallpapersMessage::GridPrevPage),
-            )));
+            nav_row = nav_row.push(widget::tooltip(
+                widget::button::standard("<").on_press(Message::Page(
+                    pages::Message::Wallpapers(pages::WallpapersMessage::GridPrevPage),
+                )),
+                widget::text::body(fl!("tooltip-prev-page")),
+                widget::tooltip::Position::Top,
+            ));
         } else {
             nav_row = nav_row.push(widget::button::standard("<"));
         }
@@ -1649,9 +1679,13 @@ impl App {
         )));
 
         if page + 1 < total_pages {
-            nav_row = nav_row.push(widget::button::standard(">").on_press(Message::Page(
-                pages::Message::Wallpapers(pages::WallpapersMessage::GridNextPage),
-            )));
+            nav_row = nav_row.push(widget::tooltip(
+                widget::button::standard(">").on_press(Message::Page(
+                    pages::Message::Wallpapers(pages::WallpapersMessage::GridNextPage),
+                )),
+                widget::text::body(fl!("tooltip-next-page")),
+                widget::tooltip::Position::Top,
+            ));
         } else {
             nav_row = nav_row.push(widget::button::standard(">"));
         }
@@ -1759,9 +1793,13 @@ impl App {
         });
 
         // Save button
-        let save_button = widget::button::suggested(fl!("save")).on_press(Message::Page(
-            pages::Message::Wallpapers(pages::WallpapersMessage::SaveSettings),
-        ));
+        let save_button = widget::tooltip(
+            widget::button::suggested(fl!("save")).on_press(Message::Page(
+                pages::Message::Wallpapers(pages::WallpapersMessage::SaveSettings),
+            )),
+            widget::text::body(fl!("tooltip-save")),
+            widget::tooltip::Position::Top,
+        );
 
         widget::settings::section()
             .title(fl!("wallpaper-rotation"))
@@ -2115,21 +2153,29 @@ impl App {
                     action_col = action_col.push(widget::text::body(msg.clone()));
                 }
 
+                let save_btn = widget::tooltip(
+                    widget::button::suggested(fl!("screensaver-save")).on_press(
+                        Message::Page(pages::Message::Screensaver(
+                            pages::ScreensaverMessage::SaveConfig,
+                        )),
+                    ),
+                    widget::text::body(fl!("tooltip-save")),
+                    widget::tooltip::Position::Top,
+                );
+                let test_btn = widget::tooltip(
+                    widget::button::standard(fl!("screensaver-save-test")).on_press(
+                        Message::Page(pages::Message::Screensaver(
+                            pages::ScreensaverMessage::SaveAndTest,
+                        )),
+                    ),
+                    widget::text::body(fl!("tooltip-save-test")),
+                    widget::tooltip::Position::Top,
+                );
                 action_col = action_col.push(
                     widget::row()
                         .spacing(spacing.space_s)
-                        .push(widget::button::suggested(fl!("screensaver-save")).on_press(
-                            Message::Page(pages::Message::Screensaver(
-                                pages::ScreensaverMessage::SaveConfig,
-                            )),
-                        ))
-                        .push(
-                            widget::button::standard(fl!("screensaver-save-test")).on_press(
-                                Message::Page(pages::Message::Screensaver(
-                                    pages::ScreensaverMessage::SaveAndTest,
-                                )),
-                            ),
-                        ),
+                        .push(save_btn)
+                        .push(test_btn),
                 );
 
                 action_col

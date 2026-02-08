@@ -181,6 +181,16 @@ none = None
 seconds = seconds
 minutes = minutes
 
+# Tooltips
+tooltip-save = Save settings
+tooltip-save-test = Save and preview screensaver
+tooltip-apply = Set as wallpaper
+tooltip-import = Import from file
+tooltip-export = Export to file
+tooltip-try = Preview this theme
+tooltip-prev-page = Previous page
+tooltip-next-page = Next page
+
 # File Dialog Filters
 filter-text-files = Text files
 filter-images = Images
