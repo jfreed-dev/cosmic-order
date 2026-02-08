@@ -199,11 +199,17 @@ async fn query_upower() -> Result<(bool, Option<u8>), zbus::Error> {
         "OnBattery",
     )
     .await?;
-    let on_battery = on_battery_val.downcast_ref::<bool>().unwrap_or(false);
+    let on_battery = match on_battery_val.downcast_ref::<bool>() {
+        Ok(v) => v,
+        Err(_) => {
+            tracing::debug!("UPower OnBattery: unexpected type, defaulting to false");
+            false
+        }
+    };
 
     // Check device Type to determine if a battery exists
     // Type 2 = Battery, 0 = Unknown (no battery)
-    let device_type = get_dbus_property(
+    let device_type = match get_dbus_property(
         &connection,
         "org.freedesktop.UPower",
         "/org/freedesktop/UPower/devices/DisplayDevice",
@@ -211,9 +217,16 @@ async fn query_upower() -> Result<(bool, Option<u8>), zbus::Error> {
         "Type",
     )
     .await
-    .ok()
-    .and_then(|v| v.downcast_ref::<u32>().ok())
-    .unwrap_or(0);
+    {
+        Ok(v) => match v.downcast_ref::<u32>() {
+            Ok(t) => t,
+            Err(_) => {
+                tracing::debug!("UPower Device Type: unexpected type, defaulting to 0");
+                0
+            }
+        },
+        Err(_) => 0,
+    };
 
     if device_type == 0 {
         // No battery present
@@ -221,7 +234,7 @@ async fn query_upower() -> Result<(bool, Option<u8>), zbus::Error> {
     }
 
     // Read battery percentage from DisplayDevice
-    let percentage = get_dbus_property(
+    let percentage = match get_dbus_property(
         &connection,
         "org.freedesktop.UPower",
         "/org/freedesktop/UPower/devices/DisplayDevice",
@@ -229,9 +242,19 @@ async fn query_upower() -> Result<(bool, Option<u8>), zbus::Error> {
         "Percentage",
     )
     .await
-    .ok()
-    .and_then(|v| v.downcast_ref::<f64>().ok())
-    .map(|p| p.clamp(0.0, 100.0) as u8);
+    {
+        Ok(v) => match v.downcast_ref::<f64>() {
+            Ok(p) => Some(p.clamp(0.0, 100.0) as u8),
+            Err(_) => {
+                tracing::debug!("UPower Percentage: unexpected type, skipping");
+                None
+            }
+        },
+        Err(e) => {
+            tracing::debug!("UPower Percentage query failed: {e}");
+            None
+        }
+    };
 
     Ok((on_battery, percentage))
 }
