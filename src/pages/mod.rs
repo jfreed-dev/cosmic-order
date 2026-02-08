@@ -138,4 +138,6 @@ pub enum ScreensaverMessage {
     SaveComplete(Result<(), String>, bool),
     /// Save and launch screensaver test
     SaveAndTest,
+    /// Screensaver test process exited
+    ScreensaverTestExited(Result<(), String>),
 }

@@ -6,6 +6,7 @@
 //! The keyboard-first workflow you love, on the desktop you deserve.
 
 mod app;
+mod compositor;
 mod config;
 mod localize;
 mod pages;

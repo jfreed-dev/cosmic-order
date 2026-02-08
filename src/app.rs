@@ -8,6 +8,7 @@ use cosmic::app::{Core, Task};
 use cosmic::widget::{self, nav_bar};
 use cosmic::{Application, Element};
 
+use crate::compositor;
 use crate::config::Config;
 use crate::fl;
 use crate::pages::{self, PageId};
@@ -49,6 +50,8 @@ pub struct App {
     available_logos: Vec<(String, PathBuf)>,
     /// Status message shown after save/reload (cleared on next action)
     screensaver_status_msg: Option<String>,
+    /// Saved compositor settings during screensaver test (None when not testing)
+    compositor_backup: Option<compositor::CompositorBackup>,
 }
 
 /// Application messages
@@ -166,6 +169,7 @@ impl Application for App {
             power_state: None,
             available_logos,
             screensaver_status_msg: None,
+            compositor_backup: None,
         };
 
         (app, Task::none())
@@ -656,18 +660,89 @@ impl App {
                     }
                 }
                 if launch_test && result.is_ok() {
-                    let launcher = ScreensaverConfig::fullscreen_launcher_path();
-                    if launcher.exists() {
-                        if let Err(e) = std::process::Command::new(&launcher)
-                            .arg("launch")
-                            .arg("force")
-                            .spawn()
-                        {
-                            tracing::error!("Failed to launch screensaver test: {e}");
-                        }
-                    } else {
-                        tracing::warn!("launch-fullscreen.sh not found at {}", launcher.display());
+                    // Guard against double-launch
+                    if self.compositor_backup.is_some() {
+                        tracing::warn!("Screensaver test already running, skipping");
+                        return Task::none();
                     }
+
+                    // Disable compositor interference via cosmic-config API
+                    let backup = match compositor::disable_interference() {
+                        Ok(b) => b,
+                        Err(e) => {
+                            tracing::warn!("Compositor disable failed: {e}");
+                            None
+                        }
+                    };
+                    self.compositor_backup.clone_from(&backup);
+
+                    let launcher = ScreensaverConfig::fullscreen_launcher_path();
+                    if !launcher.exists() {
+                        tracing::warn!("launch-fullscreen.sh not found at {}", launcher.display());
+                        // Restore immediately since we won't launch
+                        if let Some(ref b) = self.compositor_backup.take()
+                            && let Err(e) = compositor::restore_settings(b)
+                        {
+                            tracing::warn!("Compositor restore failed: {e}");
+                        }
+                        return Task::none();
+                    }
+
+                    // Spawn the screensaver and wait for it to exit
+                    match std::process::Command::new(&launcher)
+                        .arg("launch")
+                        .arg("force")
+                        .arg("--skip-compositor")
+                        .spawn()
+                    {
+                        Ok(child) => {
+                            return cosmic::task::future(async move {
+                                let result = tokio::task::spawn_blocking(move || {
+                                    let mut child = child;
+                                    match child.wait() {
+                                        Ok(status) => {
+                                            if status.success() {
+                                                Ok(())
+                                            } else {
+                                                Err(format!("Screensaver exited with: {status}"))
+                                            }
+                                        }
+                                        Err(e) => Err(format!("Wait failed: {e}")),
+                                    }
+                                })
+                                .await
+                                .map_err(|e| format!("Spawn blocking failed: {e}"))
+                                .and_then(|r| r);
+
+                                // Restore compositor settings in the async task
+                                if let Some(ref b) = backup
+                                    && let Err(e) = compositor::restore_settings(b)
+                                {
+                                    tracing::warn!("Compositor restore failed: {e}");
+                                }
+
+                                Message::Page(pages::Message::Screensaver(
+                                    pages::ScreensaverMessage::ScreensaverTestExited(result),
+                                ))
+                            });
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to launch screensaver test: {e}");
+                            if let Some(ref b) = self.compositor_backup.take()
+                                && let Err(e) = compositor::restore_settings(b)
+                            {
+                                tracing::warn!("Compositor restore failed: {e}");
+                            }
+                        }
+                    }
+                }
+                Task::none()
+            }
+            pages::ScreensaverMessage::ScreensaverTestExited(result) => {
+                self.compositor_backup = None;
+                match &result {
+                    Ok(()) => tracing::info!("Screensaver test completed"),
+                    Err(e) => tracing::warn!("Screensaver test exited: {e}"),
                 }
                 Task::none()
             }
