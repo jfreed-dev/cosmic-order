@@ -60,6 +60,12 @@ pub enum ThemesMessage {
     CancelPreview,
     /// Toggle Ghostty theme sync
     SetGhosttySync(bool),
+    /// Toggle btop theme sync
+    SetBtopSync(bool),
+    /// Toggle Neovim theme sync
+    SetNvimSync(bool),
+    /// Toggle Zellij theme sync
+    SetZellijSync(bool),
     /// Run theme sync for all enabled tools
     SyncTools,
     /// Sync completed with result

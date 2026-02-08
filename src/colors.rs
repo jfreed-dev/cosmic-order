@@ -100,6 +100,18 @@ impl ColorPalette {
     }
 }
 
+/// Parse a hex color string (`#RRGGBB`) to decimal RGB tuple
+pub fn hex_to_rgb(hex: &str) -> Option<(u8, u8, u8)> {
+    let hex = hex.strip_prefix('#')?;
+    if hex.len() != 6 {
+        return None;
+    }
+    let r = u8::from_str_radix(&hex[0..2], 16).ok()?;
+    let g = u8::from_str_radix(&hex[2..4], 16).ok()?;
+    let b = u8::from_str_radix(&hex[4..6], 16).ok()?;
+    Some((r, g, b))
+}
+
 /// Config directory for cosmic-order files
 fn dirs_config_dir() -> PathBuf {
     directories::BaseDirs::new()
@@ -185,5 +197,15 @@ mod tests {
             assert!(color.starts_with('#'), "Not hex: {color}");
             assert_eq!(color.len(), 7, "Wrong hex length: {color}");
         }
+    }
+
+    #[test]
+    fn test_hex_to_rgb() {
+        assert_eq!(hex_to_rgb("#FF0000"), Some((255, 0, 0)));
+        assert_eq!(hex_to_rgb("#00FF00"), Some((0, 255, 0)));
+        assert_eq!(hex_to_rgb("#1A1A1A"), Some((26, 26, 26)));
+        assert_eq!(hex_to_rgb("#F8F8F8"), Some((248, 248, 248)));
+        assert_eq!(hex_to_rgb("invalid"), None);
+        assert_eq!(hex_to_rgb("#FFF"), None);
     }
 }

@@ -5,4 +5,7 @@
 //! Each sub-module generates configuration files for a specific tool
 //! from the extracted [`ColorPalette`](crate::colors::ColorPalette).
 
+pub mod btop;
 pub mod ghostty;
+pub mod nvim;
+pub mod zellij;

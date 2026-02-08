@@ -488,6 +488,42 @@ impl App {
                     )))
                 })
             }
+            pages::ThemesMessage::SetBtopSync(enabled) => {
+                self.tool_sync_config.btop_enabled = enabled;
+                let config = self.tool_sync_config.clone();
+                cosmic::task::future(async move {
+                    if let Err(e) = config.save().await {
+                        tracing::warn!("Failed to save tool sync config: {e}");
+                    }
+                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SyncComplete(
+                        Ok(String::new()),
+                    )))
+                })
+            }
+            pages::ThemesMessage::SetNvimSync(enabled) => {
+                self.tool_sync_config.nvim_enabled = enabled;
+                let config = self.tool_sync_config.clone();
+                cosmic::task::future(async move {
+                    if let Err(e) = config.save().await {
+                        tracing::warn!("Failed to save tool sync config: {e}");
+                    }
+                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SyncComplete(
+                        Ok(String::new()),
+                    )))
+                })
+            }
+            pages::ThemesMessage::SetZellijSync(enabled) => {
+                self.tool_sync_config.zellij_enabled = enabled;
+                let config = self.tool_sync_config.clone();
+                cosmic::task::future(async move {
+                    if let Err(e) = config.save().await {
+                        tracing::warn!("Failed to save tool sync config: {e}");
+                    }
+                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SyncComplete(
+                        Ok(String::new()),
+                    )))
+                })
+            }
             pages::ThemesMessage::SyncTools => {
                 self.tool_sync_status = None;
                 let config = self.tool_sync_config.clone();
@@ -499,6 +535,15 @@ impl App {
                                 vec![format!("colors.toml: {}", r.colors_path.display())];
                             if r.ghostty_synced {
                                 parts.push("Ghostty: synced".to_string());
+                            }
+                            if r.btop_synced {
+                                parts.push("btop: synced".to_string());
+                            }
+                            if r.nvim_synced {
+                                parts.push("Neovim: synced".to_string());
+                            }
+                            if r.zellij_synced {
+                                parts.push("Zellij: synced".to_string());
                             }
                             Ok(parts.join(", "))
                         }
@@ -1258,17 +1303,40 @@ impl App {
     fn view_tool_sync_section(&self) -> Element<'_, Message> {
         let spacing = cosmic::theme::spacing();
 
-        let mut section =
-            widget::settings::section()
-                .title(fl!("tool-sync"))
-                .add(widget::settings::item(
-                    fl!("tool-sync-ghostty"),
-                    widget::toggler(self.tool_sync_config.ghostty_enabled).on_toggle(|enabled| {
-                        Message::Page(pages::Message::Themes(
-                            pages::ThemesMessage::SetGhosttySync(enabled),
-                        ))
-                    }),
-                ));
+        let mut section = widget::settings::section()
+            .title(fl!("tool-sync"))
+            .add(widget::settings::item(
+                fl!("tool-sync-ghostty"),
+                widget::toggler(self.tool_sync_config.ghostty_enabled).on_toggle(|enabled| {
+                    Message::Page(pages::Message::Themes(
+                        pages::ThemesMessage::SetGhosttySync(enabled),
+                    ))
+                }),
+            ))
+            .add(widget::settings::item(
+                fl!("tool-sync-btop"),
+                widget::toggler(self.tool_sync_config.btop_enabled).on_toggle(|enabled| {
+                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SetBtopSync(
+                        enabled,
+                    )))
+                }),
+            ))
+            .add(widget::settings::item(
+                fl!("tool-sync-nvim"),
+                widget::toggler(self.tool_sync_config.nvim_enabled).on_toggle(|enabled| {
+                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SetNvimSync(
+                        enabled,
+                    )))
+                }),
+            ))
+            .add(widget::settings::item(
+                fl!("tool-sync-zellij"),
+                widget::toggler(self.tool_sync_config.zellij_enabled).on_toggle(|enabled| {
+                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SetZellijSync(
+                        enabled,
+                    )))
+                }),
+            ));
 
         // Sync button + status row
         let mut sync_row = widget::row().spacing(spacing.space_m).push(widget::tooltip(

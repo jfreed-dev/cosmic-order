@@ -278,20 +278,26 @@ See [NATIVE-MIGRATION.md](development/NATIVE-MIGRATION.md) for details.
 
 ---
 
-## Phase 6B: Additional Tool Generators
+## Phase 6B: Additional Tool Generators ✓
 
 **Goal**: Extend theme sync to Neovim, btop, and Zellij.
 
 ### Tasks
 
-- [ ] Implement Neovim/LazyVim colorscheme generator
-- [ ] Implement btop theme generator
-- [ ] Implement Zellij theme generator
+- [x] Implement btop theme generator
+- [x] Implement Neovim/LazyVim colorscheme generator
+- [x] Implement Zellij theme generator
+- [x] Extend tool sync orchestration with per-tool enable/disable
+- [x] Add per-tool togglers in Tool Sync UI
+- [x] Localize all new tool sync strings
+- [x] Version bump to 0.9.0
 
 ### Deliverables
 
-- Theme generators for Neovim, btop, Zellij
-- Per-tool toggles in Tool Sync UI
+- `~/.config/btop/themes/cosmic-synced.theme` — btop theme with gradient colors
+- `~/.config/nvim/lua/plugins/colorscheme.lua` — tokyonight with COSMIC colors
+- `~/.config/zellij/config.kdl` — Zellij theme block with decimal RGB colors
+- Per-tool togglers and sync for all 4 tools (Ghostty, btop, Neovim, Zellij)
 
 ---
 
@@ -364,7 +370,7 @@ See [SCREENSAVER-INTEGRATION.md](SCREENSAVER-INTEGRATION.md) for detailed resear
 | 0.6.5 | 4C | Caffeine mode (idle inhibitor) |
 | 0.7.0 | 5 | Polish and integration |
 | 0.8.0 | 6A | Tool theme sync (colors.toml + Ghostty) |
-| 0.9.0 | 6B | Additional tool generators |
+| 0.9.0 | 6B | Additional tool generators (btop, Neovim, Zellij) |
 | 1.0.0 | 7 | First stable release |
 
 ## Success Criteria

@@ -17,6 +17,12 @@ use crate::generators;
 pub struct ToolSyncConfig {
     #[serde(default = "default_true")]
     pub ghostty_enabled: bool,
+    #[serde(default = "default_true")]
+    pub btop_enabled: bool,
+    #[serde(default = "default_true")]
+    pub nvim_enabled: bool,
+    #[serde(default = "default_true")]
+    pub zellij_enabled: bool,
 }
 
 const fn default_true() -> bool {
@@ -27,6 +33,9 @@ impl Default for ToolSyncConfig {
     fn default() -> Self {
         Self {
             ghostty_enabled: true,
+            btop_enabled: true,
+            nvim_enabled: true,
+            zellij_enabled: true,
         }
     }
 }
@@ -58,6 +67,9 @@ impl ToolSyncConfig {
 pub struct SyncResult {
     pub colors_path: PathBuf,
     pub ghostty_synced: bool,
+    pub btop_synced: bool,
+    pub nvim_synced: bool,
+    pub zellij_synced: bool,
 }
 
 /// Run the full sync pipeline for all enabled tools
@@ -70,6 +82,9 @@ pub async fn sync_tools(config: &ToolSyncConfig) -> Result<SyncResult, String> {
         .map_err(|e| format!("Failed to save colors.toml: {e}"))?;
 
     let mut ghostty_synced = false;
+    let mut btop_synced = false;
+    let mut nvim_synced = false;
+    let mut zellij_synced = false;
 
     if config.ghostty_enabled {
         generators::ghostty::write_theme(&palette)
@@ -83,9 +98,40 @@ pub async fn sync_tools(config: &ToolSyncConfig) -> Result<SyncResult, String> {
         ghostty_synced = true;
     }
 
+    if config.btop_enabled {
+        generators::btop::write_theme(&palette)
+            .await
+            .map_err(|e| format!("Failed to write btop theme: {e}"))?;
+
+        generators::btop::activate_theme()
+            .await
+            .map_err(|e| format!("Failed to activate btop theme: {e}"))?;
+
+        btop_synced = true;
+    }
+
+    if config.nvim_enabled {
+        generators::nvim::write_theme(&palette)
+            .await
+            .map_err(|e| format!("Failed to write Neovim colorscheme: {e}"))?;
+
+        nvim_synced = true;
+    }
+
+    if config.zellij_enabled {
+        generators::zellij::write_theme(&palette)
+            .await
+            .map_err(|e| format!("Failed to write Zellij theme: {e}"))?;
+
+        zellij_synced = true;
+    }
+
     Ok(SyncResult {
         colors_path,
         ghostty_synced,
+        btop_synced,
+        nvim_synced,
+        zellij_synced,
     })
 }
 
@@ -107,15 +153,36 @@ mod tests {
     fn test_default_config() {
         let config = ToolSyncConfig::default();
         assert!(config.ghostty_enabled);
+        assert!(config.btop_enabled);
+        assert!(config.nvim_enabled);
+        assert!(config.zellij_enabled);
     }
 
     #[test]
     fn test_config_roundtrip() {
         let config = ToolSyncConfig {
             ghostty_enabled: false,
+            btop_enabled: true,
+            nvim_enabled: false,
+            zellij_enabled: true,
         };
         let serialized = toml::to_string_pretty(&config).unwrap();
         let deserialized: ToolSyncConfig = toml::from_str(&serialized).unwrap();
         assert!(!deserialized.ghostty_enabled);
+        assert!(deserialized.btop_enabled);
+        assert!(!deserialized.nvim_enabled);
+        assert!(deserialized.zellij_enabled);
+    }
+
+    #[test]
+    fn test_config_deserialize_missing_fields() {
+        // Simulate old config file with only ghostty_enabled
+        let old_config = "ghostty_enabled = false\n";
+        let config: ToolSyncConfig = toml::from_str(old_config).unwrap();
+        assert!(!config.ghostty_enabled);
+        // New fields should default to true
+        assert!(config.btop_enabled);
+        assert!(config.nvim_enabled);
+        assert!(config.zellij_enabled);
     }
 }
