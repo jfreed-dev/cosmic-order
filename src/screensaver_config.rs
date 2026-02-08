@@ -297,10 +297,7 @@ DISMISS_ON_KEY="{}"
 
         if self.lock_timeout > 0 {
             let lock_time = idle + self.lock_timeout;
-            conf.push_str(&format!(
-                "timeout {lock_time} '{}'\n",
-                Self::LOCK_COMMAND
-            ));
+            conf.push_str(&format!("timeout {lock_time} '{}'\n", Self::LOCK_COMMAND));
         }
 
         if self.dpms_timeout > 0 {

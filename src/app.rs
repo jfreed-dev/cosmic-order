@@ -11,6 +11,7 @@ use cosmic::{Application, Element};
 use crate::compositor;
 use crate::config::Config;
 use crate::fl;
+use crate::inhibit;
 use crate::pages::{self, PageId};
 use crate::power;
 use crate::screensaver_config::ScreensaverConfig;
@@ -52,6 +53,10 @@ pub struct App {
     screensaver_status_msg: Option<String>,
     /// Saved compositor settings during screensaver test (None when not testing)
     compositor_backup: Option<compositor::CompositorBackup>,
+    /// Active idle inhibitor (Some = caffeine mode on)
+    caffeine_inhibitor: Option<inhibit::IdleInhibitor>,
+    /// Whether caffeine mode is active (mirrors inhibitor presence, needed for view)
+    caffeine_active: bool,
 }
 
 /// Application messages
@@ -66,6 +71,10 @@ pub enum Message {
     ConfigChanged(Config),
     /// Power state updated from D-Bus subscription
     PowerStateUpdate(power::PowerState),
+    /// Toggle caffeine mode (idle inhibitor)
+    ToggleCaffeine,
+    /// Result of acquiring the idle inhibitor
+    CaffeineResult(Result<inhibit::IdleInhibitor, String>),
 }
 
 impl Application for App {
@@ -176,6 +185,8 @@ impl Application for App {
             available_logos,
             screensaver_status_msg: None,
             compositor_backup: None,
+            caffeine_inhibitor: None,
+            caffeine_active: false,
         };
 
         (app, Task::none())
@@ -234,7 +245,45 @@ impl Application for App {
                         tracing::warn!("Failed to write power-state.env: {e}");
                     }
                 });
+
+                // Auto-disable caffeine on low battery
+                if self.caffeine_active
+                    && state.on_battery
+                    && state.battery_percent.is_some_and(|p| p < 20)
+                {
+                    self.caffeine_inhibitor = None;
+                    self.caffeine_active = false;
+                    tracing::info!("{}", fl!("caffeine-disabled-battery"));
+                }
+
                 self.power_state = Some(state);
+                Task::none()
+            }
+            Message::ToggleCaffeine => {
+                if self.caffeine_active {
+                    self.caffeine_inhibitor = None;
+                    self.caffeine_active = false;
+                    tracing::info!("Caffeine mode disabled");
+                    Task::none()
+                } else {
+                    cosmic::task::future(async {
+                        let result = inhibit::IdleInhibitor::acquire().await;
+                        Message::CaffeineResult(result)
+                    })
+                }
+            }
+            Message::CaffeineResult(result) => {
+                match result {
+                    Ok(inhibitor) => {
+                        self.caffeine_inhibitor = Some(inhibitor);
+                        self.caffeine_active = true;
+                        tracing::info!("{}", fl!("caffeine-enabled"));
+                    }
+                    Err(e) => {
+                        self.caffeine_active = false;
+                        tracing::error!("Failed to acquire idle inhibitor: {e}");
+                    }
+                }
                 Task::none()
             }
         }
@@ -258,7 +307,17 @@ impl Application for App {
     }
 
     fn header_end(&self) -> Vec<Element<'_, Self::Message>> {
-        vec![]
+        let caffeine_icon = widget::icon::from_name("preferences-system-power-symbolic");
+        let tooltip_text = if self.caffeine_active {
+            fl!("caffeine-enabled")
+        } else {
+            fl!("caffeine-toggle")
+        };
+        let caffeine_button = widget::button::icon(caffeine_icon)
+            .selected(self.caffeine_active)
+            .on_press(Message::ToggleCaffeine)
+            .tooltip(tooltip_text);
+        vec![caffeine_button.into()]
     }
 }
 

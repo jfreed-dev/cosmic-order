@@ -141,6 +141,11 @@ screensaver-effect-simple = Simple Effects
 screensaver-effect-minimal = Minimal Effects
 screensaver-effect-skip = Screensaver Disabled (low battery)
 
+# Caffeine Mode
+caffeine-toggle = Prevent Sleep
+caffeine-enabled = Caffeine mode active — idle inhibited
+caffeine-disabled-battery = Caffeine auto-disabled (low battery)
+
 # Screensaver Cursor & Dismiss
 screensaver-cursor-section = Cursor & Dismiss
 screensaver-cursor-hide = Hide text cursor

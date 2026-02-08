@@ -7,8 +7,9 @@
 
 mod app;
 mod compositor;
-mod cosmic_idle;
 mod config;
+mod cosmic_idle;
+mod inhibit;
 mod localize;
 mod pages;
 mod power;
