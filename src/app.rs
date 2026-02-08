@@ -89,7 +89,13 @@ impl Application for App {
         let config = Config::load().unwrap_or_default();
 
         // Load screensaver configuration
-        let screensaver_config = ScreensaverConfig::load().unwrap_or_default();
+        let mut screensaver_config = ScreensaverConfig::load().unwrap_or_default();
+
+        // Override DPMS timeout from system config if available
+        if let Some(system_dpms) = crate::cosmic_idle::read_screen_off_time() {
+            screensaver_config.dpms_timeout = system_dpms;
+        }
+
         tracing::info!(
             "Loaded screensaver config: enabled={}",
             screensaver_config.enabled
@@ -752,12 +758,15 @@ impl App {
     /// Save screensaver config and reload service, optionally launching test after
     fn save_screensaver_config(config: ScreensaverConfig, launch_test: bool) -> Task<Message> {
         let ctl_path = ScreensaverConfig::ctl_path();
+        let dpms_timeout = config.dpms_timeout;
         cosmic::task::future(async move {
             let result = tokio::task::spawn_blocking(move || {
                 config.save().map_err(|e| e.to_string())?;
                 if ctl_path.exists() {
                     let _ = std::process::Command::new(&ctl_path).arg("reload").status();
                 }
+                // Sync DPMS to system config so COSMIC Settings stays aligned
+                crate::cosmic_idle::write_screen_off_time(dpms_timeout);
                 Ok(())
             })
             .await

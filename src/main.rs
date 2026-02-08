@@ -7,6 +7,7 @@
 
 mod app;
 mod compositor;
+mod cosmic_idle;
 mod config;
 mod localize;
 mod pages;
