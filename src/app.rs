@@ -1134,66 +1134,65 @@ impl App {
             column = column.push(banner);
         }
 
-        column = column
-            // Theme presets
-            .push(widget::settings::section().title(fl!("theme-presets")).add(
-                widget::settings::item(fl!("available-themes"), self.view_theme_list()),
-            ))
-            // Mode selection
-            .push(
-                widget::settings::section()
-                    .title(fl!("theme-mode"))
-                    .add(widget::settings::item(
+        column =
+            column
+                // Theme presets
+                .push(widget::settings::section().title(fl!("theme-presets")).add(
+                    widget::settings::item(fl!("available-themes"), self.view_theme_list()),
+                ))
+                // Mode selection
+                .push(widget::settings::section().title(fl!("theme-mode")).add(
+                    widget::settings::item(
                         fl!("dark-mode"),
                         widget::toggler(cfg.is_dark).on_toggle(|enabled| {
                             Message::Page(pages::Message::Themes(
                                 pages::ThemesMessage::SetDarkMode(enabled),
                             ))
                         }),
-                    )),
-            )
-            // Accent color selection
-            .push(
-                widget::settings::section()
-                    .title(fl!("theme-accent-color"))
-                    .add(widget::settings::item(
-                        fl!("accent-presets"),
-                        self.view_accent_color_presets(),
-                    )),
-            )
-            // Export & Import
-            .push(
-                widget::settings::section()
-                    .title(fl!("theme-export-import"))
-                    .add(
-                        widget::column()
-                            .spacing(spacing.space_xs)
-                            .push(widget::text::body(fl!("theme-export-description")))
-                            .push(widget::tooltip(
-                                widget::button::standard(fl!("theme-export")).on_press(
-                                    Message::Page(pages::Message::Themes(
-                                        pages::ThemesMessage::Export,
-                                    )),
-                                ),
-                                widget::text::body(fl!("tooltip-export")),
-                                widget::tooltip::Position::Top,
-                            )),
-                    )
-                    .add(
-                        widget::column()
-                            .spacing(spacing.space_xs)
-                            .push(widget::text::body(fl!("theme-import-description")))
-                            .push(widget::tooltip(
-                                widget::button::standard(fl!("theme-import")).on_press(
-                                    Message::Page(pages::Message::Themes(
-                                        pages::ThemesMessage::Import,
-                                    )),
-                                ),
-                                widget::text::body(fl!("tooltip-import")),
-                                widget::tooltip::Position::Top,
-                            )),
                     ),
-            );
+                ))
+                // Accent color selection
+                .push(
+                    widget::settings::section()
+                        .title(fl!("theme-accent-color"))
+                        .add(widget::settings::item(
+                            fl!("accent-presets"),
+                            self.view_accent_color_presets(),
+                        )),
+                )
+                // Export & Import
+                .push(
+                    widget::settings::section()
+                        .title(fl!("theme-export-import"))
+                        .add(
+                            widget::column()
+                                .spacing(spacing.space_xs)
+                                .push(widget::text::body(fl!("theme-export-description")))
+                                .push(widget::tooltip(
+                                    widget::button::standard(fl!("theme-export")).on_press(
+                                        Message::Page(pages::Message::Themes(
+                                            pages::ThemesMessage::Export,
+                                        )),
+                                    ),
+                                    widget::text::body(fl!("tooltip-export")),
+                                    widget::tooltip::Position::Top,
+                                )),
+                        )
+                        .add(
+                            widget::column()
+                                .spacing(spacing.space_xs)
+                                .push(widget::text::body(fl!("theme-import-description")))
+                                .push(widget::tooltip(
+                                    widget::button::standard(fl!("theme-import")).on_press(
+                                        Message::Page(pages::Message::Themes(
+                                            pages::ThemesMessage::Import,
+                                        )),
+                                    ),
+                                    widget::text::body(fl!("tooltip-import")),
+                                    widget::tooltip::Position::Top,
+                                )),
+                        ),
+                );
 
         column.into()
     }
@@ -1662,9 +1661,9 @@ impl App {
 
         if page > 0 {
             nav_row = nav_row.push(widget::tooltip(
-                widget::button::standard("<").on_press(Message::Page(
-                    pages::Message::Wallpapers(pages::WallpapersMessage::GridPrevPage),
-                )),
+                widget::button::standard("<").on_press(Message::Page(pages::Message::Wallpapers(
+                    pages::WallpapersMessage::GridPrevPage,
+                ))),
                 widget::text::body(fl!("tooltip-prev-page")),
                 widget::tooltip::Position::Top,
             ));
@@ -1680,9 +1679,9 @@ impl App {
 
         if page + 1 < total_pages {
             nav_row = nav_row.push(widget::tooltip(
-                widget::button::standard(">").on_press(Message::Page(
-                    pages::Message::Wallpapers(pages::WallpapersMessage::GridNextPage),
-                )),
+                widget::button::standard(">").on_press(Message::Page(pages::Message::Wallpapers(
+                    pages::WallpapersMessage::GridNextPage,
+                ))),
                 widget::text::body(fl!("tooltip-next-page")),
                 widget::tooltip::Position::Top,
             ));
@@ -1718,9 +1717,9 @@ impl App {
                 )))
         } else {
             // Placeholder — thumbnail will be generated in background
-            widget::button::image(Handle::from_path(
-                PathBuf::from("/usr/share/icons/hicolor/scalable/apps/image-missing.svg"),
-            ))
+            widget::button::image(Handle::from_path(PathBuf::from(
+                "/usr/share/icons/hicolor/scalable/apps/image-missing.svg",
+            )))
             .width(Length::Fixed(160.0))
             .height(Length::Fixed(100.0))
             .selected(is_current || is_selected)
@@ -2154,20 +2153,16 @@ impl App {
                 }
 
                 let save_btn = widget::tooltip(
-                    widget::button::suggested(fl!("screensaver-save")).on_press(
-                        Message::Page(pages::Message::Screensaver(
-                            pages::ScreensaverMessage::SaveConfig,
-                        )),
-                    ),
+                    widget::button::suggested(fl!("screensaver-save")).on_press(Message::Page(
+                        pages::Message::Screensaver(pages::ScreensaverMessage::SaveConfig),
+                    )),
                     widget::text::body(fl!("tooltip-save")),
                     widget::tooltip::Position::Top,
                 );
                 let test_btn = widget::tooltip(
-                    widget::button::standard(fl!("screensaver-save-test")).on_press(
-                        Message::Page(pages::Message::Screensaver(
-                            pages::ScreensaverMessage::SaveAndTest,
-                        )),
-                    ),
+                    widget::button::standard(fl!("screensaver-save-test")).on_press(Message::Page(
+                        pages::Message::Screensaver(pages::ScreensaverMessage::SaveAndTest),
+                    )),
                     widget::text::body(fl!("tooltip-save-test")),
                     widget::tooltip::Position::Top,
                 );
