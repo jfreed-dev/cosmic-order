@@ -438,20 +438,20 @@ Store state in cosmic-config
 
 ## 8. Implementation Phases
 
-### Phase T1: Theme Foundation
+### Phase T1: Theme Foundation ✓ (Phase 6A)
 
-- [ ] Create colors.toml format specification
-- [ ] Build COSMIC → colors.toml converter
-- [ ] Implement theme generator trait/interface
+- [x] Create colors.toml format specification
+- [x] Build COSMIC → colors.toml converter (`src/colors.rs`)
+- [x] Implement theme generator interface (`src/generators/`)
 
 **Deliverable**: Unified color format for all tools
 
-### Phase T2: Tool Generators
+### Phase T2: Tool Generators (Partial — Phase 6A/6B)
 
-- [ ] Ghostty theme generator
-- [ ] Neovim colorscheme generator
-- [ ] btop theme generator
-- [ ] Zellij theme generator
+- [x] Ghostty theme generator (`src/generators/ghostty.rs`)
+- [ ] Neovim colorscheme generator (Phase 6B)
+- [ ] btop theme generator (Phase 6B)
+- [ ] Zellij theme generator (Phase 6B)
 
 **Deliverable**: Generated theme files on COSMIC theme change
 

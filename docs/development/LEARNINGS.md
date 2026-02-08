@@ -299,10 +299,8 @@ namespaces. Fix: `config.rs` now uses `crate::APP_ID`.
   to `#3e78eb23`, now requires Rust 1.90+
 - [x] Fix clippy `manual_div_ceil` warning — replaced manual
   ceiling division with `.div_ceil()`
-- [ ] PR-02: Full theme palette application (deferred to Phase 5)
-- [ ] Phase 4: Screensaver configuration (interactive controls)
-- [ ] Consider async thumbnail generation (move off UI thread)
+- [x] Phase 4: Screensaver configuration — complete (Phase 4/4A/4B/4C)
+- [x] Async thumbnail generation — complete (Phase 5)
+- [ ] PR-02: Full theme palette application (deferred)
 - [ ] Test wallpaper Apply flow end-to-end
-  (select -> apply -> verify config file)
 - [ ] Test wallpaper Import flow
-  (file picker -> copy -> grid refresh)

@@ -23,7 +23,17 @@ cosmic-order/
 │   │   └── mod.rs           # PageId enum, Message routing, per-page message enums
 │   ├── theme_config.rs      # Theme reading/writing, ThemePreview, export/import
 │   ├── wallpaper_config.rs  # Wallpaper config, RON structs, ThumbnailCache
-│   └── screensaver_config.rs # Screensaver config parsing
+│   ├── screensaver_config.rs # Screensaver config parsing
+│   ├── colors.rs            # ColorPalette extraction and colors.toml generation
+│   ├── generators/
+│   │   ├── mod.rs           # Generator module declarations
+│   │   └── ghostty.rs       # Ghostty theme generator
+│   ├── tool_sync.rs         # Tool sync orchestration and per-tool config
+│   ├── compositor.rs        # COSMIC compositor settings (cosmic-config API)
+│   ├── cosmic_idle.rs       # DPMS timeout sync with cosmic-idle
+│   ├── inhibit.rs           # Idle inhibitor (caffeine mode via logind D-Bus)
+│   ├── power.rs             # Power monitoring (UPower D-Bus subscription)
+│   └── systemd.rs           # Systemd D-Bus unit restart
 ├── i18n/
 │   └── en/
 │       └── cosmic_order.ftl # English translations
@@ -62,6 +72,12 @@ cosmic-order/
 │  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌──────────┐ │
 │  │ cosmic-    │  │ cosmic-    │  │ cosmic-bg- │  │ swayidle │ │
 │  │ config     │  │ theme      │  │ config     │  │ config   │ │
+│  └────────────┘  └────────────┘  └────────────┘  └──────────┘ │
+├─────────────────────────────────────────────────────────────────┤
+│                    Tool Sync Layer                               │
+│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌──────────┐ │
+│  │ colors     │  │ Ghostty    │  │ D-Bus      │  │ logind   │ │
+│  │ .toml      │  │ theme gen  │  │ (UPower)   │  │ inhibit  │ │
 │  └────────────┘  └────────────┘  └────────────┘  └──────────┘ │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -154,7 +170,7 @@ pub fn create_page(id: PageId) -> Box<dyn Page> {
 COSMIC ORDER uses `cosmic-config` for its own settings:
 
 ```text
-~/.config/cosmic/com.example.CosmicOrder/v1/
+~/.config/cosmic/com.github.jfreed-dev.CosmicOrder/v1/
 ├── config           # Application preferences
 └── state            # Window state, last page, etc.
 ```

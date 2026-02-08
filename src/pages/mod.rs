@@ -58,6 +58,12 @@ pub enum ThemesMessage {
     ConfirmPreview,
     /// Cancel the preview and restore the previous theme
     CancelPreview,
+    /// Toggle Ghostty theme sync
+    SetGhosttySync(bool),
+    /// Run theme sync for all enabled tools
+    SyncTools,
+    /// Sync completed with result
+    SyncComplete(Result<String, String>),
 }
 
 /// Wallpaper page messages

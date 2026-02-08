@@ -47,12 +47,25 @@ just build-vendored     # build with vendored deps
 
 ```text
 src/
-├── main.rs          # Entry point
-├── app.rs           # Application state and routing
-├── config.rs        # Configuration management
-├── localize.rs      # i18n support
-└── pages/
-    └── mod.rs       # Page definitions and messages
+├── main.rs              # Entry point, APP_ID
+├── app.rs               # Application state, routing, all page views
+├── config.rs            # Configuration management (cosmic-config)
+├── localize.rs          # i18n support (fl! macro)
+├── pages/
+│   └── mod.rs           # Page IDs, message enums
+├── theme_config.rs      # Theme reading/writing, preview, export/import
+├── wallpaper_config.rs  # Wallpaper config, thumbnails, RON structs
+├── screensaver_config.rs # Screensaver config parsing/generation
+├── colors.rs            # ColorPalette extraction, colors.toml generation
+├── generators/
+│   ├── mod.rs           # Generator module declarations
+│   └── ghostty.rs       # Ghostty theme generator
+├── tool_sync.rs         # Tool sync orchestration and config
+├── compositor.rs        # COSMIC compositor settings
+├── cosmic_idle.rs       # DPMS timeout sync
+├── inhibit.rs           # Idle inhibitor (caffeine mode)
+├── power.rs             # Power monitoring (UPower D-Bus)
+└── systemd.rs           # Systemd D-Bus unit restart
 ```
 
 ## Code Standards

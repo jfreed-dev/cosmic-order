@@ -255,54 +255,65 @@ See [NATIVE-MIGRATION.md](development/NATIVE-MIGRATION.md) for details.
 
 ---
 
-## Phase 6: Tool Theme Synchronization
+## Phase 6A: Tool Theme Synchronization — colors.toml + Ghostty ✓
 
-**Goal**: Unified theming across OMARCHY-style tools.
+**Goal**: Extract COSMIC theme colors and sync to Ghostty terminal.
 
 ### Tasks
 
-- [ ] Create colors.toml format specification (24-color standard)
-- [ ] Build COSMIC theme → colors.toml converter
-- [ ] Implement Ghostty theme generator
+- [x] Create ColorPalette struct with COSMIC theme extraction
+- [x] Implement colors.toml serialization (OMARCHY format)
+- [x] Implement Ghostty theme generator + activation
+- [x] Create tool sync orchestration with per-tool enable/disable
+- [x] Add Tool Sync UI section to Themes page
+- [x] Localize all tool sync strings
+- [x] Version bump to 0.8.0
+
+### Deliverables
+
+- `~/.config/cosmic-order/colors.toml` — 22-color palette from COSMIC theme
+- `~/.config/ghostty/themes/cosmic-synced` — Ghostty theme file
+- `~/.config/ghostty/config` — auto-activates cosmic-synced theme
+- Tool Sync settings section with per-tool toggles and Sync Now button
+
+---
+
+## Phase 6B: Additional Tool Generators
+
+**Goal**: Extend theme sync to Neovim, btop, and Zellij.
+
+### Tasks
+
 - [ ] Implement Neovim/LazyVim colorscheme generator
 - [ ] Implement btop theme generator
 - [ ] Implement Zellij theme generator
-- [ ] Add CLI tools color export (fzf, lazygit)
-- [ ] Create hook system for extensibility
 
 ### Deliverables
 
-- Unified color format (colors.toml)
-- Theme generators for all supported tools
-- User-configurable tool selection
-
-### Documentation
-
-- colors.toml specification
-- Adding new tool generators
+- Theme generators for Neovim, btop, Zellij
+- Per-tool toggles in Tool Sync UI
 
 ---
 
-## Phase 6A: Real-time Theme Sync
+## Phase 6C: CLI Tools + Hook System
 
-**Goal**: Instant theme propagation without restarts.
+**Goal**: CLI tool color export and extensibility.
 
 ### Tasks
 
-- [ ] Neovim RPC client for live theme updates
-- [ ] Ghostty OSC escape sequences for color reload
-- [ ] D-Bus integration for supporting apps
-- [ ] File watcher for tools without IPC
+- [ ] Add CLI tools color export (fzf, lazygit)
+- [ ] Create hook system for extensibility
+- [ ] Real-time theme propagation (Neovim RPC, Ghostty OSC)
 
 ### Deliverables
 
-- Real-time Neovim theme switching
-- Instant Ghostty color updates
-- Seamless theme experience
+- CLI tool theme sync (fzf, lazygit)
+- Hook system for custom generators
+- Real-time theme updates where supported
 
 ---
 
-## Phase 6B: Advanced Features
+## Phase 6D: Advanced Features
 
 **Goal**: Additional features based on user feedback.
 
@@ -315,33 +326,7 @@ See [NATIVE-MIGRATION.md](development/NATIVE-MIGRATION.md) for details.
 - [ ] Custom screensaver effects
 - [ ] Panel applet for quick theme switching
 - [ ] CLI interface for scripting
-
----
-
-## Phase 6C: CPU Performance Management
-
-**Goal**: Provide quick access to CPU turbo/performance settings.
-
-### Tasks
-
-- [ ] Detect system76-power availability
-- [ ] Read current CPU performance profile
-- [ ] Add CPU Turbo toggle button
-- [ ] Display current CPU frequency/governor
-- [ ] Integrate with system76-power profiles (performance/balanced/battery)
-- [ ] Add power profile quick-switcher
-- [ ] Show thermal status indicator (optional)
-
-### Deliverables
-
-- CPU Turbo on/off toggle
-- Power profile switcher
-- Current performance status display
-
-### Documentation
-
-- system76-power D-Bus interface
-- CPU governor integration
+- [ ] CPU performance management (system76-power integration)
 
 ## Phase 7: Deep Compositor Integration (Future)
 
@@ -378,9 +363,9 @@ See [SCREENSAVER-INTEGRATION.md](SCREENSAVER-INTEGRATION.md) for detailed resear
 | 0.6.0 | 4B | Enhanced cursor/input handling |
 | 0.6.5 | 4C | Caffeine mode (idle inhibitor) |
 | 0.7.0 | 5 | Polish and integration |
-| 0.8.0 | 6A | Real-time theme sync |
-| 0.8.5 | 6C | CPU performance management |
-| 1.0.0 | 5 | First stable release |
+| 0.8.0 | 6A | Tool theme sync (colors.toml + Ghostty) |
+| 0.9.0 | 6B | Additional tool generators |
+| 1.0.0 | 7 | First stable release |
 
 ## Success Criteria
 

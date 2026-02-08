@@ -6,9 +6,11 @@
 //! The keyboard-first workflow you love, on the desktop you deserve.
 
 mod app;
+mod colors;
 mod compositor;
 mod config;
 mod cosmic_idle;
+mod generators;
 mod inhibit;
 mod localize;
 mod pages;
@@ -16,6 +18,7 @@ mod power;
 mod screensaver_config;
 mod systemd;
 mod theme_config;
+mod tool_sync;
 mod wallpaper_config;
 
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};

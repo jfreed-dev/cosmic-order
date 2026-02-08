@@ -1,3 +1,12 @@
+cosmic-order (0.8.0-1) unstable; urgency=medium
+
+  * Phase 6A: Tool theme synchronization
+  * COSMIC color extraction to colors.toml
+  * Ghostty theme generator and auto-activation
+  * Tool Sync UI with per-tool toggles
+
+ -- jfreed-dev <jfreed@users.noreply.github.com>  Sat, 08 Feb 2026 00:00:00 +0000
+
 cosmic-order (0.7.0-1) unstable; urgency=medium
 
   * Initial packaging

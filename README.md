@@ -35,7 +35,7 @@ for the development plan.
 1. **Theme Management** - OMARCHY-inspired dark themes and accent colors
 2. **Wallpaper Management** - Curated wallpapers with rotation support
 3. **Screensaver** - Terminal-based screensaver with ASCII art effects
-4. **Application Config** - Preconfigured settings for ghostty, btop, lazyvim
+4. **Tool Theme Sync** - Propagate COSMIC colors to Ghostty (and more tools planned)
 5. **Keyboard Shortcuts** - Keyboard-first workflow bindings for COSMIC
 
 ## Architecture
@@ -50,9 +50,9 @@ for the development plan.
 │  │    Page     │  │    Page     │  │       Page          │ │
 │  └─────────────┘  └─────────────┘  └─────────────────────┘ │
 ├─────────────────────────────────────────────────────────────┤
-│                    libcosmic (Iced GUI)                     │
+│  libcosmic (Iced GUI)  │  Tool Sync (colors.toml, Ghostty) │
 ├─────────────────────────────────────────────────────────────┤
-│  cosmic-config  │  cosmic-theme  │  cosmic-bg-config       │
+│  cosmic-config  │  cosmic-theme  │  D-Bus (UPower/logind)  │
 └─────────────────────────────────────────────────────────────┘
 ```
 

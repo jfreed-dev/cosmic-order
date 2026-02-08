@@ -14,7 +14,7 @@ Guide to setting up a development environment for COSMIC ORDER.
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| Rust | 1.85+ | Programming language |
+| Rust | 1.90+ | Programming language |
 | Cargo | (with Rust) | Package manager |
 | just | latest | Task runner |
 | git | latest | Version control |
@@ -49,7 +49,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source ~/.cargo/env
 
 # Verify installation
-rustc --version  # Should be 1.85+
+rustc --version  # Should be 1.90+
 cargo --version
 ```
 

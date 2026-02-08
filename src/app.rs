@@ -16,6 +16,7 @@ use crate::pages::{self, PageId};
 use crate::power;
 use crate::screensaver_config::ScreensaverConfig;
 use crate::theme_config::{ThemeConfig, ThemePreviewState};
+use crate::tool_sync::ToolSyncConfig;
 use crate::wallpaper_config::{ThumbnailCache, WallpaperConfig};
 use std::path::PathBuf;
 
@@ -57,6 +58,10 @@ pub struct App {
     caffeine_inhibitor: Option<inhibit::IdleInhibitor>,
     /// Whether caffeine mode is active (mirrors inhibitor presence, needed for view)
     caffeine_active: bool,
+    /// Tool sync configuration (which tools to sync)
+    tool_sync_config: ToolSyncConfig,
+    /// Status message from last sync operation
+    tool_sync_status: Option<String>,
 }
 
 /// Application messages
@@ -187,6 +192,8 @@ impl Application for App {
             compositor_backup: None,
             caffeine_inhibitor: None,
             caffeine_active: false,
+            tool_sync_config: ToolSyncConfig::load(),
+            tool_sync_status: None,
         };
 
         let init_task = app.spawn_thumbnail_generation();
@@ -465,6 +472,54 @@ impl App {
                     } else {
                         self.theme_config = backup.config;
                         tracing::info!("Theme preview cancelled, restored previous theme");
+                    }
+                }
+                Task::none()
+            }
+            pages::ThemesMessage::SetGhosttySync(enabled) => {
+                self.tool_sync_config.ghostty_enabled = enabled;
+                let config = self.tool_sync_config.clone();
+                cosmic::task::future(async move {
+                    if let Err(e) = config.save().await {
+                        tracing::warn!("Failed to save tool sync config: {e}");
+                    }
+                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SyncComplete(
+                        Ok(String::new()),
+                    )))
+                })
+            }
+            pages::ThemesMessage::SyncTools => {
+                self.tool_sync_status = None;
+                let config = self.tool_sync_config.clone();
+                cosmic::task::future(async move {
+                    let result = crate::tool_sync::sync_tools(&config).await;
+                    let msg = match result {
+                        Ok(r) => {
+                            let mut parts =
+                                vec![format!("colors.toml: {}", r.colors_path.display())];
+                            if r.ghostty_synced {
+                                parts.push("Ghostty: synced".to_string());
+                            }
+                            Ok(parts.join(", "))
+                        }
+                        Err(e) => Err(e),
+                    };
+                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SyncComplete(
+                        msg,
+                    )))
+                })
+            }
+            pages::ThemesMessage::SyncComplete(result) => {
+                match &result {
+                    Ok(summary) => {
+                        if !summary.is_empty() {
+                            tracing::info!("Tool sync complete: {summary}");
+                            self.tool_sync_status = Some(fl!("tool-sync-success"));
+                        }
+                    }
+                    Err(e) => {
+                        tracing::error!("Tool sync failed: {e}");
+                        self.tool_sync_status = Some(fl!("tool-sync-error"));
                     }
                 }
                 Task::none()
@@ -1192,9 +1247,45 @@ impl App {
                                     widget::tooltip::Position::Top,
                                 )),
                         ),
-                );
+                )
+                // Tool Sync
+                .push(self.view_tool_sync_section());
 
-        column.into()
+        widget::scrollable(column).into()
+    }
+
+    /// Create tool sync settings section
+    fn view_tool_sync_section(&self) -> Element<'_, Message> {
+        let spacing = cosmic::theme::spacing();
+
+        let mut section =
+            widget::settings::section()
+                .title(fl!("tool-sync"))
+                .add(widget::settings::item(
+                    fl!("tool-sync-ghostty"),
+                    widget::toggler(self.tool_sync_config.ghostty_enabled).on_toggle(|enabled| {
+                        Message::Page(pages::Message::Themes(
+                            pages::ThemesMessage::SetGhosttySync(enabled),
+                        ))
+                    }),
+                ));
+
+        // Sync button + status row
+        let mut sync_row = widget::row().spacing(spacing.space_m).push(widget::tooltip(
+            widget::button::suggested(fl!("tool-sync-now")).on_press(Message::Page(
+                pages::Message::Themes(pages::ThemesMessage::SyncTools),
+            )),
+            widget::text::body(fl!("tool-sync-description")),
+            widget::tooltip::Position::Top,
+        ));
+
+        if let Some(ref status) = self.tool_sync_status {
+            sync_row = sync_row.push(widget::text::body(status));
+        }
+
+        section = section.add(sync_row);
+
+        section.into()
     }
 
     /// Create accent color preset buttons

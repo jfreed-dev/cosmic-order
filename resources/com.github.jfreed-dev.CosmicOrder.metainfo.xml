@@ -18,6 +18,7 @@
       <li>Terminal-based screensaver configuration with effects, clock, and timeouts</li>
       <li>Power-aware screensaver that adapts to battery state</li>
       <li>Caffeine mode to temporarily prevent idle sleep</li>
+      <li>Tool theme sync — propagate COSMIC colors to Ghostty and other tools</li>
     </ul>
   </description>
   <launchable type="desktop-id">com.github.jfreed-dev.CosmicOrder.desktop</launchable>
@@ -33,6 +34,11 @@
   </categories>
   <content_rating type="oars-1.1" />
   <releases>
+    <release version="0.8.0" date="2026-02-08">
+      <description>
+        <p>Phase 6A: Tool theme synchronization with COSMIC color extraction, colors.toml generation, and Ghostty theme sync.</p>
+      </description>
+    </release>
     <release version="0.7.0" date="2026-02-08">
       <description>
         <p>Phase 5: Polish and integration release with async thumbnails, tooltips, AppStream metadata, and Debian packaging.</p>

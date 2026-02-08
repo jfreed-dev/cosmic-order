@@ -92,18 +92,6 @@ impl ThemePreview {
         }
     }
 
-    /// Format accent color as hex
-    #[allow(dead_code)] // Used in Phase 6 tool sync
-    pub fn accent_hex(&self) -> String {
-        ThemeConfig::color_to_hex(&self.accent)
-    }
-
-    /// Format background color as hex
-    #[allow(dead_code)] // Used in Phase 6 tool sync
-    pub fn background_hex(&self) -> String {
-        ThemeConfig::color_to_hex(&self.background)
-    }
-
     /// Apply this theme preset
     pub fn apply(&self) -> Result<(), ThemeError> {
         // Set the dark mode based on theme
@@ -119,7 +107,6 @@ impl ThemePreview {
 
 /// Theme configuration extracted from COSMIC
 #[derive(Debug, Clone)]
-#[allow(dead_code)] // Fields will be used as UI expands
 pub struct ThemeConfig {
     /// Theme name
     pub name: String,
@@ -127,9 +114,11 @@ pub struct ThemeConfig {
     pub is_dark: bool,
     /// Accent color (RGBA)
     pub accent_color: Srgba,
-    /// Background color (RGBA)
+    /// Background color (RGBA) — used by ColorPalette::from_cosmic() via theme::active()
+    #[allow(dead_code)]
     pub background_color: Srgba,
-    /// Primary text color (RGBA)
+    /// Primary text color (RGBA) — used by ColorPalette::from_cosmic() via theme::active()
+    #[allow(dead_code)]
     pub text_color: Srgba,
 }
 
@@ -262,7 +251,6 @@ impl ThemeConfig {
     }
 
     /// Format a color as hex string
-    #[allow(dead_code)] // Used in Phase 6 tool sync
     pub fn color_to_hex(color: &Srgba) -> String {
         format!(
             "#{:02X}{:02X}{:02X}",
@@ -281,24 +269,6 @@ impl ThemeConfig {
             (color.green * 255.0) as u8,
             (color.blue * 255.0) as u8
         )
-    }
-
-    /// Get accent color as hex
-    #[allow(dead_code)] // Used in Phase 6 tool sync
-    pub fn accent_hex(&self) -> String {
-        Self::color_to_hex(&self.accent_color)
-    }
-
-    /// Get background color as hex
-    #[allow(dead_code)] // Used in Phase 6 tool sync
-    pub fn background_hex(&self) -> String {
-        Self::color_to_hex(&self.background_color)
-    }
-
-    /// Get text color as hex
-    #[allow(dead_code)] // Used in Phase 6 tool sync
-    pub fn text_hex(&self) -> String {
-        Self::color_to_hex(&self.text_color)
     }
 }
 

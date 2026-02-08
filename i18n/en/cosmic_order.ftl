@@ -164,6 +164,14 @@ screensaver-effects-preset-heavy = Heavy effects
 screensaver-effects-preset-simple = Simple effects
 screensaver-effects-preset-colorful = Colorful effects
 
+# Tool Sync
+tool-sync = Tool Sync
+tool-sync-description = Sync COSMIC theme colors to terminal tools
+tool-sync-ghostty = Ghostty theme
+tool-sync-now = Sync Now
+tool-sync-success = Theme synced successfully
+tool-sync-error = Theme sync failed
+
 # Common
 save = Save
 cancel = Cancel

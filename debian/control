@@ -24,4 +24,5 @@ Description: OMARCHY-inspired workflow and aesthetics for COSMIC Desktop
  .
  Features include theme management with live preview, wallpaper browsing
  with thumbnail grid, terminal-based screensaver configuration, power-aware
- effects, and caffeine mode to prevent idle sleep.
+ effects, caffeine mode to prevent idle sleep, and tool theme sync to
+ propagate COSMIC colors to Ghostty and other terminal tools.
