@@ -7,8 +7,8 @@ COSMIC/Linux APIs. Identified during deep codebase review (2026-02-08).
 
 COSMIC ORDER currently relies on ~2,000 lines of shell scripts across
 `screensaver-ctl.sh`, `launch-fullscreen.sh`, and `cosmic-screensaver.sh`
-for screensaver lifecycle management. The Rust app has 2 direct shell spawn
-points (`app.rs:661-667`, `app.rs:678-695`).
+for screensaver lifecycle management. After NM-01/02/03, the Rust app has 1
+remaining shell spawn point: `launch-fullscreen.sh` for Save & Test preview.
 
 The standalone app architecture is confirmed correct — cosmic-settings has
 no plugin system and System76 recommends standalone apps for third-party
@@ -18,79 +18,45 @@ functionality.
 
 ### NM-01: Compositor Settings via cosmic-config
 
-**Priority**: High | **Effort**: Low | **Status**: Not started
+**Priority**: High | **Effort**: Low | **Status**: Complete
 
 Replace `launch-fullscreen.sh` direct file writes to
 `~/.config/cosmic/com.system76.CosmicComp/v1/` with cosmic-config API.
 
-**Current**: Shell script writes `autotile` and `focus_follows_cursor` files
-directly, relies on inotify for compositor reload.
-
-**Native approach**:
-
-```rust
-let comp = cosmic_config::Config::new("com.system76.CosmicComp", 1)?;
-let saved_autotile: bool = comp.get("autotile")?;
-let saved_ffc: bool = comp.get("focus_follows_cursor")?;
-
-let tx = comp.transaction();
-tx.set("autotile", false)?;
-tx.set("focus_follows_cursor", false)?;
-tx.commit()?;
-// ... screensaver runs, then restore ...
-```
-
-**Impact**: Eliminates the most fragile shell interaction. Same inotify
-mechanism, but through the proper API with error handling and type safety.
+**Implementation**: `src/compositor.rs` uses `cosmic_config::Config` to
+read/write `autotile` and `focus_follows_cursor` settings with backup/restore
+pattern. Compositor picks up changes via inotify, no restart needed.
 
 ---
 
 ### NM-02: Read/Write cosmic-idle Config for DPMS
 
-**Priority**: High | **Effort**: Low | **Status**: Not started
+**Priority**: High | **Effort**: Low | **Status**: Complete
 
 Read/write `CosmicIdleConfig` instead of maintaining a parallel
 `DPMS_TIMEOUT` in custom shell config.
 
-**Current**: App stores `DPMS_TIMEOUT` in `~/.config/cosmic-screensaver/config`
-(shell KEY=value format). Separate from system idle settings.
-
-**Native approach**:
-
-```rust
-let idle_config = cosmic_config::Config::new("com.system76.CosmicIdle", 1)?;
-let screen_off: Option<u32> = idle_config.get("screen_off_time")?;
-// Values in milliseconds, stored as RON Option<u32>
-```
-
-**Fields available**: `screen_off_time`, `suspend_on_battery_time`,
-`suspend_on_ac_time`.
-
-**Impact**: Aligns DPMS settings with what cosmic-settings shows. Users
-see consistent values across both apps.
+**Implementation**: `src/cosmic_idle.rs` reads `screen_off_time` from
+`com.system76.CosmicIdle` config on startup to override local DPMS value.
+On save, writes back so COSMIC Settings stays aligned. Values stored as
+RON `Option<u32>` in milliseconds.
 
 ---
 
-### NM-03: Systemd Service Management via D-Bus
+### NM-03: Systemd Service Management via D-Bus + Swayidle Config
 
-**Priority**: Medium | **Effort**: Medium | **Status**: Not started
+**Priority**: Medium | **Effort**: Medium | **Status**: Complete
 
-Replace `screensaver-ctl reload` shell-out with direct systemd D-Bus call.
+Replace `screensaver-ctl reload` shell-out with native swayidle config
+generation and direct systemd D-Bus restart.
 
-**Current**: `app.rs:688-691` spawns `screensaver-ctl reload` which calls
-`systemctl --user restart cosmic-screensaver-idle.service`.
-
-**Native approach**:
-
-```rust
-// org.freedesktop.systemd1.Manager.RestartUnit()
-let manager = zbus::proxy::ManagerProxy::new(&connection).await?;
-manager.restart_unit("cosmic-screensaver-idle.service", "replace").await?;
-```
-
-**Impact**: Removes one of the two shell spawn points. Still needs
-screensaver-ctl for swayidle config generation unless that is also
-ported (higher effort).
+**Implementation**: `src/systemd.rs` provides `restart_user_unit()` using
+`zbus::Connection::session()` to call `RestartUnit` on the systemd1 Manager
+interface. `ScreensaverConfig::generate_swayidle_config()` writes
+`~/.config/cosmic-screensaver/swayidle.conf` natively from config values.
+Save flow: `config.save()` → `generate_swayidle_config()` → D-Bus restart →
+cosmic-idle DPMS sync. Non-fatal on service restart failure (service may not
+be running).
 
 ---
 
@@ -228,3 +194,4 @@ listing. Add "COSMIC" to categories for "Made for COSMIC" section.
 | 2026-02-08 | Stay standalone (not cosmic-settings) | No plugin system exists; all community tools are standalone |
 | 2026-02-08 | Keep shell config format (for now) | Scripts must source it; migrate after NM-01/NM-03 |
 | 2026-02-08 | Defer layer-shell screensaver to Phase 7 | Very high effort; current approach works |
+| 2026-02-08 | NM-01/02/03 complete | Compositor, DPMS, and service management all native; only launch-fullscreen.sh remains |

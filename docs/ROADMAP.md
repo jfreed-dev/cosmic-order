@@ -133,16 +133,26 @@ Documentation is maintained alongside code development.
 - [x] Test screensaver preview
 - [x] Enable/disable screensaver service
 
+### Native Migration (NM-01 through NM-03) ✓
+
+- [x] NM-01: Compositor settings via cosmic-config API
+- [x] NM-02: DPMS timeout sync with cosmic-idle system config
+- [x] NM-03: Native swayidle config generation + systemd D-Bus restart
+
+See [NATIVE-MIGRATION.md](development/NATIVE-MIGRATION.md) for details.
+
 ### Deliverables
 
 - Full screensaver configuration GUI
 - Preview capability
 - Service management (enable/disable)
+- Native swayidle config generation (no shell subprocess for save/reload)
 
 ### Documentation
 
 - Screensaver configuration format
 - Integration with swayidle
+- Native migration plan and status
 
 ---
 
