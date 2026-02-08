@@ -1,0 +1,16 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	just build-release
+
+override_dh_auto_install:
+	just rootdir=debian/cosmic-order install
+
+override_dh_auto_test:
+	just test
+
+override_dh_auto_clean:
+	just clean

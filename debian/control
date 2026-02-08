@@ -1,0 +1,27 @@
+Source: cosmic-order
+Section: utils
+Priority: optional
+Maintainer: jfreed-dev <jfreed@users.noreply.github.com>
+Build-Depends: debhelper-compat (= 13),
+               just,
+               cargo,
+               rustc (>= 1.90),
+               libwayland-dev,
+               pkg-config,
+               libxkbcommon-dev,
+               libinput-dev
+Standards-Version: 4.6.2
+Homepage: https://github.com/jfreed-dev/cosmic-order
+Rules-Requires-Root: no
+
+Package: cosmic-order
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: OMARCHY-inspired workflow and aesthetics for COSMIC Desktop
+ COSMIC ORDER brings the keyboard-first workflow you love to the desktop
+ you deserve. Manage themes, wallpapers, and screensaver settings from a
+ single native COSMIC application.
+ .
+ Features include theme management with live preview, wallpaper browsing
+ with thumbnail grid, terminal-based screensaver configuration, power-aware
+ effects, and caffeine mode to prevent idle sleep.
