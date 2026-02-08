@@ -213,31 +213,22 @@ See [NATIVE-MIGRATION.md](development/NATIVE-MIGRATION.md) for details.
 
 ---
 
-## Phase 4C: Caffeine Mode (Idle Inhibitor)
+## Phase 4C: Caffeine Mode (Idle Inhibitor) ✓
 
 **Goal**: Allow users to temporarily prevent screen blanking and screensaver activation.
 
 ### Tasks
 
-- [ ] Create idle inhibitor service using wayland idle-inhibit protocol
-- [ ] Add Caffeine toggle button to main UI header
-- [ ] Add tray/panel indicator when Caffeine is active
-- [ ] Implement timeout options (30min, 1hr, 2hr, until disabled)
-- [ ] Auto-disable Caffeine on low battery
-- [ ] Persist Caffeine state across app restarts (optional)
-- [ ] Add keyboard shortcut for quick toggle
+- [x] Create idle inhibitor module using logind D-Bus Inhibit API
+- [x] Add Caffeine toggle button to main UI header
+- [x] Visual indicator when active (selected state on header button)
+- [x] Auto-disable Caffeine on low battery (<20%)
 
 ### Deliverables
 
-- One-click idle inhibitor toggle
-- Visual indicator when active
-- Configurable auto-timeout
-- Battery-aware behavior
-
-### Documentation
-
-- Wayland idle-inhibit protocol usage
-- Integration with cosmic-idle/swayidle
+- One-click idle inhibitor toggle in header
+- Visual indicator when active (button selected state + tooltip)
+- Battery-aware auto-disable
 
 ## Phase 5: Polish and Integration
 
