@@ -40,9 +40,22 @@ pub async fn write_theme(palette: &ColorPalette) -> Result<PathBuf, std::io::Err
     Ok(path)
 }
 
+/// Color-related config keys that conflict with theme files.
+/// When a theme is active, these inline settings override it,
+/// so they must be removed.
+const COLOR_KEYS: &[&str] = &[
+    "background",
+    "foreground",
+    "cursor-color",
+    "selection-foreground",
+    "selection-background",
+    "palette",
+];
+
 /// Activate the `cosmic-synced` theme in `~/.config/ghostty/config`
 ///
-/// If a `theme =` line exists, replace it. Otherwise append one.
+/// Replaces any existing `theme =` line (or appends one) and removes
+/// inline color settings that would override the theme file.
 pub async fn activate_theme() -> Result<(), std::io::Error> {
     let config_path = ghostty_config_path();
 
@@ -62,26 +75,53 @@ pub async fn activate_theme() -> Result<(), std::io::Error> {
     let mut new_lines: Vec<String> = Vec::new();
 
     for line in contents.lines() {
-        if line.trim_start().starts_with("theme") && line.contains('=') {
+        let trimmed = line.trim_start();
+
+        // Replace existing theme line
+        if trimmed.starts_with("theme") && trimmed.contains('=') {
             new_lines.push(theme_line.to_string());
             found = true;
+            continue;
+        }
+
+        // Strip inline color settings that would override the theme
+        let is_color_key = COLOR_KEYS.iter().any(|key| {
+            trimmed.starts_with(key) && trimmed[key.len()..].trim_start().starts_with('=')
+        });
+        if is_color_key {
+            continue;
+        }
+
+        new_lines.push(line.to_string());
+    }
+
+    // Collapse runs of 3+ blank lines left by removed color settings
+    let mut collapsed: Vec<String> = Vec::with_capacity(new_lines.len());
+    let mut blank_run = 0;
+    for line in &new_lines {
+        if line.is_empty() {
+            blank_run += 1;
+            if blank_run <= 2 {
+                collapsed.push(line.clone());
+            }
         } else {
-            new_lines.push(line.to_string());
+            blank_run = 0;
+            collapsed.push(line.clone());
         }
     }
 
     if !found {
         // Add blank line before if file is non-empty and doesn't end with one
-        if !new_lines.is_empty() && new_lines.last().is_some_and(|l| !l.is_empty()) {
-            new_lines.push(String::new());
+        if !collapsed.is_empty() && collapsed.last().is_some_and(|l| !l.is_empty()) {
+            collapsed.push(String::new());
         }
-        new_lines.push(theme_line.to_string());
+        collapsed.push(theme_line.to_string());
     }
 
     // Ensure trailing newline
-    new_lines.push(String::new());
+    collapsed.push(String::new());
 
-    tokio::fs::write(&config_path, new_lines.join("\n")).await?;
+    tokio::fs::write(&config_path, collapsed.join("\n")).await?;
     Ok(())
 }
 
