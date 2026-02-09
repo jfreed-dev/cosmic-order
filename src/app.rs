@@ -1712,6 +1712,8 @@ impl App {
         column = column
             // Community themes
             .push(self.view_community_themes())
+            // Theme preview panel
+            .push(self.view_theme_preview_panel())
             // Export & Import
             .push(
                 widget::settings::section()
@@ -2004,6 +2006,139 @@ impl App {
                 widget::text::body(fl!("tooltip-try")),
                 widget::tooltip::Position::Top,
             ))
+            .into()
+    }
+
+    /// Scaled-up theme mockup showing the active (or previewed) theme colors
+    #[allow(clippy::too_many_lines, clippy::unused_self)]
+    fn view_theme_preview_panel(&self) -> Element<'_, Message> {
+        use cosmic::iced::Length;
+
+        let theme = cosmic::theme::active();
+        let palette = theme.cosmic();
+        let accent = cosmic::iced::Color::from(palette.accent_color());
+        let background = cosmic::iced::Color::from(palette.bg_color());
+        let text_color = cosmic::iced::Color::from(palette.on_bg_color());
+
+        let mockup = widget::container(
+            widget::column()
+                .spacing(10)
+                .padding(16)
+                .push(
+                    widget::container(widget::Space::new(Length::Fill, Length::Fixed(16.0))).class(
+                        cosmic::theme::Container::custom(move |_| widget::container::Style {
+                            background: Some(cosmic::iced::Background::Color(accent)),
+                            border: cosmic::iced::Border {
+                                radius: 4.0.into(),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        }),
+                    ),
+                )
+                .push(
+                    widget::container(widget::Space::new(
+                        Length::Fixed(260.0),
+                        Length::Fixed(10.0),
+                    ))
+                    .class(cosmic::theme::Container::custom(move |_| {
+                        widget::container::Style {
+                            background: Some(cosmic::iced::Background::Color(
+                                cosmic::iced::Color {
+                                    a: 0.7,
+                                    ..text_color
+                                },
+                            )),
+                            border: cosmic::iced::Border {
+                                radius: 3.0.into(),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        }
+                    })),
+                )
+                .push(
+                    widget::container(widget::Space::new(
+                        Length::Fixed(180.0),
+                        Length::Fixed(10.0),
+                    ))
+                    .class(cosmic::theme::Container::custom(move |_| {
+                        widget::container::Style {
+                            background: Some(cosmic::iced::Background::Color(
+                                cosmic::iced::Color {
+                                    a: 0.5,
+                                    ..text_color
+                                },
+                            )),
+                            border: cosmic::iced::Border {
+                                radius: 3.0.into(),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        }
+                    })),
+                )
+                .push(
+                    widget::container(widget::Space::new(
+                        Length::Fixed(220.0),
+                        Length::Fixed(10.0),
+                    ))
+                    .class(cosmic::theme::Container::custom(move |_| {
+                        widget::container::Style {
+                            background: Some(cosmic::iced::Background::Color(
+                                cosmic::iced::Color {
+                                    a: 0.4,
+                                    ..text_color
+                                },
+                            )),
+                            border: cosmic::iced::Border {
+                                radius: 3.0.into(),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        }
+                    })),
+                )
+                .push(
+                    widget::container(widget::Space::new(
+                        Length::Fixed(100.0),
+                        Length::Fixed(20.0),
+                    ))
+                    .class(cosmic::theme::Container::custom(move |_| {
+                        widget::container::Style {
+                            background: Some(cosmic::iced::Background::Color(
+                                cosmic::iced::Color { a: 0.8, ..accent },
+                            )),
+                            border: cosmic::iced::Border {
+                                radius: 6.0.into(),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        }
+                    })),
+                ),
+        )
+        .width(Length::Fixed(400.0))
+        .height(Length::Fixed(250.0))
+        .class(cosmic::theme::Container::custom(move |_| {
+            widget::container::Style {
+                background: Some(cosmic::iced::Background::Color(background)),
+                border: cosmic::iced::Border {
+                    radius: 12.0.into(),
+                    width: 2.0,
+                    color: accent,
+                },
+                ..Default::default()
+            }
+        }));
+
+        widget::settings::section()
+            .title(fl!("theme-preview"))
+            .add(
+                widget::container(mockup)
+                    .width(Length::Fill)
+                    .align_x(cosmic::iced::alignment::Horizontal::Center),
+            )
             .into()
     }
 
