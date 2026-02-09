@@ -1,3 +1,12 @@
+cosmic-order (0.13.0-1) unstable; urgency=medium
+
+  * Phase 8: CLI interface for scripting
+  * Subcommands: sync, colors, theme, hooks
+  * JSON output support for all commands
+  * Human-readable output by default
+
+ -- jfreed-dev <jfreed@users.noreply.github.com>  Sat, 08 Feb 2026 00:00:00 +0000
+
 cosmic-order (0.12.0-1) unstable; urgency=medium
 
   * Phase 7A: Native idle detection
