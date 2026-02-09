@@ -390,6 +390,8 @@ pub struct ThumbnailCache {
 impl ThumbnailCache {
     const THUMB_WIDTH: u32 = 160;
     const THUMB_HEIGHT: u32 = 100;
+    const PREVIEW_WIDTH: u32 = 640;
+    const PREVIEW_HEIGHT: u32 = 400;
 
     pub fn new() -> Self {
         let cache_dir = directories::BaseDirs::new()
@@ -405,27 +407,30 @@ impl ThumbnailCache {
     /// Check if a thumbnail exists on disk (no I/O generation).
     /// Returns `Some(thumb_path)` if cached, `None` if not yet generated.
     pub fn get_cached(&self, source_path: &str) -> Option<PathBuf> {
-        let thumb_path = self.thumb_path_for(source_path);
+        Self::check_cached_at(&self.thumb_path_for(source_path))
+    }
 
-        if thumb_path.exists() {
-            // Check for failure marker (empty file) — return None so
-            // the caller uses a placeholder icon
-            if fs::metadata(&thumb_path)
-                .map(|m| m.len() == 0)
-                .unwrap_or(false)
-            {
+    /// Check if a preview-size thumbnail exists on disk (no I/O generation).
+    /// Returns `Some(preview_path)` if cached, `None` if not yet generated.
+    pub fn get_cached_preview(&self, source_path: &str) -> Option<PathBuf> {
+        Self::check_cached_at(&self.preview_path_for(source_path))
+    }
+
+    /// Check if a cached file exists and is not a failure marker.
+    fn check_cached_at(path: &Path) -> Option<PathBuf> {
+        if path.exists() {
+            if fs::metadata(path).map(|m| m.len() == 0).unwrap_or(false) {
                 return None;
             }
-            return Some(thumb_path);
+            return Some(path.to_path_buf());
         }
-
         None
     }
 
-    /// Compute the cache key path for a source image.
-    fn thumb_path_for(&self, source_path: &str) -> PathBuf {
+    /// Compute the cache key for a source image.
+    fn cache_key_for(source_path: &str) -> String {
         let source = Path::new(source_path);
-        let key = source
+        source
             .parent()
             .and_then(|p| p.file_name())
             .and_then(|n| n.to_str())
@@ -444,42 +449,135 @@ impl ThumbnailCache {
                         .unwrap_or("unknown");
                     format!("{parent}__{fname}")
                 },
-            );
-        self.cache_dir.join(&key)
+            )
+    }
+
+    /// Compute the grid thumbnail path for a source image.
+    fn thumb_path_for(&self, source_path: &str) -> PathBuf {
+        self.cache_dir.join(Self::cache_key_for(source_path))
+    }
+
+    /// Compute the preview thumbnail path for a source image.
+    fn preview_path_for(&self, source_path: &str) -> PathBuf {
+        self.cache_dir
+            .join("preview")
+            .join(Self::cache_key_for(source_path))
     }
 
     /// Generate thumbnails for a batch of source paths (blocking I/O).
-    /// Returns the number of thumbnails generated.
+    /// Produces both grid (160x100) and preview (640x400) thumbnails.
+    /// Returns the number of source images processed.
     pub fn generate_batch(&self, source_paths: &[String]) -> usize {
+        let preview_dir = self.cache_dir.join("preview");
         let mut count = 0;
         for source_path in source_paths {
-            let thumb_path = self.thumb_path_for(source_path);
-            if thumb_path.exists() {
-                continue;
-            }
-            let source = Path::new(source_path.as_str());
-            if let Err(e) = self.generate_thumbnail(source, &thumb_path) {
-                tracing::warn!("Thumbnail generation failed for {source_path}: {e}");
-                let _ = fs::create_dir_all(&self.cache_dir);
-                let _ = fs::write(&thumb_path, b"");
-            } else {
+            if self.generate_both_tiers(source_path, &preview_dir) {
                 count += 1;
             }
         }
         count
     }
 
-    fn generate_thumbnail(&self, source: &Path, dest: &Path) -> Result<(), String> {
-        fs::create_dir_all(&self.cache_dir).map_err(|e| format!("Create cache dir: {e}"))?;
+    /// Generate grid + preview thumbnails for a single source image.
+    /// Returns `true` if at least one tier was generated.
+    fn generate_both_tiers(&self, source_path: &str, preview_dir: &Path) -> bool {
+        let thumb_path = self.thumb_path_for(source_path);
+        let preview_path = self.preview_path_for(source_path);
+        let need_thumb = !thumb_path.exists();
+        let need_preview = !preview_path.exists();
+        if !need_thumb && !need_preview {
+            return false;
+        }
 
-        let img = image::open(source).map_err(|e| format!("Open image: {e}"))?;
+        let source = Path::new(source_path);
+        let img = match image::open(source) {
+            Ok(img) => img,
+            Err(e) => {
+                tracing::warn!("Thumbnail generation failed for {source_path}: {e}");
+                Self::write_failure_markers(
+                    need_thumb,
+                    &thumb_path,
+                    &self.cache_dir,
+                    need_preview,
+                    &preview_path,
+                    preview_dir,
+                );
+                return false;
+            }
+        };
 
-        let thumb = img.thumbnail(Self::THUMB_WIDTH, Self::THUMB_HEIGHT);
+        if need_thumb {
+            Self::save_or_mark(
+                &img,
+                &thumb_path,
+                &self.cache_dir,
+                Self::THUMB_WIDTH,
+                Self::THUMB_HEIGHT,
+                source_path,
+                "Grid",
+            );
+        }
+        if need_preview {
+            Self::save_or_mark(
+                &img,
+                &preview_path,
+                preview_dir,
+                Self::PREVIEW_WIDTH,
+                Self::PREVIEW_HEIGHT,
+                source_path,
+                "Preview",
+            );
+        }
+        true
+    }
 
+    /// Write 0-byte failure markers for tiers that need them.
+    fn write_failure_markers(
+        need_thumb: bool,
+        thumb_path: &Path,
+        thumb_dir: &Path,
+        need_preview: bool,
+        preview_path: &Path,
+        preview_dir: &Path,
+    ) {
+        if need_thumb {
+            let _ = fs::create_dir_all(thumb_dir);
+            let _ = fs::write(thumb_path, b"");
+        }
+        if need_preview {
+            let _ = fs::create_dir_all(preview_dir);
+            let _ = fs::write(preview_path, b"");
+        }
+    }
+
+    /// Save a thumbnail or write a failure marker on error.
+    fn save_or_mark(
+        img: &image::DynamicImage,
+        dest: &Path,
+        dest_dir: &Path,
+        width: u32,
+        height: u32,
+        source_path: &str,
+        label: &str,
+    ) {
+        if let Err(e) = Self::save_thumbnail(img, dest, dest_dir, width, height) {
+            tracing::warn!("{label} thumbnail save failed for {source_path}: {e}");
+            let _ = fs::write(dest, b"");
+        }
+    }
+
+    fn save_thumbnail(
+        img: &image::DynamicImage,
+        dest: &Path,
+        dest_dir: &Path,
+        width: u32,
+        height: u32,
+    ) -> Result<(), String> {
+        fs::create_dir_all(dest_dir).map_err(|e| format!("Create cache dir: {e}"))?;
+        let thumb = img.thumbnail(width, height);
         thumb
             .save(dest)
             .map_err(|e| format!("Save thumbnail: {e}"))?;
-
         Ok(())
     }
 }

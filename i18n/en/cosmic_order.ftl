@@ -38,6 +38,7 @@ wallpaper-file = File
 wallpaper-theme = Theme
 wallpaper-scaling = Scaling Mode
 wallpaper-all = All
+wallpaper-preview = Preview
 wallpaper-no-wallpapers = No wallpapers found
 wallpaper-5min = 5 minutes
 wallpaper-10min = 10 minutes

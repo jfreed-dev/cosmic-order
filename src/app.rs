@@ -1460,10 +1460,13 @@ impl App {
             Vec::new()
         };
 
-        // Filter to only those not yet cached
+        // Filter to paths where either grid or preview thumbnail is missing
         let missing: Vec<String> = paths
             .into_iter()
-            .filter(|p| self.thumbnail_cache.get_cached(p).is_none())
+            .filter(|p| {
+                self.thumbnail_cache.get_cached(p).is_none()
+                    || self.thumbnail_cache.get_cached_preview(p).is_none()
+            })
             .collect();
 
         if missing.is_empty() {
@@ -1745,6 +1748,7 @@ impl App {
             // Wallpaper sections
             .push(self.view_wallpaper_current_section())
             .push(self.view_wallpaper_collection_selector())
+            .push(self.view_wallpaper_preview_panel())
             .push(self.view_wallpaper_grid())
             .push(self.view_wallpaper_rotation_section());
 
@@ -2122,6 +2126,47 @@ impl App {
         }));
 
         Some(banner.into())
+    }
+
+    /// Wallpaper preview panel (640x400).
+    ///
+    /// Shows a larger preview of the selected or current wallpaper.
+    /// Fallback chain: preview cache → grid cache → placeholder SVG.
+    fn view_wallpaper_preview_panel(&self) -> Element<'_, Message> {
+        use cosmic::iced::{Alignment, Length};
+        use cosmic::widget::image::Handle;
+
+        let source_path = self
+            .wallpaper_selected_path
+            .as_deref()
+            .unwrap_or(&self.wallpaper_config.current_source);
+
+        let image_widget = if source_path.is_empty() {
+            widget::image(Handle::from_path(PathBuf::from(
+                "/usr/share/icons/hicolor/scalable/apps/image-missing.svg",
+            )))
+        } else if let Some(preview) = self.thumbnail_cache.get_cached_preview(source_path) {
+            widget::image(Handle::from_path(preview))
+        } else if let Some(thumb) = self.thumbnail_cache.get_cached(source_path) {
+            widget::image(Handle::from_path(thumb))
+        } else {
+            widget::image(Handle::from_path(PathBuf::from(
+                "/usr/share/icons/hicolor/scalable/apps/image-missing.svg",
+            )))
+        };
+
+        let preview = widget::container(
+            image_widget
+                .width(Length::Fixed(640.0))
+                .height(Length::Fixed(400.0)),
+        )
+        .align_x(Alignment::Center)
+        .width(Length::Fill);
+
+        widget::settings::section()
+            .title(fl!("wallpaper-preview"))
+            .add(preview)
+            .into()
     }
 
     /// Current wallpaper info + Apply and Import buttons
