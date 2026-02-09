@@ -6,6 +6,7 @@
 //! The keyboard-first workflow you love, on the desktop you deserve.
 
 mod app;
+mod cli;
 mod colors;
 mod compositor;
 mod config;
@@ -24,12 +25,15 @@ mod tool_sync;
 mod wallpaper_config;
 mod wayland_idle;
 
+use std::process::ExitCode;
+
+use clap::Parser;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
 /// Application ID for COSMIC configuration
 pub const APP_ID: &str = "com.github.jfreed-dev.CosmicOrder";
 
-fn main() -> cosmic::iced::Result {
+fn main() -> ExitCode {
     // Initialize logging
     tracing_subscriber::registry()
         .with(
@@ -39,12 +43,24 @@ fn main() -> cosmic::iced::Result {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    tracing::info!("Starting COSMIC ORDER");
-
     // Initialize localization with system language preferences
     let requested_languages = i18n_embed::DesktopLanguageRequester::requested_languages();
     localize::init(&requested_languages);
 
-    // Run the application
-    cosmic::app::run::<app::App>(cosmic::app::Settings::default(), ())
+    // Parse CLI arguments
+    let args = cli::Cli::parse();
+
+    match args.command {
+        Some(cmd) => cli::run(cmd),
+        None => {
+            tracing::info!("Starting COSMIC ORDER");
+            match cosmic::app::run::<app::App>(cosmic::app::Settings::default(), ()) {
+                Ok(()) => ExitCode::SUCCESS,
+                Err(e) => {
+                    tracing::error!("Application error: {e}");
+                    ExitCode::FAILURE
+                }
+            }
+        }
+    }
 }

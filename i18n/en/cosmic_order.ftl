@@ -224,6 +224,23 @@ timeout-minutes = { $minutes } min
 screensaver-native-idle = Native idle detection active
 screensaver-fallback-swayidle = Using swayidle service (fallback)
 
+# CLI
+cli-error-runtime = Failed to create async runtime
+cli-sync-complete = Theme sync complete
+cli-colors-saved = Colors saved
+cli-theme-info = Theme
+cli-theme-dark-set = Switched to dark mode
+cli-theme-light-set = Switched to light mode
+cli-theme-accent-set = Accent color set
+cli-theme-exported = Theme exported
+cli-theme-imported = Theme imported
+cli-hooks-complete = Hooks complete
+cli-error-invalid-hex = Invalid hex color
+cli-error-sync-failed = Sync failed
+cli-error-save-failed = Failed to save colors
+cli-error-export-failed = Failed to export theme
+cli-error-import-failed = Failed to import theme
+
 # Errors
 error-load-config = Failed to load configuration
 error-save-config = Failed to save configuration
