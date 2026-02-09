@@ -6,6 +6,7 @@
 //! The keyboard-first workflow you love, on the desktop you deserve.
 
 mod app;
+mod bundled_themes;
 mod cli;
 mod colors;
 mod compositor;

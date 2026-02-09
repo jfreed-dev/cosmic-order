@@ -140,6 +140,7 @@ Alternatively, use `ext-session-lock-v1` for proper session lock
 integration.
 
 **Blockers**:
+
 - TerminalTextEffects is Python — would need Rust port or wgpu renderer
 - cosmic-idle already uses layer shell for fade-to-black
 - Would eliminate ~2,000 lines of shell scripts entirely
@@ -185,7 +186,7 @@ listing. Add "COSMIC" to categories for "Made for COSMIC" section.
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| 2026-02-08 | Stay standalone (not cosmic-settings) | No plugin system exists; all community tools are standalone |
-| 2026-02-08 | Keep shell config format (for now) | Scripts must source it; migrate after NM-01/NM-03 |
+| 2026-02-08 | Stay standalone (not cosmic-settings) | No plugin system; all tools standalone |
+| 2026-02-08 | Keep shell config format (for now) | Scripts must source it; migrate after NM-01/03 |
 | 2026-02-08 | Defer layer-shell screensaver to Phase 7 | Very high effort; current approach works |
-| 2026-02-08 | NM-01/02/03 complete | Compositor, DPMS, and service management all native; only launch-fullscreen.sh remains |
+| 2026-02-08 | NM-01/02/03 complete | Compositor, DPMS, service mgmt native; shell launch remains |

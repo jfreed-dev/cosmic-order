@@ -26,8 +26,13 @@ theme-mode-dark = Dark
 theme-mode-light = Light
 dark-mode = Dark Mode
 accent-presets = Presets
+accent-presets-cosmic = COSMIC
+accent-presets-cosmictron = Cosmictron
 theme-presets = Theme Presets
 available-themes = Available
+community-themes = Community Themes
+community-themes-dark = Community Themes (Dark)
+community-themes-light = Community Themes (Light)
 
 # Wallpapers Page
 wallpapers-description = Organize and set desktop wallpapers

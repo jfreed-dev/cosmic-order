@@ -369,8 +369,10 @@ See [NATIVE-MIGRATION.md](development/NATIVE-MIGRATION.md) for details.
 
 ### Findings
 
-- In-process ext-session-lock-v1 is **not viable** — acquiring the lock disrupts the main app's Wayland connection (broken pipe), crashing the app while locked
-- Fullscreen screensaver window resets compositor idle timer — Wayland idle lock notification unreliable after screensaver starts
+- In-process ext-session-lock-v1 is **not viable** — acquiring the lock disrupts
+  the main app's Wayland connection (broken pipe), crashing while locked
+- Fullscreen screensaver window resets compositor idle timer — Wayland idle lock
+  notification unreliable after screensaver starts
 - `src/session_lock.rs` deleted (non-viable approach, no longer needed)
 
 ## Phase 8: CLI Interface ✅ (v0.13.0)

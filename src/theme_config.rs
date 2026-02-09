@@ -28,20 +28,24 @@ pub enum ThemeError {
     DeserializeError(String),
 }
 
-/// Built-in theme identifier
+/// Theme identifier (built-in or bundled community theme)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ThemeId {
     Dark,
     Light,
     HighContrastDark,
     HighContrastLight,
+    /// Bundled community theme by index
+    Bundled(usize),
 }
 
 /// Snapshot of theme state for preview restore
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ThemePreviewState {
     pub config: ThemeConfig,
     pub previewing_id: ThemeId,
+    /// Full theme snapshot for proper restore (includes builder state)
+    pub snapshot: Option<crate::bundled_themes::ThemeSnapshot>,
 }
 
 /// Theme preview information

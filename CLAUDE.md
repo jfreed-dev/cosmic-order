@@ -132,7 +132,8 @@ widget::text::title2(fl!("page-title"))
 - [docs/research/](docs/research/) - libcosmic and COSMIC research
 - [docs/development/](docs/development/) - Development guides
 - [docs/development/WORKFLOW.md](docs/development/WORKFLOW.md) - Git workflow
-- [docs/development/NATIVE-MIGRATION.md](docs/development/NATIVE-MIGRATION.md) - Native API migration plan
+- [docs/development/NATIVE-MIGRATION.md](docs/development/NATIVE-MIGRATION.md) - Native API
+  migration plan
 
 ## Development Phase
 
