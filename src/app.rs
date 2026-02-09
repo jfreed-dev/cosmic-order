@@ -304,10 +304,9 @@ impl Application for App {
     fn on_app_exit(&mut self) -> Option<Self::Message> {
         if self.native_idle_active {
             self.kill_idle_screensaver();
-            Some(Message::RestartSwayidle)
-        } else {
-            None
+            Self::restart_swayidle_sync();
         }
+        None
     }
 
     #[allow(clippy::cognitive_complexity)]
