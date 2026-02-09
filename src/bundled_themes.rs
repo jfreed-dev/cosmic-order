@@ -7,7 +7,6 @@
 
 use std::sync::LazyLock;
 
-use cosmic::cosmic_theme::palette::Srgba;
 use cosmic::cosmic_theme::{Theme as CosmicTheme, ThemeBuilder, ThemeMode};
 use cosmic_config::CosmicConfigEntry;
 use rust_embed::RustEmbed;
@@ -28,12 +27,6 @@ pub struct BundledTheme {
     pub filename: String,
     /// Whether this is a dark theme
     pub is_dark: bool,
-    /// Accent color for the preview card
-    pub accent: Srgba,
-    /// Background color for the preview card
-    pub background: Srgba,
-    /// Text color for the preview card
-    pub text: Srgba,
 }
 
 /// Pre-parsed registry of all bundled themes
@@ -68,9 +61,6 @@ fn parse_theme_file(filename: &str, index: usize) -> Option<(BundledTheme, Cosmi
         name: display_name_from_filename(filename),
         filename: filename.to_string(),
         is_dark: theme.is_dark,
-        accent: theme.accent.base,
-        background: theme.background.base,
-        text: theme.primary.on,
     };
 
     Some((meta, theme))
