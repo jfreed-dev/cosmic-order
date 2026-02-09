@@ -356,6 +356,23 @@ See [NATIVE-MIGRATION.md](development/NATIVE-MIGRATION.md) for details.
 - [x] Caffeine mode respected for native idle events
 - [x] `on_app_exit()` + `Drop` safety net for swayidle restart
 
+## Phase 7B: Session Lock ✅ (v0.12.0)
+
+**Goal**: Lock the screen after idle timeout using COSMIC's greeter.
+
+### Completed
+
+- [x] Timer-based lock scheduling (cancellable `Task::abortable` on screensaver start)
+- [x] Screen lock via logind D-Bus (`loginctl lock-session` → COSMIC greeter)
+- [x] `screensaver_config.session_lock` field with UI toggle in Screensaver page
+- [x] Lock timer cancelled on user resume
+
+### Findings
+
+- In-process ext-session-lock-v1 is **not viable** — acquiring the lock disrupts the main app's Wayland connection (broken pipe), crashing the app while locked
+- Fullscreen screensaver window resets compositor idle timer — Wayland idle lock notification unreliable after screensaver starts
+- `src/session_lock.rs` retained for potential future standalone lock binary
+
 ## Phase 7: Deep Compositor Integration (Future)
 
 **Goal**: Native COSMIC compositor integration for advanced screensaver features.
@@ -363,10 +380,11 @@ See [NATIVE-MIGRATION.md](development/NATIVE-MIGRATION.md) for details.
 ### Potential Features
 
 - [ ] Native effect rendering (eliminate terminal dependency)
-- [ ] Session lock protocol (ext-session-lock-v1)
+- [ ] Standalone session lock binary (ext-session-lock-v1 with PAM authentication)
 - [ ] Layer-shell overlay surfaces
 - [ ] Compositor-level cursor control
 - [x] Direct idle notification subscription (Phase 7A)
+- [x] Session lock via logind D-Bus (Phase 7B)
 - [ ] cosmic-term contributions (--fullscreen flag)
 
 ### Research Required
@@ -396,6 +414,7 @@ See [SCREENSAVER-INTEGRATION.md](SCREENSAVER-INTEGRATION.md) for detailed resear
 | 0.10.0 | 6C | CLI tools + hook system (fzf, lazygit) |
 | 0.11.0 | 6D | Real-time theme propagation |
 | 0.12.0 | 7A | Native idle detection |
+| 0.12.1 | 7B | Session lock via logind D-Bus |
 | 1.0.0 | 7 | First stable release |
 
 ## Success Criteria
