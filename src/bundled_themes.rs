@@ -85,12 +85,21 @@ pub fn all_themes() -> &'static [(BundledTheme, CosmicTheme)] {
     &REGISTRY.entries
 }
 
-/// Get dark community themes only
-pub fn dark_themes() -> Vec<&'static (BundledTheme, CosmicTheme)> {
+/// Get COSMIC (non-Cosmictron) dark themes
+pub fn cosmic_dark_themes() -> Vec<&'static (BundledTheme, CosmicTheme)> {
     REGISTRY
         .entries
         .iter()
-        .filter(|(meta, _)| meta.is_dark)
+        .filter(|(meta, _)| meta.is_dark && !meta.filename.starts_with("cosmictron-"))
+        .collect()
+}
+
+/// Get Cosmictron dark themes
+pub fn cosmictron_dark_themes() -> Vec<&'static (BundledTheme, CosmicTheme)> {
+    REGISTRY
+        .entries
+        .iter()
+        .filter(|(meta, _)| meta.is_dark && meta.filename.starts_with("cosmictron-"))
         .collect()
 }
 
@@ -250,16 +259,22 @@ mod tests {
 
     #[test]
     fn test_dark_light_split() {
-        let dark = dark_themes();
+        let cosmic_dark = cosmic_dark_themes();
+        let cosmictron_dark = cosmictron_dark_themes();
         let light = light_themes();
         let total = all_themes().len();
 
+        assert_eq!(cosmic_dark.len(), 19, "Expected 19 COSMIC dark themes");
         assert_eq!(
-            dark.len() + light.len(),
-            total,
-            "Dark + light should equal total"
+            cosmictron_dark.len(),
+            8,
+            "Expected 8 Cosmictron dark themes"
         );
-        assert_eq!(dark.len(), 27, "Expected 27 dark themes");
         assert_eq!(light.len(), 9, "Expected 9 light themes");
+        assert_eq!(
+            cosmic_dark.len() + cosmictron_dark.len() + light.len(),
+            total,
+            "COSMIC dark + Cosmictron dark + light should equal total"
+        );
     }
 }

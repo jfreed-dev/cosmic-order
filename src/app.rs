@@ -2435,19 +2435,39 @@ impl App {
     fn view_theme_selectors(&self) -> Element<'_, Message> {
         let previewing_id = self.theme_preview_backup.as_ref().map(|b| b.previewing_id);
 
-        let dark = crate::bundled_themes::dark_themes();
-        let dark_names: Vec<String> = dark.iter().map(|(m, _)| m.name.clone()).collect();
-        let dark_selected = previewing_id.and_then(|id| {
-            dark.iter()
+        let cosmic_dark = crate::bundled_themes::cosmic_dark_themes();
+        let cosmic_dark_names: Vec<String> =
+            cosmic_dark.iter().map(|(m, _)| m.name.clone()).collect();
+        let cosmic_dark_selected = previewing_id.and_then(|id| {
+            cosmic_dark
+                .iter()
                 .position(|(m, _)| crate::theme_config::ThemeId::Bundled(m.index) == id)
         });
-        let dark_indices: Vec<usize> = dark.iter().map(|(m, _)| m.index).collect();
-        let dark_dropdown = widget::dropdown(dark_names, dark_selected, move |idx| {
-            let registry_index = dark_indices[idx];
-            Message::Page(pages::Message::Visuals(pages::ThemesMessage::PreviewTheme(
-                crate::theme_config::ThemeId::Bundled(registry_index),
-            )))
+        let cosmic_dark_indices: Vec<usize> = cosmic_dark.iter().map(|(m, _)| m.index).collect();
+        let cosmic_dark_dropdown =
+            widget::dropdown(cosmic_dark_names, cosmic_dark_selected, move |idx| {
+                let registry_index = cosmic_dark_indices[idx];
+                Message::Page(pages::Message::Visuals(pages::ThemesMessage::PreviewTheme(
+                    crate::theme_config::ThemeId::Bundled(registry_index),
+                )))
+            });
+
+        let cosmictron = crate::bundled_themes::cosmictron_dark_themes();
+        let cosmictron_names: Vec<String> =
+            cosmictron.iter().map(|(m, _)| m.name.clone()).collect();
+        let cosmictron_selected = previewing_id.and_then(|id| {
+            cosmictron
+                .iter()
+                .position(|(m, _)| crate::theme_config::ThemeId::Bundled(m.index) == id)
         });
+        let cosmictron_indices: Vec<usize> = cosmictron.iter().map(|(m, _)| m.index).collect();
+        let cosmictron_dropdown =
+            widget::dropdown(cosmictron_names, cosmictron_selected, move |idx| {
+                let registry_index = cosmictron_indices[idx];
+                Message::Page(pages::Message::Visuals(pages::ThemesMessage::PreviewTheme(
+                    crate::theme_config::ThemeId::Bundled(registry_index),
+                )))
+            });
 
         let light = crate::bundled_themes::light_themes();
         let light_names: Vec<String> = light.iter().map(|(m, _)| m.name.clone()).collect();
@@ -2468,7 +2488,11 @@ impl App {
             .title(fl!("community-themes"))
             .add(widget::settings::item(
                 fl!("community-themes-dark"),
-                dark_dropdown,
+                cosmic_dark_dropdown,
+            ))
+            .add(widget::settings::item(
+                fl!("community-themes-cosmictron"),
+                cosmictron_dropdown,
             ))
             .add(widget::settings::item(
                 fl!("community-themes-light"),
@@ -2612,8 +2636,14 @@ impl App {
                 }))
                 .into()
         } else {
+            let lines = self.logo_preview_text.lines().count().max(1);
+            let available_height = f32::from(spacing.space_m).mul_add(-2.0, 200.0);
+            #[allow(clippy::cast_precision_loss)]
+            let font_size = (available_height / (lines as f32 * 1.2)).clamp(4.0, 14.0);
+
             widget::container(
-                widget::text::body(&self.logo_preview_text)
+                widget::text(&self.logo_preview_text)
+                    .size(font_size)
                     .font(cosmic::iced::Font::MONOSPACE)
                     .width(cosmic::iced::Length::Fill),
             )

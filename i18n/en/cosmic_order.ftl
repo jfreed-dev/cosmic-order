@@ -21,6 +21,7 @@ theme-export-description = Save current theme to a file
 theme-import-description = Load a theme from a file
 community-themes = Community Themes
 community-themes-dark = Community Themes (Dark)
+community-themes-cosmictron = Cosmictron (Dark)
 community-themes-light = Community Themes (Light)
 
 # Screensaver Page
