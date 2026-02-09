@@ -15,6 +15,7 @@ use crate::inhibit;
 use crate::pages::{self, PageId};
 use crate::power;
 use crate::screensaver_config::ScreensaverConfig;
+use crate::session_lock;
 use crate::sleep_lock;
 use crate::theme_config::{ThemeConfig, ThemePreviewState};
 use crate::tool_sync::ToolSyncConfig;
@@ -70,6 +71,10 @@ pub struct App {
     idle_subscription_config: wayland_idle::IdleSubscriptionConfig,
     /// Handle for the running screensaver child process
     idle_screensaver_child: Option<u32>,
+    /// Whether native session lock subscription is active
+    session_lock_active: bool,
+    /// Whether native session lock feature is enabled in config
+    session_lock_enabled: bool,
 }
 
 /// Application messages
@@ -92,6 +97,8 @@ pub enum Message {
     IdleEvent(wayland_idle::IdleEvent),
     /// Logind sleep event (`PrepareForSleep`)
     SleepEvent(sleep_lock::SleepEvent),
+    /// Session lock event
+    SessionLockEvent(session_lock::SessionLockEvent),
     /// Restart swayidle fallback service
     RestartSwayidle,
     /// No-op (used by fire-and-forget async tasks)
@@ -215,6 +222,7 @@ impl Application for App {
         tracing::info!("Found {} available logos", available_logos.len());
 
         let idle_subscription_config = Self::compute_idle_config(&screensaver_config);
+        let session_lock_enabled = screensaver_config.session_lock;
         let initial_collection = wallpaper_config.current_theme_name();
         let app = Self {
             core,
@@ -240,6 +248,8 @@ impl Application for App {
             native_idle_active: false,
             idle_subscription_config,
             idle_screensaver_child: None,
+            session_lock_active: false,
+            session_lock_enabled,
         };
 
         let init_task = app.spawn_thumbnail_generation();
@@ -276,12 +286,19 @@ impl Application for App {
     }
 
     fn subscription(&self) -> cosmic::iced::Subscription<Self::Message> {
-        cosmic::iced::Subscription::batch([
+        let mut subs = vec![
             power::power_subscription().map(Message::PowerStateUpdate),
             wayland_idle::idle_subscription(self.idle_subscription_config.clone())
                 .map(Message::IdleEvent),
             sleep_lock::sleep_lock_subscription().map(Message::SleepEvent),
-        ])
+        ];
+
+        if self.session_lock_active {
+            let bg_color = crate::colors::ColorPalette::from_cosmic().background;
+            subs.push(session_lock::lock_session(bg_color).map(Message::SessionLockEvent));
+        }
+
+        cosmic::iced::Subscription::batch(subs)
     }
 
     fn on_app_exit(&mut self) -> Option<Self::Message> {
@@ -357,6 +374,7 @@ impl Application for App {
             }
             Message::IdleEvent(event) => self.handle_idle_event(event),
             Message::SleepEvent(event) => self.handle_sleep_event(event),
+            Message::SessionLockEvent(event) => self.handle_session_lock_event(event),
             Message::RestartSwayidle => {
                 Self::restart_swayidle_sync();
                 Task::none()
@@ -941,6 +959,11 @@ impl App {
                 self.screensaver_config.dismiss_on_key = enabled;
                 Task::none()
             }
+            pages::ScreensaverMessage::SetSessionLock(enabled) => {
+                self.screensaver_config.session_lock = enabled;
+                self.session_lock_enabled = enabled;
+                Task::none()
+            }
             pages::ScreensaverMessage::SelectLogo(path) => {
                 self.screensaver_config.logo_file = path;
                 Task::none()
@@ -1170,6 +1193,44 @@ impl App {
         }
     }
 
+    /// Handle session lock events
+    fn handle_session_lock_event(
+        &mut self,
+        event: session_lock::SessionLockEvent,
+    ) -> Task<Message> {
+        match event {
+            session_lock::SessionLockEvent::Locked => {
+                tracing::info!("Session lock acquired");
+                Task::none()
+            }
+            session_lock::SessionLockEvent::UnlockRequested => {
+                tracing::info!("Session unlock requested");
+                self.session_lock_active = false;
+                Task::none()
+            }
+            session_lock::SessionLockEvent::Failed(reason) => {
+                tracing::warn!("Session lock failed: {reason} — falling back to logind");
+                self.session_lock_active = false;
+                cosmic::task::future(async {
+                    if let Err(e) = crate::systemd::lock_session().await {
+                        tracing::error!("Logind lock fallback failed: {e}");
+                    }
+                    Message::None
+                })
+            }
+            session_lock::SessionLockEvent::Error(e) => {
+                tracing::warn!("Session lock error: {e} — falling back to logind");
+                self.session_lock_active = false;
+                cosmic::task::future(async {
+                    if let Err(e) = crate::systemd::lock_session().await {
+                        tracing::error!("Logind lock fallback failed: {e}");
+                    }
+                    Message::None
+                })
+            }
+        }
+    }
+
     /// Kill the screensaver child process if running
     fn kill_idle_screensaver(&mut self) {
         if self.idle_screensaver_child.take().is_some() {
@@ -1180,14 +1241,21 @@ impl App {
         }
     }
 
-    /// Lock the screen via logind D-Bus
-    fn lock_screen(&self) -> Task<Message> {
-        cosmic::task::future(async {
-            if let Err(e) = crate::systemd::lock_session().await {
-                tracing::error!("Failed to lock screen: {e}");
-            }
-            Message::None
-        })
+    /// Lock the screen — native session lock or logind D-Bus fallback
+    fn lock_screen(&mut self) -> Task<Message> {
+        if self.session_lock_enabled {
+            tracing::info!("Locking screen via native session lock");
+            self.session_lock_active = true;
+            // Subscription starts on next subscription() call
+            Task::none()
+        } else {
+            cosmic::task::future(async {
+                if let Err(e) = crate::systemd::lock_session().await {
+                    tracing::error!("Failed to lock screen: {e}");
+                }
+                Message::None
+            })
+        }
     }
 
     /// Synchronously restart swayidle — used during app exit when tokio may be shutting down
@@ -2652,6 +2720,19 @@ impl App {
                         widget::toggler(cfg.dismiss_on_key).on_toggle(|enabled| {
                             Message::Page(pages::Message::Screensaver(
                                 pages::ScreensaverMessage::SetDismissOnKey(enabled),
+                            ))
+                        }),
+                    )),
+            )
+            // Session Lock section
+            .push(
+                widget::settings::section()
+                    .title(fl!("screensaver-session-lock"))
+                    .add(widget::settings::item(
+                        fl!("screensaver-session-lock-native"),
+                        widget::toggler(cfg.session_lock).on_toggle(|enabled| {
+                            Message::Page(pages::Message::Screensaver(
+                                pages::ScreensaverMessage::SetSessionLock(enabled),
                             ))
                         }),
                     )),

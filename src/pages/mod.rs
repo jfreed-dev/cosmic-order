@@ -156,6 +156,8 @@ pub enum ScreensaverMessage {
     SetHideMouse(bool),
     /// Toggle dismiss on keypress
     SetDismissOnKey(bool),
+    /// Toggle native session lock
+    SetSessionLock(bool),
     /// Save configuration and reload service
     SaveConfig,
     /// Save completed (bool = launch test after save)

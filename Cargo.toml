@@ -57,6 +57,7 @@ wayland-protocols = { version = "0.32", features = ["client", "staging"] }
 # Utilities
 directories = "5"
 once_cell = "1"
+tempfile = "3"
 
 [build-dependencies]
 # None needed yet

@@ -61,6 +61,8 @@ pub struct ScreensaverConfig {
     pub hide_mouse: bool,
     /// Keyboard input dismisses screensaver
     pub dismiss_on_key: bool,
+    /// Use native session lock (ext-session-lock-v1) instead of logind
+    pub session_lock: bool,
 }
 
 impl ScreensaverConfig {
@@ -143,6 +145,7 @@ impl ScreensaverConfig {
             cursor_hide: Self::parse_bool(&values, "CURSOR_HIDE", true),
             hide_mouse: Self::parse_bool(&values, "HIDE_MOUSE", true),
             dismiss_on_key: Self::parse_bool(&values, "DISMISS_ON_KEY", true),
+            session_lock: Self::parse_bool(&values, "SESSION_LOCK", false),
         })
     }
 
@@ -189,6 +192,7 @@ impl ScreensaverConfig {
             cursor_hide: true,
             hide_mouse: true,
             dismiss_on_key: true,
+            session_lock: false,
         }
     }
 
@@ -220,6 +224,7 @@ EFFECTS_MINIMAL="{}"
 CURSOR_HIDE="{}"
 HIDE_MOUSE="{}"
 DISMISS_ON_KEY="{}"
+SESSION_LOCK="{}"
 "#,
             bool_str(self.enabled),
             self.idle_timeout,
@@ -245,6 +250,7 @@ DISMISS_ON_KEY="{}"
             bool_str(self.cursor_hide),
             bool_str(self.hide_mouse),
             bool_str(self.dismiss_on_key),
+            bool_str(self.session_lock),
         )
     }
 
@@ -487,6 +493,7 @@ IDLE_TIMEOUT="300"
         assert!(config.cursor_hide);
         assert!(config.hide_mouse);
         assert!(config.dismiss_on_key);
+        assert!(!config.session_lock);
     }
 
     #[test]
@@ -516,6 +523,7 @@ IDLE_TIMEOUT="300"
             cursor_hide: false,
             hide_mouse: true,
             dismiss_on_key: false,
+            session_lock: true,
         };
 
         let serialized = config.serialize();
@@ -545,6 +553,7 @@ IDLE_TIMEOUT="300"
         assert_eq!(parsed.cursor_hide, config.cursor_hide);
         assert_eq!(parsed.hide_mouse, config.hide_mouse);
         assert_eq!(parsed.dismiss_on_key, config.dismiss_on_key);
+        assert_eq!(parsed.session_lock, config.session_lock);
     }
 
     #[test]

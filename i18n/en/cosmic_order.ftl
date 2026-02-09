@@ -141,6 +141,10 @@ screensaver-effect-simple = Simple Effects
 screensaver-effect-minimal = Minimal Effects
 screensaver-effect-skip = Screensaver Disabled (low battery)
 
+# Session Lock
+screensaver-session-lock = Session Lock
+screensaver-session-lock-native = Native session lock
+
 # Caffeine Mode
 caffeine-toggle = Prevent Sleep
 caffeine-enabled = Caffeine mode active — idle inhibited
