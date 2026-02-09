@@ -8,7 +8,7 @@ visuals = Visuals
 screensaver = Screensaver
 
 # Visuals Page
-visuals-description = Customize themes and wallpapers for your desktop
+visuals-description = Customize themes for your desktop
 theme-select = Select Theme
 theme-apply = Apply
 theme-export = Export Theme
@@ -22,29 +22,6 @@ theme-import-description = Load a theme from a file
 community-themes = Community Themes
 community-themes-dark = Community Themes (Dark)
 community-themes-light = Community Themes (Light)
-
-# Wallpapers
-wallpaper-select = Select Wallpaper
-wallpaper-set = Set as Wallpaper
-wallpaper-add = Add Wallpaper
-wallpaper-add-file = From File
-wallpaper-add-url = From URL
-wallpaper-rotation = Rotation
-wallpaper-rotation-enabled = Enable Rotation
-wallpaper-rotation-interval = Change Every
-wallpaper-collection = Collection
-wallpaper-current = Current Wallpaper
-wallpaper-file = File
-wallpaper-theme = Theme
-wallpaper-scaling = Scaling Mode
-wallpaper-all = All
-wallpaper-preview = Preview
-wallpaper-no-wallpapers = No wallpapers found
-wallpaper-5min = 5 minutes
-wallpaper-10min = 10 minutes
-wallpaper-15min = 15 minutes
-wallpaper-30min = 30 minutes
-wallpaper-1hour = 1 hour
 
 # Screensaver Page
 screensaver-description = Configure the terminal-based screensaver
@@ -178,25 +155,15 @@ none = None
 seconds = seconds
 minutes = minutes
 
-# Wallpaper URL Download
-wallpaper-url-placeholder = Enter image URL...
-wallpaper-downloading = Downloading...
-wallpaper-download = Download
-
 # Tooltips
 tooltip-save = Save settings
 tooltip-save-test = Save and preview screensaver
-tooltip-apply = Set as wallpaper
 tooltip-import = Import from file
 tooltip-export = Export to file
 tooltip-try = Preview this theme
-tooltip-prev-page = Previous page
-tooltip-next-page = Next page
-tooltip-url-download = Download wallpaper from URL
 
 # File Dialog Filters
 filter-text-files = Text files
-filter-images = Images
 filter-ron-theme = RON Theme
 
 # Timeout Display
@@ -223,9 +190,11 @@ cli-error-sync-failed = Sync failed
 cli-error-save-failed = Failed to save colors
 cli-error-export-failed = Failed to export theme
 cli-error-import-failed = Failed to import theme
+cli-wallpaper-added = Wallpaper saved
+cli-error-download-failed = Download failed
+cli-error-invalid-image = Downloaded file is not a valid image
 
 # Errors
 error-load-config = Failed to load configuration
 error-save-config = Failed to save configuration
 error-apply-theme = Failed to apply theme
-error-load-wallpapers = Failed to load wallpapers

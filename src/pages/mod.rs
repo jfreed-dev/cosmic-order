@@ -3,7 +3,7 @@
 //! Application pages
 //!
 //! Each page represents a section of the application:
-//! - Visuals: Theme and wallpaper customization
+//! - Visuals: Theme customization
 //! - Tool Sync: Tool theme sync configuration
 //! - Screensaver: Screensaver configuration
 
@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 /// Page identifiers
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PageId {
-    /// Visuals page (themes + wallpapers)
+    /// Visuals page (themes)
     #[default]
     Visuals,
     /// Tool sync configuration page
@@ -26,8 +26,6 @@ pub enum PageId {
 pub enum Message {
     /// Visuals page messages (themes)
     Visuals(ThemesMessage),
-    /// Wallpaper page messages
-    Wallpapers(WallpapersMessage),
     /// Screensaver page messages
     Screensaver(ScreensaverMessage),
 }
@@ -73,47 +71,6 @@ pub enum ThemesMessage {
     SyncTools,
     /// Sync completed with result
     SyncComplete(Result<String, String>),
-}
-
-/// Wallpaper page messages
-#[derive(Debug, Clone)]
-pub enum WallpapersMessage {
-    /// Switch collection view (None = "All")
-    SelectCollection(Option<String>),
-    /// Highlight a wallpaper by full path
-    SelectWallpaper(String),
-    /// Apply the selected wallpaper to the desktop
-    ApplyWallpaper,
-    /// Apply completed with result (path or error)
-    ApplyComplete(Result<String, String>),
-    /// Toggle rotation on/off
-    SetRotationEnabled(bool),
-    /// Set rotation frequency in seconds
-    SetRotationFrequency(u32),
-    /// Set the scaling mode
-    SetScalingMode(usize),
-    /// Save rotation/scaling settings to disk
-    SaveSettings,
-    /// Save completed with result
-    SaveComplete(Result<(), String>),
-    /// Open file picker to import a wallpaper
-    ImportFromFile,
-    /// Import completed with result (path or error)
-    ImportComplete(Result<String, String>),
-    /// Toggle the URL input field visibility
-    ShowUrlInput(bool),
-    /// Update the URL text input content
-    SetUrlInput(String),
-    /// Download wallpaper from the entered URL
-    DownloadFromUrl,
-    /// Download completed with result (path or error)
-    DownloadComplete(Result<String, String>),
-    /// Show next page of wallpaper thumbnails
-    GridNextPage,
-    /// Show previous page of wallpaper thumbnails
-    GridPrevPage,
-    /// Background thumbnail generation completed for the visible page
-    ThumbnailsReady,
 }
 
 /// Screensaver page messages

@@ -48,10 +48,10 @@ unic-langid = "0.9"
 thiserror = "2"
 anyhow = "1"
 
-# Image processing (thumbnail generation + wallpaper validation)
+# Image validation (CLI wallpaper download)
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp", "gif", "bmp"] }
 
-# HTTP client (wallpaper URL download)
+# HTTP client (CLI wallpaper download)
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 
 # D-Bus (power monitoring via UPower)

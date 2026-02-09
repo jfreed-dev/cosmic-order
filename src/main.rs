@@ -23,7 +23,6 @@ mod sleep_lock;
 mod systemd;
 mod theme_config;
 mod tool_sync;
-mod wallpaper_config;
 mod wayland_idle;
 
 use std::process::ExitCode;

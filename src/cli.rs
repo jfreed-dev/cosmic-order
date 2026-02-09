@@ -51,6 +51,11 @@ pub enum Commands {
         #[command(subcommand)]
         action: HooksAction,
     },
+    /// Manage wallpapers
+    Wallpaper {
+        #[command(subcommand)]
+        action: WallpaperAction,
+    },
 }
 
 #[derive(Subcommand)]
@@ -96,6 +101,18 @@ pub enum HooksAction {
     /// Run all hooks with the current color palette
     Run {
         /// Output results as JSON
+        #[arg(long)]
+        json: bool,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum WallpaperAction {
+    /// Download a wallpaper from a URL
+    Add {
+        /// Image URL to download
+        url: String,
+        /// Output as JSON
         #[arg(long)]
         json: bool,
     },
@@ -178,6 +195,7 @@ pub fn run(command: Commands) -> ExitCode {
         Commands::Colors { action, json } => rt.block_on(cmd_colors(action, json)),
         Commands::Theme { action } => rt.block_on(cmd_theme(action)),
         Commands::Hooks { action } => rt.block_on(cmd_hooks(action)),
+        Commands::Wallpaper { action } => rt.block_on(cmd_wallpaper(action)),
     }
 }
 
@@ -418,6 +436,124 @@ async fn cmd_hooks(action: HooksAction) -> ExitCode {
             }
         }
     }
+}
+
+async fn cmd_wallpaper(action: WallpaperAction) -> ExitCode {
+    match action {
+        WallpaperAction::Add { url, json } => {
+            let parsed = match reqwest::Url::parse(&url) {
+                Ok(u) => u,
+                Err(e) => {
+                    eprintln!("{}: {e}", fl!("cli-error-download-failed"));
+                    return ExitCode::FAILURE;
+                }
+            };
+
+            let response = match reqwest::get(parsed).await {
+                Ok(r) => r,
+                Err(e) => {
+                    eprintln!("{}: {e}", fl!("cli-error-download-failed"));
+                    return ExitCode::FAILURE;
+                }
+            };
+
+            if !response.status().is_success() {
+                eprintln!(
+                    "{}: HTTP {}",
+                    fl!("cli-error-download-failed"),
+                    response.status()
+                );
+                return ExitCode::FAILURE;
+            }
+
+            // Extract filename from URL path
+            let url_path = response.url().path();
+            let filename = url_path
+                .rsplit('/')
+                .next()
+                .filter(|s| !s.is_empty() && s.contains('.'))
+                .unwrap_or("downloaded-wallpaper.png");
+
+            // Sanitize filename: keep only alphanumeric, dots, hyphens, underscores
+            let safe_filename: String = filename
+                .chars()
+                .map(|c| {
+                    if c.is_alphanumeric() || c == '.' || c == '-' || c == '_' {
+                        c
+                    } else {
+                        '_'
+                    }
+                })
+                .collect();
+
+            // Destination: ~/.local/share/backgrounds/custom/
+            let dest_dir = directories::BaseDirs::new().map_or_else(
+                || PathBuf::from("backgrounds/custom"),
+                |b| b.data_local_dir().join("backgrounds/custom"),
+            );
+
+            if let Err(e) = tokio::fs::create_dir_all(&dest_dir).await {
+                eprintln!("{}: {e}", fl!("cli-error-download-failed"));
+                return ExitCode::FAILURE;
+            }
+
+            let dest_path = dest_dir.join(&safe_filename);
+
+            let bytes = match response.bytes().await {
+                Ok(b) => b,
+                Err(e) => {
+                    eprintln!("{}: {e}", fl!("cli-error-download-failed"));
+                    return ExitCode::FAILURE;
+                }
+            };
+
+            // Write to a temp file first, then validate
+            let tmp_path = dest_path.with_extension("tmp");
+            if let Err(e) = tokio::fs::write(&tmp_path, &bytes).await {
+                eprintln!("{}: {e}", fl!("cli-error-download-failed"));
+                return ExitCode::FAILURE;
+            }
+
+            // Validate that it's a real image (guess format from content, not extension)
+            let tmp_clone = tmp_path.clone();
+            let valid = tokio::task::spawn_blocking(move || {
+                image::ImageReader::open(&tmp_clone)
+                    .ok()
+                    .and_then(|r| r.with_guessed_format().ok())
+                    .and_then(|r| r.decode().ok())
+                    .is_some()
+            })
+            .await
+            .unwrap_or(false);
+
+            if !valid {
+                let _ = tokio::fs::remove_file(&tmp_path).await;
+                eprintln!("{}", fl!("cli-error-invalid-image"));
+                return ExitCode::FAILURE;
+            }
+
+            // Move temp file to final location
+            if let Err(e) = tokio::fs::rename(&tmp_path, &dest_path).await {
+                eprintln!("{}: {e}", fl!("cli-error-download-failed"));
+                return ExitCode::FAILURE;
+            }
+
+            let saved = dest_path.display().to_string();
+            if json {
+                let output = WallpaperOutput { path: saved };
+                print_json(&output);
+            } else {
+                println!("{}: {saved}", fl!("cli-wallpaper-added"));
+            }
+
+            ExitCode::SUCCESS
+        }
+    }
+}
+
+#[derive(Serialize)]
+struct WallpaperOutput {
+    path: String,
 }
 
 fn print_json<T: Serialize>(value: &T) {
