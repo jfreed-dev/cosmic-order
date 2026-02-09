@@ -64,6 +64,8 @@ pub struct App {
     session_lock_enabled: bool,
     /// Abort handle for the lock delay timer (cancelled on user resume)
     lock_timer_handle: Option<cosmic::iced::task::Handle>,
+    /// Cached text content of the selected logo file (for preview display)
+    logo_preview_text: String,
 }
 
 /// Application messages
@@ -201,6 +203,7 @@ impl Application for App {
 
         let idle_subscription_config = Self::compute_idle_config(&screensaver_config);
         let session_lock_enabled = screensaver_config.session_lock;
+        let logo_preview_text = Self::load_logo_text(&screensaver_config.logo_file);
         let app = Self {
             core,
             config,
@@ -222,6 +225,7 @@ impl Application for App {
             idle_screensaver_child: None,
             session_lock_enabled,
             lock_timer_handle: None,
+            logo_preview_text,
         };
 
         (app, Task::none())
@@ -398,6 +402,14 @@ impl Application for App {
 }
 
 impl App {
+    /// Load the text content of a logo file for preview display
+    fn load_logo_text(path: &str) -> String {
+        if path.is_empty() {
+            return String::new();
+        }
+        std::fs::read_to_string(path).unwrap_or_default()
+    }
+
     /// Handle page-specific messages
     fn handle_page_message(&mut self, message: pages::Message) -> Task<Message> {
         match message {
@@ -819,6 +831,7 @@ impl App {
                 Task::none()
             }
             pages::ScreensaverMessage::SelectLogo(path) => {
+                self.logo_preview_text = Self::load_logo_text(&path);
                 self.screensaver_config.logo_file = path;
                 Task::none()
             }
@@ -831,6 +844,7 @@ impl App {
             pages::ScreensaverMessage::SelectLogoComplete(result) => {
                 match &result {
                     Ok(path) => {
+                        self.logo_preview_text = Self::load_logo_text(path);
                         self.screensaver_config.logo_file.clone_from(path);
                         tracing::info!("Logo selected: {path}");
                     }
@@ -1721,15 +1735,82 @@ impl App {
     }
 
     /// View for the Screensaver page
-    #[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
     fn view_screensaver_page(&self) -> Element<'_, Message> {
+        let spacing = cosmic::theme::spacing();
+        let column = widget::column()
+            .spacing(spacing.space_m)
+            .padding(spacing.space_m)
+            .push(widget::text::title2(fl!("screensaver")))
+            .push(widget::text::body(fl!("screensaver-description")))
+            .push(self.view_screensaver_preview_section())
+            .push(self.view_screensaver_settings_section());
+        widget::scrollable(column).into()
+    }
+
+    /// Preview sub-section: logo text preview, Save & Test, logo selector, effects, timeouts
+    #[allow(clippy::too_many_lines)]
+    fn view_screensaver_preview_section(&self) -> Element<'_, Message> {
         let spacing = cosmic::theme::spacing();
         let cfg = &self.screensaver_config;
 
-        // --- Timeout sliders with tick marks ---
-        // All three sliders use the same tick values (index 0..=6)
-        let ticks: [u32; 7] = [0, 5, 10, 15, 30, 45, 60];
+        // --- Logo text preview container ---
+        let logo_preview: Element<'_, Message> = if self.logo_preview_text.is_empty() {
+            widget::container(widget::text::caption(fl!("screensaver-no-logo")))
+                .padding(spacing.space_m)
+                .width(cosmic::iced::Length::Fill)
+                .height(cosmic::iced::Length::Fixed(200.0))
+                .align_x(cosmic::iced::alignment::Horizontal::Center)
+                .align_y(cosmic::iced::alignment::Vertical::Center)
+                .class(cosmic::theme::Container::custom(|theme| {
+                    let bg = theme.cosmic().bg_divider();
+                    widget::container::Style {
+                        background: Some(cosmic::iced::Background::Color(
+                            cosmic::iced::Color::from(bg),
+                        )),
+                        border: cosmic::iced::Border {
+                            radius: 8.0.into(),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    }
+                }))
+                .into()
+        } else {
+            widget::container(
+                widget::text::body(&self.logo_preview_text)
+                    .font(cosmic::iced::Font::MONOSPACE)
+                    .width(cosmic::iced::Length::Fill),
+            )
+            .padding(spacing.space_m)
+            .width(cosmic::iced::Length::Fill)
+            .height(cosmic::iced::Length::Fixed(200.0))
+            .class(cosmic::theme::Container::custom(|theme| {
+                let bg = theme.cosmic().bg_divider();
+                widget::container::Style {
+                    background: Some(cosmic::iced::Background::Color(cosmic::iced::Color::from(
+                        bg,
+                    ))),
+                    border: cosmic::iced::Border {
+                        radius: 8.0.into(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }
+            }))
+            .into()
+        };
 
+        // --- Save & Test button ---
+        let test_btn = widget::tooltip(
+            widget::button::standard(fl!("screensaver-save-test")).on_press(Message::Page(
+                pages::Message::Screensaver(pages::ScreensaverMessage::SaveAndTest),
+            )),
+            widget::text::body(fl!("tooltip-save-test")),
+            widget::tooltip::Position::Top,
+        );
+
+        // --- Timeout sliders ---
+        let ticks: [u32; 7] = [0, 5, 10, 15, 30, 45, 60];
         let idle_slider = Self::view_timeout_slider(
             fl!("screensaver-idle-timeout"),
             cfg.idle_timeout,
@@ -1740,7 +1821,6 @@ impl App {
                 ))
             },
         );
-
         let lock_slider = Self::view_timeout_slider(
             fl!("screensaver-lock-timeout"),
             cfg.lock_timeout,
@@ -1751,7 +1831,6 @@ impl App {
                 ))
             },
         );
-
         let dpms_slider = Self::view_timeout_slider(
             fl!("screensaver-dpms-timeout"),
             cfg.dpms_timeout,
@@ -1787,7 +1866,6 @@ impl App {
         let fade_values = Self::fade_effect_values();
         let fade_in_selected = fade_values.iter().position(|v| v == &cfg.fade_in_effect);
         let fade_out_selected = fade_values.iter().position(|v| v == &cfg.fade_out_effect);
-
         let fade_in_labels = fade_labels.clone();
         let fade_in_dropdown = widget::dropdown(fade_in_labels, fade_in_selected, |index| {
             Message::Page(pages::Message::Screensaver(
@@ -1824,7 +1902,6 @@ impl App {
                     pages::ScreensaverMessage::SetExcludeEffects(value),
                 ))
             });
-
         let include_preset_labels: Vec<String> = vec![
             fl!("screensaver-effects-all-except"),
             fl!("screensaver-effects-preset-simple"),
@@ -1849,83 +1926,13 @@ impl App {
                 ))
             });
 
-        // --- Clock dropdowns ---
-        let clock_fmt_options: Vec<String> = vec![
-            fl!("screensaver-clock-24h"),
-            fl!("screensaver-clock-24h-sec"),
-            fl!("screensaver-clock-12h"),
-            fl!("screensaver-clock-12h-sec"),
-        ];
-        let clock_fmt_values = ["%H:%M", "%H:%M:%S", "%I:%M %p", "%I:%M:%S %p"];
-        let clock_fmt_selected = clock_fmt_values.iter().position(|&v| v == cfg.clock_format);
-        let clock_fmt_dropdown = widget::dropdown(clock_fmt_options, clock_fmt_selected, |index| {
-            Message::Page(pages::Message::Screensaver(
-                pages::ScreensaverMessage::SetClockFormat(index),
-            ))
-        });
-
-        let clock_dur_options: Vec<String> = vec![
-            fl!("screensaver-clock-3sec"),
-            fl!("screensaver-clock-5sec"),
-            fl!("screensaver-clock-10sec"),
-            fl!("screensaver-clock-15sec"),
-        ];
-        let clock_dur_values: [u32; 4] = [3, 5, 10, 15];
-        let clock_dur_selected = clock_dur_values
-            .iter()
-            .position(|&v| v == cfg.clock_duration);
-        let clock_dur_dropdown = widget::dropdown(clock_dur_options, clock_dur_selected, |index| {
-            Message::Page(pages::Message::Screensaver(
-                pages::ScreensaverMessage::SetClockDuration(index),
-            ))
-        });
-
-        // --- Terminal dropdown ---
-        let terminal_options: Vec<String> = vec![
-            fl!("screensaver-terminal-ghostty"),
-            fl!("screensaver-terminal-cosmic-term"),
-        ];
-        let terminal_values = ["ghostty", "cosmic-term"];
-        let terminal_selected = terminal_values.iter().position(|&v| v == cfg.terminal);
-        let terminal_dropdown = widget::dropdown(terminal_options, terminal_selected, |index| {
-            Message::Page(pages::Message::Screensaver(
-                pages::ScreensaverMessage::SetTerminal(index),
-            ))
-        });
-
-        // --- Build page ---
-        let column = widget::column()
-            .spacing(spacing.space_m)
-            .padding(spacing.space_m)
-            .push(widget::text::title2(fl!("screensaver")))
-            .push(widget::text::body(fl!("screensaver-description")))
-            // Status section
-            .push(
-                widget::settings::section()
-                    .title(fl!("screensaver-status"))
-                    .add(widget::settings::item(
-                        fl!("screensaver-enabled"),
-                        widget::toggler(cfg.enabled).on_toggle(|enabled| {
-                            Message::Page(pages::Message::Screensaver(
-                                pages::ScreensaverMessage::SetEnabled(enabled),
-                            ))
-                        }),
-                    ))
-                    .add(widget::settings::item(
-                        fl!("screensaver-terminal"),
-                        terminal_dropdown,
-                    )),
-            )
-            // Logo section
+        widget::column()
+            .spacing(spacing.space_s)
+            .push(widget::text::title4(fl!("screensaver-preview")))
+            .push(logo_preview)
+            .push(test_btn)
+            // Logo selector
             .push(self.view_screensaver_logo_section())
-            // Timeouts section
-            .push(
-                widget::settings::section()
-                    .title(fl!("screensaver-timeouts"))
-                    .add(idle_slider)
-                    .add(lock_slider)
-                    .add(dpms_slider),
-            )
             // Effects section
             .push(
                 widget::settings::section()
@@ -1949,6 +1956,86 @@ impl App {
                     .add(widget::settings::item(
                         fl!("screensaver-fade-out"),
                         fade_out_dropdown,
+                    )),
+            )
+            // Timeouts section
+            .push(
+                widget::settings::section()
+                    .title(fl!("screensaver-timeouts"))
+                    .add(idle_slider)
+                    .add(lock_slider)
+                    .add(dpms_slider),
+            )
+            .into()
+    }
+
+    /// Settings sub-section: status, clock, cursor & dismiss, session lock, save button
+    #[allow(clippy::too_many_lines)]
+    fn view_screensaver_settings_section(&self) -> Element<'_, Message> {
+        let spacing = cosmic::theme::spacing();
+        let cfg = &self.screensaver_config;
+
+        // --- Terminal dropdown ---
+        let terminal_options: Vec<String> = vec![
+            fl!("screensaver-terminal-ghostty"),
+            fl!("screensaver-terminal-cosmic-term"),
+        ];
+        let terminal_values = ["ghostty", "cosmic-term"];
+        let terminal_selected = terminal_values.iter().position(|&v| v == cfg.terminal);
+        let terminal_dropdown = widget::dropdown(terminal_options, terminal_selected, |index| {
+            Message::Page(pages::Message::Screensaver(
+                pages::ScreensaverMessage::SetTerminal(index),
+            ))
+        });
+
+        // --- Clock dropdowns ---
+        let clock_fmt_options: Vec<String> = vec![
+            fl!("screensaver-clock-24h"),
+            fl!("screensaver-clock-24h-sec"),
+            fl!("screensaver-clock-12h"),
+            fl!("screensaver-clock-12h-sec"),
+        ];
+        let clock_fmt_values = ["%H:%M", "%H:%M:%S", "%I:%M %p", "%I:%M:%S %p"];
+        let clock_fmt_selected = clock_fmt_values.iter().position(|&v| v == cfg.clock_format);
+        let clock_fmt_dropdown = widget::dropdown(clock_fmt_options, clock_fmt_selected, |index| {
+            Message::Page(pages::Message::Screensaver(
+                pages::ScreensaverMessage::SetClockFormat(index),
+            ))
+        });
+        let clock_dur_options: Vec<String> = vec![
+            fl!("screensaver-clock-3sec"),
+            fl!("screensaver-clock-5sec"),
+            fl!("screensaver-clock-10sec"),
+            fl!("screensaver-clock-15sec"),
+        ];
+        let clock_dur_values: [u32; 4] = [3, 5, 10, 15];
+        let clock_dur_selected = clock_dur_values
+            .iter()
+            .position(|&v| v == cfg.clock_duration);
+        let clock_dur_dropdown = widget::dropdown(clock_dur_options, clock_dur_selected, |index| {
+            Message::Page(pages::Message::Screensaver(
+                pages::ScreensaverMessage::SetClockDuration(index),
+            ))
+        });
+
+        widget::column()
+            .spacing(spacing.space_s)
+            .push(widget::text::title4(fl!("screensaver-settings")))
+            // Status section
+            .push(
+                widget::settings::section()
+                    .title(fl!("screensaver-status"))
+                    .add(widget::settings::item(
+                        fl!("screensaver-enabled"),
+                        widget::toggler(cfg.enabled).on_toggle(|enabled| {
+                            Message::Page(pages::Message::Screensaver(
+                                pages::ScreensaverMessage::SetEnabled(enabled),
+                            ))
+                        }),
+                    ))
+                    .add(widget::settings::item(
+                        fl!("screensaver-terminal"),
+                        terminal_dropdown,
                     )),
             )
             // Clock section
@@ -2018,7 +2105,6 @@ impl App {
             .push({
                 let mut action_col = widget::column().spacing(spacing.space_s);
 
-                // Status message (if any)
                 if let Some(ref msg) = self.screensaver_status_msg {
                     action_col = action_col.push(widget::text::body(msg.clone()));
                 }
@@ -2030,24 +2116,11 @@ impl App {
                     widget::text::body(fl!("tooltip-save")),
                     widget::tooltip::Position::Top,
                 );
-                let test_btn = widget::tooltip(
-                    widget::button::standard(fl!("screensaver-save-test")).on_press(Message::Page(
-                        pages::Message::Screensaver(pages::ScreensaverMessage::SaveAndTest),
-                    )),
-                    widget::text::body(fl!("tooltip-save-test")),
-                    widget::tooltip::Position::Top,
-                );
-                action_col = action_col.push(
-                    widget::row()
-                        .spacing(spacing.space_s)
-                        .push(save_btn)
-                        .push(test_btn),
-                );
 
+                action_col = action_col.push(save_btn);
                 action_col
-            });
-
-        widget::scrollable(column).into()
+            })
+            .into()
     }
 }
 

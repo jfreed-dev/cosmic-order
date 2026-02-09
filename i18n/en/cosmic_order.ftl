@@ -25,6 +25,9 @@ community-themes-light = Community Themes (Light)
 
 # Screensaver Page
 screensaver-description = Configure the terminal-based screensaver
+screensaver-preview = Preview
+screensaver-settings = Settings
+screensaver-no-logo = No logo selected
 screensaver-enabled = Enable Screensaver
 screensaver-status = Status
 screensaver-terminal = Terminal
