@@ -54,7 +54,7 @@ fn main() -> ExitCode {
     if let Some(cmd) = args.command {
         cli::run(cmd)
     } else {
-        tracing::info!("Starting Cosmic Enhancements");
+        tracing::info!("Starting COSMIC ORDER");
         match cosmic::app::run::<app::App>(cosmic::app::Settings::default(), ()) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {

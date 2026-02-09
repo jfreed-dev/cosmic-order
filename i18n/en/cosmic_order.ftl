@@ -1,7 +1,7 @@
 # COSMIC ORDER - English Translations
 
 # Application
-app-title = Cosmic Enhancements
+app-title = COSMIC ORDER
 
 # Navigation
 visuals = Visuals
