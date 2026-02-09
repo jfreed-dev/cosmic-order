@@ -1,6 +1,6 @@
 [package]
 name = "cosmic-order"
-version = "0.11.0"
+version = "0.12.0"
 edition = "2024"
 rust-version = "1.90"
 license = "GPL-3.0-only"
@@ -49,6 +49,10 @@ image = { version = "0.25", default-features = false, features = ["jpeg", "png",
 
 # D-Bus (power monitoring via UPower)
 zbus = { version = "5", default-features = false, features = ["tokio"] }
+
+# Wayland protocols (idle notification)
+wayland-client = "0.31"
+wayland-protocols = { version = "0.32", features = ["client", "staging"] }
 
 # Utilities
 directories = "5"

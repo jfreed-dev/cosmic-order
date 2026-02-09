@@ -15,9 +15,11 @@ use crate::inhibit;
 use crate::pages::{self, PageId};
 use crate::power;
 use crate::screensaver_config::ScreensaverConfig;
+use crate::sleep_lock;
 use crate::theme_config::{ThemeConfig, ThemePreviewState};
 use crate::tool_sync::ToolSyncConfig;
 use crate::wallpaper_config::{ThumbnailCache, WallpaperConfig};
+use crate::wayland_idle;
 use std::path::PathBuf;
 
 /// Application state
@@ -62,6 +64,12 @@ pub struct App {
     tool_sync_config: ToolSyncConfig,
     /// Status message from last sync operation
     tool_sync_status: Option<String>,
+    /// Whether native Wayland idle detection is active (swayidle stopped)
+    native_idle_active: bool,
+    /// Configuration for the idle subscription (changes trigger restart)
+    idle_subscription_config: wayland_idle::IdleSubscriptionConfig,
+    /// Handle for the running screensaver child process
+    idle_screensaver_child: Option<u32>,
 }
 
 /// Application messages
@@ -80,6 +88,14 @@ pub enum Message {
     ToggleCaffeine,
     /// Result of acquiring the idle inhibitor
     CaffeineResult(Result<inhibit::IdleInhibitor, String>),
+    /// Wayland idle notification event
+    IdleEvent(wayland_idle::IdleEvent),
+    /// Logind sleep event (`PrepareForSleep`)
+    SleepEvent(sleep_lock::SleepEvent),
+    /// Restart swayidle fallback service
+    RestartSwayidle,
+    /// No-op (used by fire-and-forget async tasks)
+    None,
 }
 
 impl Application for App {
@@ -198,6 +214,7 @@ impl Application for App {
         let available_logos = ScreensaverConfig::scan_logos();
         tracing::info!("Found {} available logos", available_logos.len());
 
+        let idle_subscription_config = Self::compute_idle_config(&screensaver_config);
         let initial_collection = wallpaper_config.current_theme_name();
         let app = Self {
             core,
@@ -220,6 +237,9 @@ impl Application for App {
             caffeine_active: false,
             tool_sync_config: ToolSyncConfig::load(),
             tool_sync_status: None,
+            native_idle_active: false,
+            idle_subscription_config,
+            idle_screensaver_child: None,
         };
 
         let init_task = app.spawn_thumbnail_generation();
@@ -256,9 +276,24 @@ impl Application for App {
     }
 
     fn subscription(&self) -> cosmic::iced::Subscription<Self::Message> {
-        power::power_subscription().map(Message::PowerStateUpdate)
+        cosmic::iced::Subscription::batch([
+            power::power_subscription().map(Message::PowerStateUpdate),
+            wayland_idle::idle_subscription(self.idle_subscription_config.clone())
+                .map(Message::IdleEvent),
+            sleep_lock::sleep_lock_subscription().map(Message::SleepEvent),
+        ])
     }
 
+    fn on_app_exit(&mut self) -> Option<Self::Message> {
+        if self.native_idle_active {
+            self.kill_idle_screensaver();
+            Some(Message::RestartSwayidle)
+        } else {
+            None
+        }
+    }
+
+    #[allow(clippy::cognitive_complexity)]
     fn update(&mut self, message: Self::Message) -> Task<Message> {
         match message {
             Message::NavSelect(id) => self.on_nav_select(id),
@@ -320,6 +355,13 @@ impl Application for App {
                 }
                 Task::none()
             }
+            Message::IdleEvent(event) => self.handle_idle_event(event),
+            Message::SleepEvent(event) => self.handle_sleep_event(event),
+            Message::RestartSwayidle => {
+                Self::restart_swayidle_sync();
+                Task::none()
+            }
+            Message::None => Task::none(),
         }
     }
 
@@ -925,17 +967,28 @@ impl App {
             }
             pages::ScreensaverMessage::SaveConfig => {
                 self.screensaver_status_msg = None;
-                Self::save_screensaver_config(self.screensaver_config.clone(), false)
+                Self::save_screensaver_config(
+                    self.screensaver_config.clone(),
+                    false,
+                    self.native_idle_active,
+                )
             }
             pages::ScreensaverMessage::SaveAndTest => {
                 self.screensaver_status_msg = None;
-                Self::save_screensaver_config(self.screensaver_config.clone(), true)
+                Self::save_screensaver_config(
+                    self.screensaver_config.clone(),
+                    true,
+                    self.native_idle_active,
+                )
             }
             pages::ScreensaverMessage::SaveComplete(result, launch_test) => {
                 match &result {
                     Ok(()) => {
                         tracing::info!("Screensaver config saved and reloaded");
                         self.screensaver_status_msg = Some(fl!("screensaver-save-success"));
+                        // Recompute idle config — iced auto-restarts subscription on change
+                        self.idle_subscription_config =
+                            Self::compute_idle_config(&self.screensaver_config);
                     }
                     Err(e) => {
                         tracing::error!("Failed to save screensaver config: {e}");
@@ -1032,8 +1085,155 @@ impl App {
         }
     }
 
+    /// Handle Wayland idle events
+    #[allow(clippy::cognitive_complexity)]
+    fn handle_idle_event(&mut self, event: wayland_idle::IdleEvent) -> Task<Message> {
+        match event {
+            wayland_idle::IdleEvent::Connected => {
+                tracing::info!("Native idle detection connected — stopping swayidle");
+                self.native_idle_active = true;
+                cosmic::task::future(async {
+                    if let Err(e) =
+                        crate::systemd::stop_user_unit("cosmic-screensaver-idle.service").await
+                    {
+                        tracing::warn!("Failed to stop swayidle (may not be running): {e}");
+                    }
+                    // Return a no-op message — we already updated state synchronously
+                    Message::Page(pages::Message::Screensaver(
+                        pages::ScreensaverMessage::SaveComplete(Ok(()), false),
+                    ))
+                })
+            }
+            wayland_idle::IdleEvent::ScreensaverIdle => {
+                // Respect caffeine mode
+                if self.caffeine_active {
+                    tracing::debug!("Screensaver idle ignored — caffeine mode active");
+                    return Task::none();
+                }
+
+                tracing::info!("Screensaver idle — launching screensaver");
+                let launcher = ScreensaverConfig::fullscreen_launcher_path();
+                if !launcher.exists() {
+                    tracing::warn!("launch-fullscreen.sh not found at {}", launcher.display());
+                    return Task::none();
+                }
+
+                match std::process::Command::new(&launcher)
+                    .arg("launch")
+                    .arg("force")
+                    .arg("--skip-compositor")
+                    .spawn()
+                {
+                    Ok(child) => {
+                        self.idle_screensaver_child = Some(child.id());
+                        tracing::info!("Screensaver launched (pid {})", child.id());
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to launch screensaver: {e}");
+                    }
+                }
+                Task::none()
+            }
+            wayland_idle::IdleEvent::ScreensaverResumed => {
+                tracing::info!("User activity resumed — killing screensaver");
+                self.kill_idle_screensaver();
+                Task::none()
+            }
+            wayland_idle::IdleEvent::LockIdle => {
+                tracing::info!("Lock idle — locking screen");
+                self.lock_screen()
+            }
+            wayland_idle::IdleEvent::Error(e) => {
+                tracing::warn!("Idle subscription error: {e} — falling back to swayidle");
+                self.native_idle_active = false;
+                cosmic::task::future(async {
+                    if let Err(e) =
+                        crate::systemd::restart_user_unit("cosmic-screensaver-idle.service").await
+                    {
+                        tracing::warn!("Failed to restart swayidle: {e}");
+                    }
+                    Message::Page(pages::Message::Screensaver(
+                        pages::ScreensaverMessage::SaveComplete(Ok(()), false),
+                    ))
+                })
+            }
+        }
+    }
+
+    /// Handle logind sleep events
+    fn handle_sleep_event(&mut self, event: sleep_lock::SleepEvent) -> Task<Message> {
+        match event {
+            sleep_lock::SleepEvent::PrepareForSleep => {
+                tracing::info!("System going to sleep — locking screen");
+                self.lock_screen()
+            }
+        }
+    }
+
+    /// Kill the screensaver child process if running
+    fn kill_idle_screensaver(&mut self) {
+        if self.idle_screensaver_child.take().is_some() {
+            let launcher = ScreensaverConfig::fullscreen_launcher_path();
+            if let Err(e) = std::process::Command::new(&launcher).arg("kill").status() {
+                tracing::warn!("Failed to kill screensaver via launcher: {e}");
+            }
+        }
+    }
+
+    /// Lock the screen via logind D-Bus
+    fn lock_screen(&self) -> Task<Message> {
+        cosmic::task::future(async {
+            if let Err(e) = crate::systemd::lock_session().await {
+                tracing::error!("Failed to lock screen: {e}");
+            }
+            Message::None
+        })
+    }
+
+    /// Synchronously restart swayidle — used during app exit when tokio may be shutting down
+    fn restart_swayidle_sync() {
+        match std::process::Command::new("systemctl")
+            .args(["--user", "restart", "cosmic-screensaver-idle.service"])
+            .status()
+        {
+            Ok(status) => {
+                if status.success() {
+                    tracing::info!("Swayidle service restarted on app exit");
+                } else {
+                    tracing::warn!("Swayidle restart exited with: {status}");
+                }
+            }
+            Err(e) => tracing::warn!("Failed to restart swayidle on exit: {e}"),
+        }
+    }
+
+    /// Compute idle subscription config from screensaver settings
+    const fn compute_idle_config(
+        config: &ScreensaverConfig,
+    ) -> wayland_idle::IdleSubscriptionConfig {
+        let screensaver_timeout_ms = if config.enabled {
+            config.idle_timeout.saturating_mul(1000)
+        } else {
+            0
+        };
+        let lock_timeout_ms = if config.enabled && config.lock_timeout > 0 {
+            (config.idle_timeout + config.lock_timeout).saturating_mul(1000)
+        } else {
+            0
+        };
+        wayland_idle::IdleSubscriptionConfig {
+            screensaver_timeout_ms,
+            lock_timeout_ms,
+            enabled: config.enabled,
+        }
+    }
+
     /// Save screensaver config and reload service, optionally launching test after
-    fn save_screensaver_config(config: ScreensaverConfig, launch_test: bool) -> Task<Message> {
+    fn save_screensaver_config(
+        config: ScreensaverConfig,
+        launch_test: bool,
+        native_idle_active: bool,
+    ) -> Task<Message> {
         let dpms_timeout = config.dpms_timeout;
         cosmic::task::future(async move {
             let result: Result<(), String> = async {
@@ -1051,9 +1251,10 @@ impl App {
                 .map_err(|e| e.to_string())
                 .and_then(|r| r)?;
 
-                // Restart swayidle service via D-Bus
-                if let Err(e) =
-                    crate::systemd::restart_user_unit("cosmic-screensaver-idle.service").await
+                // Only restart swayidle when native idle is not active
+                if !native_idle_active
+                    && let Err(e) =
+                        crate::systemd::restart_user_unit("cosmic-screensaver-idle.service").await
                 {
                     tracing::warn!("Service restart failed (swayidle may not be running): {e}");
                 }
@@ -2489,5 +2690,14 @@ impl App {
             });
 
         widget::scrollable(column).into()
+    }
+}
+
+impl Drop for App {
+    fn drop(&mut self) {
+        if self.native_idle_active {
+            // Safety net: restart swayidle when the app is dropped
+            Self::restart_swayidle_sync();
+        }
     }
 }

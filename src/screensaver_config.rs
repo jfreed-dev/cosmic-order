@@ -279,7 +279,7 @@ DISMISS_ON_KEY="{}"
     }
 
     /// Lock command used in swayidle config
-    const LOCK_COMMAND: &'static str = "cosmic-greeter --lock";
+    const LOCK_COMMAND: &'static str = "loginctl lock-session";
 
     /// Generate swayidle config content as a string
     pub fn generate_swayidle_config_content(&self) -> String {
@@ -564,14 +564,14 @@ IDLE_TIMEOUT="300"
         assert!(content.contains("kill'"));
 
         // Lock = idle + lock_timeout = 300 + 600 = 900
-        assert!(content.contains("timeout 900 'cosmic-greeter --lock'"));
+        assert!(content.contains("timeout 900 'loginctl lock-session'"));
 
         // DPMS line
         assert!(content.contains("timeout 900 'cosmic-randr output \"*\" --off'"));
         assert!(content.contains("resume 'cosmic-randr output \"*\" --on'"));
 
         // before-sleep always present
-        assert!(content.contains("before-sleep 'cosmic-greeter --lock'"));
+        assert!(content.contains("before-sleep 'loginctl lock-session'"));
     }
 
     #[test]
@@ -594,7 +594,7 @@ IDLE_TIMEOUT="300"
         assert_eq!(timeout_lines.len(), 1, "Only idle timeout line expected");
 
         // before-sleep always present
-        assert!(content.contains("before-sleep 'cosmic-greeter --lock'"));
+        assert!(content.contains("before-sleep 'loginctl lock-session'"));
     }
 
     #[test]

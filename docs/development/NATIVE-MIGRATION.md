@@ -62,21 +62,15 @@ be running).
 
 ### NM-04: Screen Lock via logind D-Bus
 
-**Priority**: Medium | **Effort**: Low | **Status**: Not started
+**Priority**: Medium | **Effort**: Low | **Status**: Complete
 
 Use `org.freedesktop.login1.Session.Lock()` for programmatic screen lock.
 
-**Current**: Shell scripts call `loginctl lock-session` or
-`cosmic-greeter lock` as subprocesses.
-
-**Native approach**:
-
-```rust
-let session = zbus::proxy::SessionProxy::new(&connection).await?;
-session.lock().await?;
-```
-
-**Impact**: Direct D-Bus call instead of spawning a subprocess.
+**Implementation**: `src/systemd.rs` provides `lock_session()` using
+`zbus::Connection::system()` to call `Lock` on the logind Session interface
+at `/org/freedesktop/login1/session/auto` (auto-resolves to caller's session).
+Replaced `spawn_lock_command()` in `app.rs` with async `lock_screen()`.
+Swayidle fallback updated to `loginctl lock-session`.
 
 ---
 

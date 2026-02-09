@@ -343,6 +343,19 @@ See [NATIVE-MIGRATION.md](development/NATIVE-MIGRATION.md) for details.
 - [ ] CLI interface for scripting
 - [ ] CPU performance management (system76-power integration)
 
+## Phase 7A: Native Idle Detection ✅ (v0.12.0)
+
+**Goal**: Direct compositor idle detection via ext-idle-notify-v1 Wayland protocol.
+
+### Completed
+
+- [x] Wayland idle subscription via ext-idle-notify-v1 (screensaver + lock timeouts)
+- [x] Lock-before-suspend via logind PrepareForSleep D-Bus signal
+- [x] Automatic swayidle fallback (stop on connect, restart on exit/error)
+- [x] Config-driven subscription restart (timeout changes take effect immediately)
+- [x] Caffeine mode respected for native idle events
+- [x] `on_app_exit()` + `Drop` safety net for swayidle restart
+
 ## Phase 7: Deep Compositor Integration (Future)
 
 **Goal**: Native COSMIC compositor integration for advanced screensaver features.
@@ -353,7 +366,7 @@ See [NATIVE-MIGRATION.md](development/NATIVE-MIGRATION.md) for details.
 - [ ] Session lock protocol (ext-session-lock-v1)
 - [ ] Layer-shell overlay surfaces
 - [ ] Compositor-level cursor control
-- [ ] Direct idle notification subscription
+- [x] Direct idle notification subscription (Phase 7A)
 - [ ] cosmic-term contributions (--fullscreen flag)
 
 ### Research Required
@@ -380,6 +393,9 @@ See [SCREENSAVER-INTEGRATION.md](SCREENSAVER-INTEGRATION.md) for detailed resear
 | 0.7.0 | 5 | Polish and integration |
 | 0.8.0 | 6A | Tool theme sync (colors.toml + Ghostty) |
 | 0.9.0 | 6B | Additional tool generators (btop, Neovim, Zellij) |
+| 0.10.0 | 6C | CLI tools + hook system (fzf, lazygit) |
+| 0.11.0 | 6D | Real-time theme propagation |
+| 0.12.0 | 7A | Native idle detection |
 | 1.0.0 | 7 | First stable release |
 
 ## Success Criteria

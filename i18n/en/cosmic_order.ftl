@@ -216,6 +216,10 @@ filter-ron-theme = RON Theme
 timeout-hours = { $hours } hr
 timeout-minutes = { $minutes } min
 
+# Idle Detection
+screensaver-native-idle = Native idle detection active
+screensaver-fallback-swayidle = Using swayidle service (fallback)
+
 # Errors
 error-load-config = Failed to load configuration
 error-save-config = Failed to save configuration
