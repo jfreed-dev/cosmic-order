@@ -340,7 +340,7 @@ See [NATIVE-MIGRATION.md](development/NATIVE-MIGRATION.md) for details.
 - [ ] Per-workspace wallpapers
 - [ ] Custom screensaver effects
 - [ ] Panel applet for quick theme switching
-- [ ] CLI interface for scripting
+- [x] CLI interface for scripting (Phase 8)
 - [ ] CPU performance management (system76-power integration)
 
 ## Phase 7A: Native Idle Detection ✅ (v0.12.0)
@@ -372,6 +372,27 @@ See [NATIVE-MIGRATION.md](development/NATIVE-MIGRATION.md) for details.
 - In-process ext-session-lock-v1 is **not viable** — acquiring the lock disrupts the main app's Wayland connection (broken pipe), crashing the app while locked
 - Fullscreen screensaver window resets compositor idle timer — Wayland idle lock notification unreliable after screensaver starts
 - `src/session_lock.rs` retained for potential future standalone lock binary
+
+## Phase 8: CLI Interface ✅ (v0.13.0)
+
+**Goal**: Scriptable CLI for theme sync, color extraction, and theme switching.
+
+### Completed
+
+- [x] Single binary: `cosmic-order` with no args launches GUI, subcommands run CLI mode
+- [x] `sync [--reload] [--json]` — full theme sync pipeline
+- [x] `colors [--json]` — extract palette to stdout (TOML or JSON)
+- [x] `colors save [path]` — save colors.toml to disk
+- [x] `theme info [--json]` — show current theme name, mode, accent
+- [x] `theme dark` / `theme light` — switch mode
+- [x] `theme set-accent <hex>` — set accent color
+- [x] `theme export <path>` / `theme import <path>` — .ron theme export/import
+- [x] `hooks run [--json]` — run all hooks with current palette
+- [x] Human-readable output by default, `--json` for scripting
+- [x] All strings localized via `fl!()`
+- [x] Added `clap` (derive) and `serde_json` dependencies
+
+---
 
 ## Phase 7: Deep Compositor Integration (Future)
 
@@ -415,6 +436,7 @@ See [SCREENSAVER-INTEGRATION.md](SCREENSAVER-INTEGRATION.md) for detailed resear
 | 0.11.0 | 6D | Real-time theme propagation |
 | 0.12.0 | 7A | Native idle detection |
 | 0.12.1 | 7B | Session lock via logind D-Bus |
+| 0.13.0 | 8 | CLI interface for scripting |
 | 1.0.0 | 7 | First stable release |
 
 ## Success Criteria
