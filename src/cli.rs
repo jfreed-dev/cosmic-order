@@ -14,7 +14,7 @@ use crate::hooks;
 use crate::theme_config::ThemeConfig;
 use crate::tool_sync::{self, ToolSyncConfig};
 
-/// COSMIC ORDER — OMARCHY-inspired workflow and aesthetics for COSMIC Desktop
+/// Cosmic Enhancements — OMARCHY-inspired workflow and aesthetics for COSMIC Desktop
 #[derive(Parser)]
 #[command(name = "cosmic-order", version, about)]
 pub struct Cli {

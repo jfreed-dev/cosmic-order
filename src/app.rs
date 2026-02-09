@@ -131,7 +131,7 @@ impl Application for App {
         _new_theme: &cosmic::cosmic_theme::Theme,
     ) -> Task<Message> {
         if self.tool_sync_config.auto_sync {
-            return self.update(Message::Page(pages::Message::Themes(
+            return self.update(Message::Page(pages::Message::Visuals(
                 pages::ThemesMessage::SyncTools,
             )));
         }
@@ -144,7 +144,7 @@ impl Application for App {
         _new_theme: &cosmic::cosmic_theme::ThemeMode,
     ) -> Task<Message> {
         if self.tool_sync_config.auto_sync {
-            return self.update(Message::Page(pages::Message::Themes(
+            return self.update(Message::Page(pages::Message::Visuals(
                 pages::ThemesMessage::SyncTools,
             )));
         }
@@ -191,19 +191,11 @@ impl Application for App {
         // Add navigation items
         nav_model
             .insert()
-            .text(fl!("themes"))
+            .text(fl!("visuals"))
             .icon(widget::icon::from_name(
                 "preferences-desktop-theme-symbolic",
             ))
-            .data(PageId::Themes);
-
-        nav_model
-            .insert()
-            .text(fl!("wallpapers"))
-            .icon(widget::icon::from_name(
-                "preferences-desktop-wallpaper-symbolic",
-            ))
-            .data(PageId::Wallpapers);
+            .data(PageId::Visuals);
 
         nav_model
             .insert()
@@ -222,10 +214,9 @@ impl Application for App {
         // Activate the saved page from config
         let active_page = config.active_page;
         let position = match active_page {
-            PageId::Themes => 0,
-            PageId::Wallpapers => 1,
-            PageId::ToolSync => 2,
-            PageId::Screensaver => 3,
+            PageId::Visuals => 0,
+            PageId::ToolSync => 1,
+            PageId::Screensaver => 2,
         };
         nav_model.activate_position(position);
 
@@ -412,8 +403,7 @@ impl Application for App {
     fn view(&self) -> Element<'_, Self::Message> {
         // Build page content based on active page
         match self.active_page {
-            PageId::Themes => self.view_themes_page(),
-            PageId::Wallpapers => self.view_wallpapers_page(),
+            PageId::Visuals => self.view_visuals_page(),
             PageId::ToolSync => self.view_tool_sync_page(),
             PageId::Screensaver => self.view_screensaver_page(),
         }
@@ -446,9 +436,7 @@ impl App {
     /// Handle page-specific messages
     fn handle_page_message(&mut self, message: pages::Message) -> Task<Message> {
         match message {
-            pages::Message::Themes(msg) | pages::Message::ToolSync(msg) => {
-                self.handle_themes_message(msg)
-            }
+            pages::Message::Visuals(msg) => self.handle_themes_message(msg),
             pages::Message::Wallpapers(msg) => self.handle_wallpapers_message(msg),
             pages::Message::Screensaver(msg) => self.handle_screensaver_message(msg),
         }
@@ -462,7 +450,7 @@ impl App {
                 let default_name = crate::theme_config::ThemeConfig::default_export_filename();
                 cosmic::task::future(async move {
                     let result = Self::run_theme_export(default_name).await;
-                    Message::Page(pages::Message::Themes(
+                    Message::Page(pages::Message::Visuals(
                         pages::ThemesMessage::ExportComplete(result),
                     ))
                 })
@@ -482,7 +470,7 @@ impl App {
             }
             pages::ThemesMessage::Import => cosmic::task::future(async move {
                 let result = Self::run_theme_import().await;
-                Message::Page(pages::Message::Themes(
+                Message::Page(pages::Message::Visuals(
                     pages::ThemesMessage::ImportComplete(result),
                 ))
             }),
@@ -579,7 +567,7 @@ impl App {
                     if let Err(e) = config.save().await {
                         tracing::warn!("Failed to save tool sync config: {e}");
                     }
-                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SyncComplete(
+                    Message::Page(pages::Message::Visuals(pages::ThemesMessage::SyncComplete(
                         Ok(String::new()),
                     )))
                 })
@@ -591,7 +579,7 @@ impl App {
                     if let Err(e) = config.save().await {
                         tracing::warn!("Failed to save tool sync config: {e}");
                     }
-                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SyncComplete(
+                    Message::Page(pages::Message::Visuals(pages::ThemesMessage::SyncComplete(
                         Ok(String::new()),
                     )))
                 })
@@ -603,7 +591,7 @@ impl App {
                     if let Err(e) = config.save().await {
                         tracing::warn!("Failed to save tool sync config: {e}");
                     }
-                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SyncComplete(
+                    Message::Page(pages::Message::Visuals(pages::ThemesMessage::SyncComplete(
                         Ok(String::new()),
                     )))
                 })
@@ -615,7 +603,7 @@ impl App {
                     if let Err(e) = config.save().await {
                         tracing::warn!("Failed to save tool sync config: {e}");
                     }
-                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SyncComplete(
+                    Message::Page(pages::Message::Visuals(pages::ThemesMessage::SyncComplete(
                         Ok(String::new()),
                     )))
                 })
@@ -627,7 +615,7 @@ impl App {
                     if let Err(e) = config.save().await {
                         tracing::warn!("Failed to save tool sync config: {e}");
                     }
-                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SyncComplete(
+                    Message::Page(pages::Message::Visuals(pages::ThemesMessage::SyncComplete(
                         Ok(String::new()),
                     )))
                 })
@@ -647,7 +635,7 @@ impl App {
                     if let Err(e) = shell_result {
                         tracing::warn!("Failed to update fzf shell integration: {e}");
                     }
-                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SyncComplete(
+                    Message::Page(pages::Message::Visuals(pages::ThemesMessage::SyncComplete(
                         Ok(String::new()),
                     )))
                 })
@@ -659,7 +647,7 @@ impl App {
                     if let Err(e) = config.save().await {
                         tracing::warn!("Failed to save tool sync config: {e}");
                     }
-                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SyncComplete(
+                    Message::Page(pages::Message::Visuals(pages::ThemesMessage::SyncComplete(
                         Ok(String::new()),
                     )))
                 })
@@ -671,7 +659,7 @@ impl App {
                     if let Err(e) = config.save().await {
                         tracing::warn!("Failed to save tool sync config: {e}");
                     }
-                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SyncComplete(
+                    Message::Page(pages::Message::Visuals(pages::ThemesMessage::SyncComplete(
                         Ok(String::new()),
                     )))
                 })
@@ -683,7 +671,7 @@ impl App {
                     if let Err(e) = config.save().await {
                         tracing::warn!("Failed to save tool sync config: {e}");
                     }
-                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SyncComplete(
+                    Message::Page(pages::Message::Visuals(pages::ThemesMessage::SyncComplete(
                         Ok(String::new()),
                     )))
                 })
@@ -732,7 +720,7 @@ impl App {
                         }
                         Err(e) => Err(e),
                     };
-                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SyncComplete(
+                    Message::Page(pages::Message::Visuals(pages::ThemesMessage::SyncComplete(
                         msg,
                     )))
                 })
@@ -1703,15 +1691,15 @@ impl App {
             .map_err(|e| e.to_string())
     }
 
-    /// View for the Themes page
-    fn view_themes_page(&self) -> Element<'_, Message> {
+    /// View for the Visuals page (themes + wallpapers)
+    fn view_visuals_page(&self) -> Element<'_, Message> {
         let spacing = cosmic::theme::spacing();
 
         let mut column = widget::column()
             .spacing(spacing.space_m)
             .padding(spacing.space_m)
-            .push(widget::text::title2(fl!("themes")))
-            .push(widget::text::body(fl!("themes-description")));
+            .push(widget::text::title2(fl!("visuals")))
+            .push(widget::text::body(fl!("visuals-description")));
 
         // Insert preview banner when actively previewing
         if let Some(banner) = self.view_preview_banner() {
@@ -1731,7 +1719,7 @@ impl App {
                             .push(widget::text::body(fl!("theme-export-description")))
                             .push(widget::tooltip(
                                 widget::button::standard(fl!("theme-export")).on_press(
-                                    Message::Page(pages::Message::Themes(
+                                    Message::Page(pages::Message::Visuals(
                                         pages::ThemesMessage::Export,
                                     )),
                                 ),
@@ -1745,7 +1733,7 @@ impl App {
                             .push(widget::text::body(fl!("theme-import-description")))
                             .push(widget::tooltip(
                                 widget::button::standard(fl!("theme-import")).on_press(
-                                    Message::Page(pages::Message::Themes(
+                                    Message::Page(pages::Message::Visuals(
                                         pages::ThemesMessage::Import,
                                     )),
                                 ),
@@ -1753,7 +1741,12 @@ impl App {
                                 widget::tooltip::Position::Top,
                             )),
                     ),
-            );
+            )
+            // Wallpaper sections
+            .push(self.view_wallpaper_current_section())
+            .push(self.view_wallpaper_collection_selector())
+            .push(self.view_wallpaper_grid())
+            .push(self.view_wallpaper_rotation_section());
 
         widget::scrollable(column).into()
     }
@@ -1767,7 +1760,7 @@ impl App {
             .add(widget::settings::item(
                 fl!("tool-sync-auto"),
                 widget::toggler(self.tool_sync_config.auto_sync).on_toggle(|enabled| {
-                    Message::Page(pages::Message::ToolSync(pages::ThemesMessage::SetAutoSync(
+                    Message::Page(pages::Message::Visuals(pages::ThemesMessage::SetAutoSync(
                         enabled,
                     )))
                 }),
@@ -1775,7 +1768,7 @@ impl App {
             .add(widget::settings::item(
                 fl!("tool-sync-ghostty"),
                 widget::toggler(self.tool_sync_config.ghostty_enabled).on_toggle(|enabled| {
-                    Message::Page(pages::Message::ToolSync(
+                    Message::Page(pages::Message::Visuals(
                         pages::ThemesMessage::SetGhosttySync(enabled),
                     ))
                 }),
@@ -1783,7 +1776,7 @@ impl App {
             .add(widget::settings::item(
                 fl!("tool-sync-btop"),
                 widget::toggler(self.tool_sync_config.btop_enabled).on_toggle(|enabled| {
-                    Message::Page(pages::Message::ToolSync(pages::ThemesMessage::SetBtopSync(
+                    Message::Page(pages::Message::Visuals(pages::ThemesMessage::SetBtopSync(
                         enabled,
                     )))
                 }),
@@ -1791,7 +1784,7 @@ impl App {
             .add(widget::settings::item(
                 fl!("tool-sync-nvim"),
                 widget::toggler(self.tool_sync_config.nvim_enabled).on_toggle(|enabled| {
-                    Message::Page(pages::Message::ToolSync(pages::ThemesMessage::SetNvimSync(
+                    Message::Page(pages::Message::Visuals(pages::ThemesMessage::SetNvimSync(
                         enabled,
                     )))
                 }),
@@ -1799,7 +1792,7 @@ impl App {
             .add(widget::settings::item(
                 fl!("tool-sync-zellij"),
                 widget::toggler(self.tool_sync_config.zellij_enabled).on_toggle(|enabled| {
-                    Message::Page(pages::Message::ToolSync(
+                    Message::Page(pages::Message::Visuals(
                         pages::ThemesMessage::SetZellijSync(enabled),
                     ))
                 }),
@@ -1807,7 +1800,7 @@ impl App {
             .add(widget::settings::item(
                 fl!("tool-sync-fzf"),
                 widget::toggler(self.tool_sync_config.fzf_enabled).on_toggle(|enabled| {
-                    Message::Page(pages::Message::ToolSync(pages::ThemesMessage::SetFzfSync(
+                    Message::Page(pages::Message::Visuals(pages::ThemesMessage::SetFzfSync(
                         enabled,
                     )))
                 }),
@@ -1815,7 +1808,7 @@ impl App {
             .add(widget::settings::item(
                 fl!("tool-sync-fzf-shell"),
                 widget::toggler(self.tool_sync_config.fzf_shell_integration).on_toggle(|enabled| {
-                    Message::Page(pages::Message::ToolSync(
+                    Message::Page(pages::Message::Visuals(
                         pages::ThemesMessage::SetFzfShellIntegration(enabled),
                     ))
                 }),
@@ -1823,7 +1816,7 @@ impl App {
             .add(widget::settings::item(
                 fl!("tool-sync-lazygit"),
                 widget::toggler(self.tool_sync_config.lazygit_enabled).on_toggle(|enabled| {
-                    Message::Page(pages::Message::ToolSync(
+                    Message::Page(pages::Message::Visuals(
                         pages::ThemesMessage::SetLazygitSync(enabled),
                     ))
                 }),
@@ -1831,7 +1824,7 @@ impl App {
             .add(widget::settings::item(
                 fl!("tool-sync-hooks"),
                 widget::toggler(self.tool_sync_config.hooks_enabled).on_toggle(|enabled| {
-                    Message::Page(pages::Message::ToolSync(
+                    Message::Page(pages::Message::Visuals(
                         pages::ThemesMessage::SetHooksEnabled(enabled),
                     ))
                 }),
@@ -1840,7 +1833,7 @@ impl App {
         // Sync button + status row
         let mut sync_row = widget::row().spacing(spacing.space_m).push(widget::tooltip(
             widget::button::suggested(fl!("tool-sync-now")).on_press(Message::Page(
-                pages::Message::ToolSync(pages::ThemesMessage::SyncTools),
+                pages::Message::Visuals(pages::ThemesMessage::SyncTools),
             )),
             widget::text::body(fl!("tool-sync-description")),
             widget::tooltip::Position::Top,
@@ -2002,7 +1995,7 @@ impl App {
             .push(widget::text::body(display_name))
             .push(widget::tooltip(
                 widget::button::standard(fl!("theme-try")).on_press(Message::Page(
-                    pages::Message::Themes(pages::ThemesMessage::PreviewTheme(theme_id)),
+                    pages::Message::Visuals(pages::ThemesMessage::PreviewTheme(theme_id)),
                 )),
                 widget::text::body(fl!("tooltip-try")),
                 widget::tooltip::Position::Top,
@@ -2098,12 +2091,12 @@ impl App {
                 )
                 .push(
                     widget::button::standard(fl!("cancel")).on_press(Message::Page(
-                        pages::Message::Themes(pages::ThemesMessage::CancelPreview),
+                        pages::Message::Visuals(pages::ThemesMessage::CancelPreview),
                     )),
                 )
                 .push(
                     widget::button::suggested(fl!("theme-apply")).on_press(Message::Page(
-                        pages::Message::Themes(pages::ThemesMessage::ConfirmPreview),
+                        pages::Message::Visuals(pages::ThemesMessage::ConfirmPreview),
                     )),
                 ),
         )
@@ -2129,23 +2122,6 @@ impl App {
         }));
 
         Some(banner.into())
-    }
-
-    /// View for the Wallpapers page
-    fn view_wallpapers_page(&self) -> Element<'_, Message> {
-        let spacing = cosmic::theme::spacing();
-
-        let column = widget::column()
-            .spacing(spacing.space_m)
-            .padding(spacing.space_m)
-            .push(widget::text::title2(fl!("wallpapers")))
-            .push(widget::text::body(fl!("wallpapers-description")))
-            .push(self.view_wallpaper_current_section())
-            .push(self.view_wallpaper_collection_selector())
-            .push(self.view_wallpaper_grid())
-            .push(self.view_wallpaper_rotation_section());
-
-        widget::scrollable(column).into()
     }
 
     /// Current wallpaper info + Apply and Import buttons

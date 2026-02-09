@@ -3,8 +3,8 @@
 //! Application pages
 //!
 //! Each page represents a section of the application:
-//! - Themes: Theme management and customization
-//! - Wallpapers: Wallpaper organization and selection
+//! - Visuals: Theme and wallpaper customization
+//! - Tool Sync: Tool theme sync configuration
 //! - Screensaver: Screensaver configuration
 
 use serde::{Deserialize, Serialize};
@@ -12,28 +12,24 @@ use serde::{Deserialize, Serialize};
 /// Page identifiers
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PageId {
-    /// Theme management page
+    /// Visuals page (themes + wallpapers)
     #[default]
-    Themes,
-    /// Wallpaper management page
-    Wallpapers,
-    /// Screensaver configuration page
-    Screensaver,
+    Visuals,
     /// Tool sync configuration page
     ToolSync,
+    /// Screensaver configuration page
+    Screensaver,
 }
 
 /// Messages from pages
 #[derive(Debug, Clone)]
 pub enum Message {
-    /// Theme page messages
-    Themes(ThemesMessage),
+    /// Visuals page messages (themes)
+    Visuals(ThemesMessage),
     /// Wallpaper page messages
     Wallpapers(WallpapersMessage),
     /// Screensaver page messages
     Screensaver(ScreensaverMessage),
-    /// Tool sync page messages
-    ToolSync(ThemesMessage),
 }
 
 use crate::theme_config::ThemeId;

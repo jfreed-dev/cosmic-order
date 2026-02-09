@@ -1,15 +1,14 @@
 # COSMIC ORDER - English Translations
 
 # Application
-app-title = COSMIC ORDER
+app-title = Cosmic Enhancements
 
 # Navigation
-themes = Themes
-wallpapers = Wallpapers
+visuals = Visuals
 screensaver = Screensaver
 
-# Themes Page
-themes-description = Community themes, export, and import
+# Visuals Page
+visuals-description = Customize themes and wallpapers for your desktop
 theme-select = Select Theme
 theme-apply = Apply
 theme-export = Export Theme
@@ -24,8 +23,7 @@ community-themes = Community Themes
 community-themes-dark = Community Themes (Dark)
 community-themes-light = Community Themes (Light)
 
-# Wallpapers Page
-wallpapers-description = Organize and set desktop wallpapers
+# Wallpapers
 wallpaper-select = Select Wallpaper
 wallpaper-set = Set as Wallpaper
 wallpaper-add = Add Wallpaper
