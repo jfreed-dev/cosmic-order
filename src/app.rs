@@ -6,13 +6,18 @@
 
 use cosmic::app::{Core, Task};
 use cosmic::widget::{self, nav_bar};
-use cosmic::{Application, Element};
+use cosmic::{Application, Apply, Element};
 
+use cosmic::cosmic_theme::palette::{Srgb, Srgba};
+use cosmic::cosmic_theme::{CornerRadii, ThemeBuilder};
+use cosmic_config::CosmicConfigEntry;
+
+use crate::bundled_themes::ThemeSnapshot;
 use crate::compositor;
 use crate::config::Config;
 use crate::fl;
 use crate::inhibit;
-use crate::pages::{self, PageId};
+use crate::pages::{self, PageId, WizardMessage};
 use crate::power;
 use crate::screensaver_config::ScreensaverConfig;
 use crate::sleep_lock;
@@ -20,6 +25,95 @@ use crate::theme_config::{ThemeConfig, ThemePreviewState};
 use crate::tool_sync::ToolSyncConfig;
 use crate::wayland_idle;
 use std::path::PathBuf;
+
+/// Wizard step identifiers
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum WizardStep {
+    Base,
+    Colors,
+    Appearance,
+    Save,
+}
+
+impl WizardStep {
+    const fn index(self) -> u32 {
+        match self {
+            Self::Base => 1,
+            Self::Colors => 2,
+            Self::Appearance => 3,
+            Self::Save => 4,
+        }
+    }
+
+    fn name(self) -> String {
+        match self {
+            Self::Base => fl!("wizard-step-base"),
+            Self::Colors => fl!("wizard-step-colors"),
+            Self::Appearance => fl!("wizard-step-appearance"),
+            Self::Save => fl!("wizard-step-save"),
+        }
+    }
+
+    const fn next(self) -> Option<Self> {
+        match self {
+            Self::Base => Some(Self::Colors),
+            Self::Colors => Some(Self::Appearance),
+            Self::Appearance => Some(Self::Save),
+            Self::Save => None,
+        }
+    }
+
+    const fn prev(self) -> Option<Self> {
+        match self {
+            Self::Base => None,
+            Self::Colors => Some(Self::Base),
+            Self::Appearance => Some(Self::Colors),
+            Self::Save => Some(Self::Appearance),
+        }
+    }
+}
+
+/// Corner radii presets (i18n key, xs, s, m+)
+const CORNER_PRESETS: &[(&str, [f32; 4], [f32; 4], [f32; 4])] = &[
+    ("wizard-corners-sharp", [0.0; 4], [0.0; 4], [0.0; 4]),
+    ("wizard-corners-subtle", [2.0; 4], [4.0; 4], [4.0; 4]),
+    ("wizard-corners-rounded", [2.0; 4], [8.0; 4], [8.0; 4]),
+    (
+        "wizard-corners-very-rounded",
+        [4.0; 4],
+        [12.0; 4],
+        [16.0; 4],
+    ),
+];
+
+/// Tracks wizard step and working theme state
+struct WizardState {
+    step: WizardStep,
+    /// Working copy of the theme builder (mutated as user customizes)
+    builder: ThemeBuilder,
+    /// Snapshot of the theme before wizard opened (for cancel/restore)
+    snapshot: ThemeSnapshot,
+    /// Whether working theme is dark
+    is_dark: bool,
+    /// User-entered theme name
+    name: String,
+    /// Accent color hex string (bound to text input)
+    accent_hex: String,
+    /// Background color hex string (bound to text input)
+    bg_hex: String,
+    /// Whether custom background is enabled
+    bg_override: bool,
+    /// Outer window gap
+    outer_gap: u32,
+    /// Inner window gap
+    inner_gap: u32,
+    /// Active window hint size
+    active_hint: u32,
+    /// Corner radii preset index
+    corner_preset: usize,
+    /// Frosted glass effect
+    is_frosted: bool,
+}
 
 /// Application state
 #[allow(clippy::struct_excessive_bools)]
@@ -66,6 +160,8 @@ pub struct App {
     lock_timer_handle: Option<cosmic::iced::task::Handle>,
     /// Cached text content of the selected logo file (for preview display)
     logo_preview_text: String,
+    /// Active theme creation wizard state (None when wizard is closed)
+    wizard_state: Option<WizardState>,
 }
 
 /// Application messages
@@ -226,6 +322,7 @@ impl Application for App {
             session_lock_enabled,
             lock_timer_handle: None,
             logo_preview_text,
+            wizard_state: None,
         };
 
         (app, Task::none())
@@ -237,6 +334,15 @@ impl Application for App {
 
     #[allow(clippy::cognitive_complexity)]
     fn on_nav_select(&mut self, id: nav_bar::Id) -> Task<Message> {
+        // Auto-cancel wizard when navigating away
+        if let Some(wiz) = self.wizard_state.take() {
+            if let Err(e) = crate::bundled_themes::restore_theme(&wiz.snapshot) {
+                tracing::error!("Failed to restore theme on nav (wizard): {e}");
+            }
+            self.theme_config = ThemeConfig::load();
+            tracing::info!("Wizard auto-cancelled on navigation");
+        }
+
         // Auto-cancel theme preview when navigating away
         if let Some(backup) = self.theme_preview_backup.take() {
             if let Some(snapshot) = &backup.snapshot {
@@ -275,7 +381,15 @@ impl Application for App {
         cosmic::iced::Subscription::batch(subs)
     }
 
+    #[allow(clippy::cognitive_complexity)]
     fn on_app_exit(&mut self) -> Option<Self::Message> {
+        // Restore theme if wizard was active
+        if let Some(wiz) = self.wizard_state.take()
+            && let Err(e) = crate::bundled_themes::restore_theme(&wiz.snapshot)
+        {
+            tracing::error!("Failed to restore theme on exit (wizard): {e}");
+        }
+
         // Restore theme if preview was active
         if let Some(backup) = self.theme_preview_backup.take() {
             if let Some(snapshot) = &backup.snapshot {
@@ -716,6 +830,7 @@ impl App {
                 }
                 Task::none()
             }
+            pages::ThemesMessage::Wizard(msg) => self.handle_wizard_message(msg),
         }
     }
 
@@ -1318,8 +1433,356 @@ impl App {
             .map_err(|e| e.to_string())
     }
 
+    /// Handle theme creation wizard messages
+    #[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
+    fn handle_wizard_message(&mut self, message: WizardMessage) -> Task<Message> {
+        match message {
+            WizardMessage::Open => {
+                // Cancel any active preview first
+                if let Some(backup) = self.theme_preview_backup.take() {
+                    if let Some(snapshot) = &backup.snapshot
+                        && let Err(e) = crate::bundled_themes::restore_theme(snapshot)
+                    {
+                        tracing::error!("Failed to restore preview before wizard: {e}");
+                    }
+                    self.theme_config = backup.config;
+                }
+
+                let snapshot = match crate::bundled_themes::snapshot_current_theme() {
+                    Ok(s) => s,
+                    Err(e) => {
+                        tracing::error!("Failed to snapshot theme for wizard: {e}");
+                        return Task::none();
+                    }
+                };
+
+                let builder = snapshot.builder.clone();
+                let is_dark = snapshot.is_dark;
+
+                // Extract current values from builder
+                let accent_hex = builder
+                    .accent
+                    .map_or_else(|| "#63D0DE".to_string(), |c| srgb_to_hex(&c));
+                let bg_hex = builder
+                    .bg_color
+                    .map_or_else(String::new, |c| srgba_to_hex(&c));
+                let bg_override = builder.bg_color.is_some();
+                let (outer_gap, inner_gap) = builder.gaps;
+                let active_hint = builder.active_hint;
+                let corner_preset = detect_corner_preset(&builder.corner_radii);
+                let is_frosted = builder.is_frosted;
+
+                self.wizard_state = Some(WizardState {
+                    step: WizardStep::Base,
+                    builder,
+                    snapshot,
+                    is_dark,
+                    name: "My Custom Theme".to_string(),
+                    accent_hex,
+                    bg_hex,
+                    bg_override,
+                    outer_gap,
+                    inner_gap,
+                    active_hint,
+                    corner_preset,
+                    is_frosted,
+                });
+                tracing::info!("Theme wizard opened");
+                Task::none()
+            }
+            WizardMessage::Close => {
+                if let Some(wiz) = self.wizard_state.take() {
+                    if let Err(e) = crate::bundled_themes::restore_theme(&wiz.snapshot) {
+                        tracing::error!("Failed to restore theme on wizard cancel: {e}");
+                    }
+                    self.theme_config = ThemeConfig::load();
+                    tracing::info!("Theme wizard cancelled, restored previous theme");
+                }
+                Task::none()
+            }
+            WizardMessage::NextStep => {
+                if let Some(ref mut wiz) = self.wizard_state
+                    && let Some(next) = wiz.step.next()
+                {
+                    wiz.step = next;
+                }
+                Task::none()
+            }
+            WizardMessage::PrevStep => {
+                if let Some(ref mut wiz) = self.wizard_state
+                    && let Some(prev) = wiz.step.prev()
+                {
+                    wiz.step = prev;
+                }
+                Task::none()
+            }
+            WizardMessage::SetBaseTheme(index) => {
+                if let Some(ref mut wiz) = self.wizard_state {
+                    // usize::MAX = "Current Theme" — restore from wizard snapshot
+                    if index == usize::MAX {
+                        if let Err(e) = crate::bundled_themes::restore_theme(&wiz.snapshot) {
+                            tracing::error!("Failed to restore snapshot in wizard: {e}");
+                            return Task::none();
+                        }
+                    } else if let Err(e) = crate::bundled_themes::apply_bundled_theme(index) {
+                        tracing::error!("Failed to apply base theme in wizard: {e}");
+                        return Task::none();
+                    }
+                    // Re-read the builder from config
+                    if let Ok(new_builder) = Self::read_current_builder() {
+                        wiz.is_dark = new_builder.palette.is_dark();
+                        wiz.accent_hex = new_builder
+                            .accent
+                            .map_or_else(|| "#63D0DE".to_string(), |c| srgb_to_hex(&c));
+                        wiz.bg_hex = new_builder
+                            .bg_color
+                            .map_or_else(String::new, |c| srgba_to_hex(&c));
+                        wiz.bg_override = new_builder.bg_color.is_some();
+                        wiz.outer_gap = new_builder.gaps.0;
+                        wiz.inner_gap = new_builder.gaps.1;
+                        wiz.active_hint = new_builder.active_hint;
+                        wiz.corner_preset = detect_corner_preset(&new_builder.corner_radii);
+                        wiz.is_frosted = new_builder.is_frosted;
+                        wiz.builder = new_builder;
+                    }
+                    self.theme_config = ThemeConfig::load();
+                }
+                Task::none()
+            }
+            WizardMessage::SetDarkMode(is_dark) => {
+                if let Some(ref mut wiz) = self.wizard_state {
+                    if let Err(e) = ThemeConfig::set_dark_mode(is_dark) {
+                        tracing::error!("Failed to set dark mode in wizard: {e}");
+                    }
+                    wiz.is_dark = is_dark;
+                    // Re-read the builder from the new mode's config
+                    if let Ok(new_builder) = Self::read_current_builder() {
+                        wiz.builder = new_builder;
+                    }
+                    self.theme_config = ThemeConfig::load();
+                }
+                Task::none()
+            }
+            WizardMessage::SetAccentHex(hex) => {
+                if let Some(ref mut wiz) = self.wizard_state {
+                    wiz.accent_hex.clone_from(&hex);
+                    if let Some(color) = parse_hex_to_srgb(&hex) {
+                        wiz.builder.accent = Some(color);
+                        if let Err(e) = ThemeConfig::write_builder(&wiz.builder, wiz.is_dark) {
+                            tracing::error!("Failed to write accent in wizard: {e}");
+                        }
+                        self.theme_config = ThemeConfig::load();
+                    }
+                }
+                Task::none()
+            }
+            WizardMessage::SetAccentPreset(packed) => {
+                if let Some(ref mut wiz) = self.wizard_state {
+                    let color = unpack_rgb(packed);
+                    wiz.accent_hex = srgb_to_hex(&color);
+                    wiz.builder.accent = Some(color);
+                    if let Err(e) = ThemeConfig::write_builder(&wiz.builder, wiz.is_dark) {
+                        tracing::error!("Failed to write accent preset in wizard: {e}");
+                    }
+                    self.theme_config = ThemeConfig::load();
+                }
+                Task::none()
+            }
+            WizardMessage::SetBgHex(hex) => {
+                if let Some(ref mut wiz) = self.wizard_state {
+                    wiz.bg_hex.clone_from(&hex);
+                    if let Some(color) = parse_hex_to_srgb(&hex) {
+                        wiz.builder.bg_color =
+                            Some(Srgba::new(color.red, color.green, color.blue, 1.0));
+                        if let Err(e) = ThemeConfig::write_builder(&wiz.builder, wiz.is_dark) {
+                            tracing::error!("Failed to write bg color in wizard: {e}");
+                        }
+                        self.theme_config = ThemeConfig::load();
+                    }
+                }
+                Task::none()
+            }
+            WizardMessage::SetBgOverride(enabled) => {
+                if let Some(ref mut wiz) = self.wizard_state {
+                    wiz.bg_override = enabled;
+                    if !enabled {
+                        wiz.builder.bg_color = None;
+                        wiz.bg_hex.clear();
+                        if let Err(e) = ThemeConfig::write_builder(&wiz.builder, wiz.is_dark) {
+                            tracing::error!("Failed to clear bg override in wizard: {e}");
+                        }
+                        self.theme_config = ThemeConfig::load();
+                    }
+                }
+                Task::none()
+            }
+            WizardMessage::SetOuterGap(gap) => {
+                if let Some(ref mut wiz) = self.wizard_state {
+                    wiz.outer_gap = gap;
+                    wiz.builder.gaps = (gap, wiz.inner_gap);
+                    if let Err(e) = ThemeConfig::write_builder(&wiz.builder, wiz.is_dark) {
+                        tracing::error!("Failed to write outer gap in wizard: {e}");
+                    }
+                }
+                Task::none()
+            }
+            WizardMessage::SetInnerGap(gap) => {
+                if let Some(ref mut wiz) = self.wizard_state {
+                    wiz.inner_gap = gap;
+                    wiz.builder.gaps = (wiz.outer_gap, gap);
+                    if let Err(e) = ThemeConfig::write_builder(&wiz.builder, wiz.is_dark) {
+                        tracing::error!("Failed to write inner gap in wizard: {e}");
+                    }
+                }
+                Task::none()
+            }
+            WizardMessage::SetActiveHint(hint) => {
+                if let Some(ref mut wiz) = self.wizard_state {
+                    wiz.active_hint = hint;
+                    wiz.builder.active_hint = hint;
+                    if let Err(e) = ThemeConfig::write_builder(&wiz.builder, wiz.is_dark) {
+                        tracing::error!("Failed to write active hint in wizard: {e}");
+                    }
+                }
+                Task::none()
+            }
+            WizardMessage::SetCornerPreset(preset_idx) => {
+                if let Some(ref mut wiz) = self.wizard_state
+                    && let Some(&(_, xs, s, m)) = CORNER_PRESETS.get(preset_idx)
+                {
+                    wiz.corner_preset = preset_idx;
+                    wiz.builder.corner_radii = CornerRadii {
+                        radius_0: [0.0; 4],
+                        radius_xs: xs,
+                        radius_s: s,
+                        radius_m: m,
+                        radius_l: m,
+                        radius_xl: m,
+                    };
+                    if let Err(e) = ThemeConfig::write_builder(&wiz.builder, wiz.is_dark) {
+                        tracing::error!("Failed to write corner radii in wizard: {e}");
+                    }
+                }
+                Task::none()
+            }
+            WizardMessage::SetFrosted(enabled) => {
+                if let Some(ref mut wiz) = self.wizard_state {
+                    wiz.is_frosted = enabled;
+                    wiz.builder.is_frosted = enabled;
+                    if let Err(e) = ThemeConfig::write_builder(&wiz.builder, wiz.is_dark) {
+                        tracing::error!("Failed to write frosted in wizard: {e}");
+                    }
+                }
+                Task::none()
+            }
+            WizardMessage::SetName(name) => {
+                if let Some(ref mut wiz) = self.wizard_state {
+                    wiz.name = name;
+                }
+                Task::none()
+            }
+            WizardMessage::Export => {
+                let Some(ref wiz) = self.wizard_state else {
+                    return Task::none();
+                };
+                let builder = wiz.builder.clone();
+                let name = wiz.name.clone();
+                cosmic::task::future(async move {
+                    let result = Self::run_wizard_export(builder, &name).await;
+                    Message::Page(pages::Message::Visuals(pages::ThemesMessage::Wizard(
+                        WizardMessage::ExportComplete(result),
+                    )))
+                })
+            }
+            WizardMessage::ExportComplete(result) => {
+                match &result {
+                    Ok(path) => tracing::info!("Wizard theme exported to: {path}"),
+                    Err(e) => {
+                        if e == "cancelled" {
+                            tracing::debug!("Wizard export cancelled");
+                        } else {
+                            tracing::error!("Wizard export failed: {e}");
+                        }
+                    }
+                }
+                Task::none()
+            }
+            WizardMessage::Apply => {
+                // Keep the current theme (don't restore snapshot), close wizard
+                self.wizard_state = None;
+                self.theme_config = ThemeConfig::load();
+                tracing::info!("Wizard theme applied");
+                Task::none()
+            }
+        }
+    }
+
+    /// Read the current `ThemeBuilder` from cosmic-config
+    fn read_current_builder() -> Result<ThemeBuilder, crate::theme_config::ThemeError> {
+        use crate::theme_config::ThemeError;
+        use cosmic::cosmic_theme::ThemeMode;
+
+        let mode_config =
+            ThemeMode::config().map_err(|e| ThemeError::ConfigAccess(e.to_string()))?;
+        let mode = match ThemeMode::get_entry(&mode_config) {
+            Ok(m) | Err((_, m)) => m,
+        };
+
+        let builder_config = if mode.is_dark {
+            ThemeBuilder::dark_config()
+        } else {
+            ThemeBuilder::light_config()
+        }
+        .map_err(|e| ThemeError::ConfigAccess(e.to_string()))?;
+
+        Ok(match ThemeBuilder::get_entry(&builder_config) {
+            Ok(b) | Err((_, b)) => b,
+        })
+    }
+
+    /// Export a wizard theme builder as RON via file save dialog
+    async fn run_wizard_export(builder: ThemeBuilder, name: &str) -> Result<String, String> {
+        use cosmic::dialog::file_chooser;
+
+        let sanitized = name.to_lowercase().replace(' ', "-");
+        let filename = format!("{sanitized}.ron");
+
+        let dialog = file_chooser::save::Dialog::new()
+            .title(fl!("wizard-export"))
+            .file_name(filename)
+            .filter(file_chooser::FileFilter::new(&fl!("filter-ron-theme")).glob("*.ron"));
+
+        let response = match dialog.save_file().await {
+            Ok(r) => r,
+            Err(file_chooser::Error::Cancelled) => return Err("cancelled".to_string()),
+            Err(e) => return Err(format!("Dialog error: {e}")),
+        };
+
+        let url = response
+            .url()
+            .ok_or_else(|| "No file URL returned".to_string())?;
+        let path = url
+            .to_file_path()
+            .map_err(|()| "Invalid file path".to_string())?;
+
+        let pretty = ron::ser::PrettyConfig::default();
+        let serialized = ron::ser::to_string_pretty(&builder, pretty)
+            .map_err(|e| format!("Serialize error: {e}"))?;
+
+        tokio::fs::write(&path, &serialized)
+            .await
+            .map_err(|e| format!("Write error: {e}"))?;
+
+        Ok(path.to_string_lossy().to_string())
+    }
+
     /// View for the Visuals page (themes)
     fn view_visuals_page(&self) -> Element<'_, Message> {
+        // Show wizard view when active
+        if self.wizard_state.is_some() {
+            return self.view_wizard();
+        }
+
         let spacing = cosmic::theme::spacing();
 
         let mut column = widget::column()
@@ -1341,7 +1804,7 @@ impl App {
                     .push(self.view_theme_preview_panel())
                     .push(self.view_theme_selectors()),
             )
-            // Export & Import
+            // Export & Import + Create Theme
             .push(
                 widget::settings::section()
                     .title(fl!("theme-export-import"))
@@ -1372,10 +1835,383 @@ impl App {
                                 widget::text::body(fl!("tooltip-import")),
                                 widget::tooltip::Position::Top,
                             )),
+                    )
+                    .add(
+                        widget::button::suggested(fl!("wizard-create-theme")).on_press(
+                            Message::Page(pages::Message::Visuals(pages::ThemesMessage::Wizard(
+                                WizardMessage::Open,
+                            ))),
+                        ),
                     ),
             );
 
         widget::scrollable(column).into()
+    }
+
+    /// Wizard main view — orchestrates steps, navigation, and preview panel
+    #[allow(clippy::too_many_lines)]
+    fn view_wizard(&self) -> Element<'_, Message> {
+        let Some(ref wiz) = self.wizard_state else {
+            return widget::text::body("").into();
+        };
+
+        let spacing = cosmic::theme::spacing();
+
+        // Step indicator
+        let step_name = wiz.step.name();
+        let indicator = fl!(
+            "wizard-step-indicator",
+            step = wiz.step.index().to_string(),
+            total = "4",
+            name = step_name
+        );
+
+        // Step content
+        let step_content: Element<'_, Message> = match wiz.step {
+            WizardStep::Base => self.view_wizard_step_base(wiz),
+            WizardStep::Colors => self.view_wizard_step_colors(wiz),
+            WizardStep::Appearance => self.view_wizard_step_appearance(wiz),
+            WizardStep::Save => self.view_wizard_step_save(wiz),
+        };
+
+        // Navigation row
+        let mut nav_row = widget::row().spacing(spacing.space_m);
+
+        // Cancel button (always visible)
+        nav_row = nav_row.push(
+            widget::button::standard(fl!("cancel")).on_press(Message::Page(
+                pages::Message::Visuals(pages::ThemesMessage::Wizard(WizardMessage::Close)),
+            )),
+        );
+
+        // Back button (hidden on first step)
+        if wiz.step.prev().is_some() {
+            nav_row = nav_row.push(widget::button::standard(fl!("wizard-back")).on_press(
+                Message::Page(pages::Message::Visuals(pages::ThemesMessage::Wizard(
+                    WizardMessage::PrevStep,
+                ))),
+            ));
+        }
+
+        // Next / Apply / Export buttons depending on step
+        if wiz.step == WizardStep::Save {
+            nav_row = nav_row
+                .push(
+                    widget::button::standard(fl!("wizard-export")).on_press(Message::Page(
+                        pages::Message::Visuals(pages::ThemesMessage::Wizard(
+                            WizardMessage::Export,
+                        )),
+                    )),
+                )
+                .push(
+                    widget::button::suggested(fl!("wizard-apply")).on_press(Message::Page(
+                        pages::Message::Visuals(pages::ThemesMessage::Wizard(WizardMessage::Apply)),
+                    )),
+                );
+        } else {
+            nav_row = nav_row.push(widget::button::suggested(fl!("wizard-next")).on_press(
+                Message::Page(pages::Message::Visuals(pages::ThemesMessage::Wizard(
+                    WizardMessage::NextStep,
+                ))),
+            ));
+        }
+
+        let column = widget::column()
+            .spacing(spacing.space_m)
+            .padding(spacing.space_m)
+            .push(widget::text::title2(fl!("wizard-title")))
+            .push(widget::text::body(indicator))
+            .push(
+                widget::row()
+                    .spacing(spacing.space_m)
+                    .push(step_content)
+                    .push(self.view_theme_preview_panel()),
+            )
+            .push(nav_row);
+
+        widget::scrollable(column).into()
+    }
+
+    /// Wizard Step 1: Base Theme selection
+    #[allow(clippy::unused_self)]
+    fn view_wizard_step_base<'a>(&'a self, wiz: &'a WizardState) -> Element<'a, Message> {
+        // Build dropdown: "Current Theme" + all bundled theme names
+        let themes = crate::bundled_themes::all_themes();
+        let mut names: Vec<String> = vec![fl!("wizard-current-theme")];
+        names.extend(themes.iter().map(|(m, _)| m.name.clone()));
+
+        // No selection by default (user picks from list)
+        let base_dropdown = widget::dropdown(names, None::<usize>, move |idx| {
+            if idx == 0 {
+                // "Current Theme" selected — reload from snapshot
+                Message::Page(pages::Message::Visuals(pages::ThemesMessage::Wizard(
+                    WizardMessage::SetBaseTheme(usize::MAX),
+                )))
+            } else {
+                let registry_idx = themes[idx - 1].0.index;
+                Message::Page(pages::Message::Visuals(pages::ThemesMessage::Wizard(
+                    WizardMessage::SetBaseTheme(registry_idx),
+                )))
+            }
+        });
+
+        widget::settings::section()
+            .title(fl!("wizard-step-base"))
+            .add(widget::settings::item(
+                fl!("wizard-start-from"),
+                base_dropdown,
+            ))
+            .add(widget::settings::item(
+                fl!("wizard-dark-mode"),
+                widget::toggler(wiz.is_dark).on_toggle(|dark| {
+                    Message::Page(pages::Message::Visuals(pages::ThemesMessage::Wizard(
+                        WizardMessage::SetDarkMode(dark),
+                    )))
+                }),
+            ))
+            .apply(widget::container)
+            .width(cosmic::iced::Length::Fill)
+            .into()
+    }
+
+    /// Wizard Step 2: Colors (accent + background)
+    #[allow(clippy::too_many_lines)]
+    fn view_wizard_step_colors<'a>(&'a self, wiz: &'a WizardState) -> Element<'a, Message> {
+        let spacing = cosmic::theme::spacing();
+
+        // Accent hex input
+        let accent_input =
+            widget::text_input(fl!("wizard-accent-hex"), &wiz.accent_hex).on_input(|hex| {
+                Message::Page(pages::Message::Visuals(pages::ThemesMessage::Wizard(
+                    WizardMessage::SetAccentHex(hex),
+                )))
+            });
+
+        // Accent presets — COSMIC colors (dark-aware)
+        let cosmic_accents: &[(u8, u8, u8)] = if wiz.is_dark {
+            &[
+                (99, 208, 222),  // Blue
+                (129, 137, 236), // Indigo
+                (173, 131, 220), // Purple
+                (215, 129, 194), // Pink
+                (230, 116, 118), // Red
+                (230, 150, 92),  // Orange
+                (222, 199, 76),  // Yellow
+                (95, 199, 128),  // Green
+                (168, 153, 152), // Warm Grey
+            ]
+        } else {
+            &[
+                (38, 133, 203),  // Blue
+                (104, 96, 202),  // Indigo
+                (147, 90, 195),  // Purple
+                (192, 88, 160),  // Pink
+                (207, 73, 79),   // Red
+                (207, 109, 42),  // Orange
+                (193, 161, 26),  // Yellow
+                (46, 163, 84),   // Green
+                (143, 116, 115), // Warm Grey
+            ]
+        };
+
+        let mut cosmic_row = widget::row().spacing(spacing.space_xxs);
+        for &(r, g, b) in cosmic_accents {
+            cosmic_row = cosmic_row.push(self.view_accent_swatch(r, g, b, &wiz.accent_hex));
+        }
+
+        // Cosmictron accent presets
+        let cosmictron_accents: &[(u8, u8, u8)] = &[
+            (92, 160, 207),  // Blue
+            (163, 131, 97),  // Brown
+            (97, 173, 131),  // Green
+            (207, 131, 173), // Pink
+            (152, 120, 191), // Purple
+            (199, 109, 109), // Red
+            (92, 184, 179),  // Teal
+            (214, 196, 101), // Yellow
+        ];
+
+        let mut cosmictron_row = widget::row().spacing(spacing.space_xxs);
+        for &(r, g, b) in cosmictron_accents {
+            cosmictron_row = cosmictron_row.push(self.view_accent_swatch(r, g, b, &wiz.accent_hex));
+        }
+
+        let mut section = widget::settings::section()
+            .title(fl!("wizard-step-colors"))
+            .add(widget::settings::item(
+                fl!("wizard-accent-color"),
+                accent_input,
+            ))
+            .add(cosmic_row)
+            .add(cosmictron_row);
+
+        // Background override
+        section = section.add(widget::settings::item(
+            fl!("wizard-bg-override"),
+            widget::toggler(wiz.bg_override).on_toggle(|enabled| {
+                Message::Page(pages::Message::Visuals(pages::ThemesMessage::Wizard(
+                    WizardMessage::SetBgOverride(enabled),
+                )))
+            }),
+        ));
+
+        if wiz.bg_override {
+            let bg_input =
+                widget::text_input(fl!("wizard-accent-hex"), &wiz.bg_hex).on_input(|hex| {
+                    Message::Page(pages::Message::Visuals(pages::ThemesMessage::Wizard(
+                        WizardMessage::SetBgHex(hex),
+                    )))
+                });
+            section = section.add(widget::settings::item(fl!("wizard-bg-color"), bg_input));
+        }
+
+        widget::container(section)
+            .width(cosmic::iced::Length::Fill)
+            .into()
+    }
+
+    /// Build a single accent color swatch button
+    #[allow(clippy::cast_lossless, clippy::unused_self)]
+    fn view_accent_swatch(&self, r: u8, g: u8, b: u8, current_hex: &str) -> Element<'_, Message> {
+        let packed = pack_rgb(r, g, b);
+        let color = cosmic::iced::Color::from_rgb8(r, g, b);
+
+        // Check if this swatch matches current accent
+        let swatch_hex = format!("#{r:02X}{g:02X}{b:02X}");
+        let is_selected = current_hex.eq_ignore_ascii_case(&swatch_hex);
+
+        let border = if is_selected {
+            cosmic::iced::Border {
+                radius: 4.0.into(),
+                width: 2.0,
+                color: cosmic::iced::Color::WHITE,
+            }
+        } else {
+            cosmic::iced::Border {
+                radius: 4.0.into(),
+                ..Default::default()
+            }
+        };
+
+        widget::button::custom(
+            widget::container(widget::Space::new(
+                cosmic::iced::Length::Fixed(22.0),
+                cosmic::iced::Length::Fixed(22.0),
+            ))
+            .class(cosmic::theme::Container::custom(move |_| {
+                widget::container::Style {
+                    background: Some(cosmic::iced::Background::Color(color)),
+                    border,
+                    ..Default::default()
+                }
+            })),
+        )
+        .on_press(Message::Page(pages::Message::Visuals(
+            pages::ThemesMessage::Wizard(WizardMessage::SetAccentPreset(packed)),
+        )))
+        .padding(0)
+        .into()
+    }
+
+    /// Wizard Step 3: Appearance (gaps, hint, corners, frosted)
+    #[allow(clippy::unused_self)]
+    fn view_wizard_step_appearance<'a>(&'a self, wiz: &'a WizardState) -> Element<'a, Message> {
+        // Corner radii preset dropdown
+        let corner_names: Vec<String> = vec![
+            fl!("wizard-corners-sharp"),
+            fl!("wizard-corners-subtle"),
+            fl!("wizard-corners-rounded"),
+            fl!("wizard-corners-very-rounded"),
+        ];
+        let corner_dropdown = widget::dropdown(corner_names, Some(wiz.corner_preset), |idx| {
+            Message::Page(pages::Message::Visuals(pages::ThemesMessage::Wizard(
+                WizardMessage::SetCornerPreset(idx),
+            )))
+        });
+
+        // Gap sliders (0–16 range)
+        let outer_gap = wiz.outer_gap;
+        let inner_gap = wiz.inner_gap;
+        let active_hint = wiz.active_hint;
+
+        let outer_slider = widget::slider(0u32..=16u32, outer_gap, |v| {
+            Message::Page(pages::Message::Visuals(pages::ThemesMessage::Wizard(
+                WizardMessage::SetOuterGap(v),
+            )))
+        });
+
+        let inner_slider = widget::slider(0u32..=16u32, inner_gap, |v| {
+            Message::Page(pages::Message::Visuals(pages::ThemesMessage::Wizard(
+                WizardMessage::SetInnerGap(v),
+            )))
+        });
+
+        let hint_slider = widget::slider(0u32..=10u32, active_hint, |v| {
+            Message::Page(pages::Message::Visuals(pages::ThemesMessage::Wizard(
+                WizardMessage::SetActiveHint(v),
+            )))
+        });
+
+        widget::settings::section()
+            .title(fl!("wizard-step-appearance"))
+            .add(widget::settings::item(
+                format!("{} ({})", fl!("wizard-outer-gap"), outer_gap),
+                outer_slider,
+            ))
+            .add(widget::settings::item(
+                format!("{} ({})", fl!("wizard-inner-gap"), inner_gap),
+                inner_slider,
+            ))
+            .add(widget::settings::item(
+                format!("{} ({})", fl!("wizard-active-hint"), active_hint),
+                hint_slider,
+            ))
+            .add(widget::settings::item(
+                fl!("wizard-corners"),
+                corner_dropdown,
+            ))
+            .add(widget::settings::item(
+                fl!("wizard-frosted"),
+                widget::toggler(wiz.is_frosted).on_toggle(|enabled| {
+                    Message::Page(pages::Message::Visuals(pages::ThemesMessage::Wizard(
+                        WizardMessage::SetFrosted(enabled),
+                    )))
+                }),
+            ))
+            .apply(widget::container)
+            .width(cosmic::iced::Length::Fill)
+            .into()
+    }
+
+    /// Wizard Step 4: Name & Save
+    #[allow(clippy::unused_self)]
+    fn view_wizard_step_save<'a>(&'a self, wiz: &'a WizardState) -> Element<'a, Message> {
+        let name_input = widget::text_input(fl!("wizard-theme-name"), &wiz.name).on_input(|name| {
+            Message::Page(pages::Message::Visuals(pages::ThemesMessage::Wizard(
+                WizardMessage::SetName(name),
+            )))
+        });
+
+        // Summary info
+        let mode_text = if wiz.is_dark {
+            fl!("wizard-dark-mode")
+        } else {
+            "Light mode".to_string()
+        };
+
+        widget::settings::section()
+            .title(fl!("wizard-step-save"))
+            .add(widget::settings::item(fl!("wizard-theme-name"), name_input))
+            .add(widget::text::body(format!(
+                "{mode_text} | {} {} | {} {}",
+                fl!("wizard-outer-gap"),
+                wiz.outer_gap,
+                fl!("wizard-inner-gap"),
+                wiz.inner_gap,
+            )))
+            .apply(widget::container)
+            .width(cosmic::iced::Length::Fill)
+            .into()
     }
 
     /// View for the Tool Sync page
@@ -2131,4 +2967,71 @@ impl Drop for App {
             Self::restart_swayidle_sync();
         }
     }
+}
+
+// --- Wizard color helpers ---
+
+/// Pack (r, g, b) as u8 values into a single u32
+#[allow(clippy::cast_lossless)]
+const fn pack_rgb(r: u8, g: u8, b: u8) -> u32 {
+    (r as u32) << 16 | (g as u32) << 8 | b as u32
+}
+
+/// Unpack a u32 to Srgb (0.0–1.0)
+#[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+fn unpack_rgb(packed: u32) -> Srgb {
+    let r = ((packed >> 16) & 0xFF) as f32 / 255.0;
+    let g = ((packed >> 8) & 0xFF) as f32 / 255.0;
+    let b = (packed & 0xFF) as f32 / 255.0;
+    Srgb::new(r, g, b)
+}
+
+/// Format an Srgb color as a hex string (#RRGGBB)
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+fn srgb_to_hex(c: &Srgb) -> String {
+    format!(
+        "#{:02X}{:02X}{:02X}",
+        (c.red * 255.0) as u8,
+        (c.green * 255.0) as u8,
+        (c.blue * 255.0) as u8
+    )
+}
+
+/// Format an Srgba color as a hex string (#RRGGBB)
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+fn srgba_to_hex(c: &Srgba) -> String {
+    format!(
+        "#{:02X}{:02X}{:02X}",
+        (c.red * 255.0) as u8,
+        (c.green * 255.0) as u8,
+        (c.blue * 255.0) as u8
+    )
+}
+
+/// Parse a hex string (#RRGGBB or RRGGBB) to Srgb
+fn parse_hex_to_srgb(hex: &str) -> Option<Srgb> {
+    let hex = hex.trim_start_matches('#');
+    if hex.len() != 6 {
+        return None;
+    }
+    let r = u8::from_str_radix(&hex[0..2], 16).ok()?;
+    let g = u8::from_str_radix(&hex[2..4], 16).ok()?;
+    let b = u8::from_str_radix(&hex[4..6], 16).ok()?;
+    Some(Srgb::new(
+        f32::from(r) / 255.0,
+        f32::from(g) / 255.0,
+        f32::from(b) / 255.0,
+    ))
+}
+
+/// Detect which corner preset index best matches the given radii
+#[allow(clippy::float_cmp)]
+fn detect_corner_preset(radii: &CornerRadii) -> usize {
+    for (i, &(_, xs, s, m)) in CORNER_PRESETS.iter().enumerate() {
+        if radii.radius_xs == xs && radii.radius_s == s && radii.radius_m == m {
+            return i;
+        }
+    }
+    // Default to "Rounded" if no match
+    2
 }

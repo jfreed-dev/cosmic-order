@@ -232,6 +232,21 @@ impl ThemeConfig {
         format!("{sanitized}.ron")
     }
 
+    /// Write a `ThemeBuilder` to the appropriate dark/light cosmic-config entry
+    pub fn write_builder(builder: &ThemeBuilder, is_dark: bool) -> Result<(), ThemeError> {
+        let config = if is_dark {
+            ThemeBuilder::dark_config()
+        } else {
+            ThemeBuilder::light_config()
+        }
+        .map_err(|e| ThemeError::ConfigAccess(e.to_string()))?;
+
+        builder
+            .clone()
+            .write_entry(&config)
+            .map_err(|e| ThemeError::ConfigWrite(e.to_string()))
+    }
+
     /// Format a color as hex string
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn color_to_hex(color: &Srgba) -> String {

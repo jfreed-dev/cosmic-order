@@ -197,6 +197,36 @@ cli-wallpaper-added = Wallpaper saved
 cli-error-download-failed = Download failed
 cli-error-invalid-image = Downloaded file is not a valid image
 
+# Theme Wizard
+wizard-create-theme = Create Theme
+wizard-title = Create Theme
+wizard-step-base = Base Theme
+wizard-step-colors = Colors
+wizard-step-appearance = Appearance
+wizard-step-save = Name & Save
+wizard-step-indicator = Step { $step } of { $total } — { $name }
+wizard-start-from = Start from
+wizard-current-theme = Current Theme
+wizard-dark-mode = Dark mode
+wizard-accent-color = Accent Color
+wizard-accent-hex = Hex color
+wizard-bg-color = Background Color
+wizard-bg-override = Use custom background
+wizard-outer-gap = Outer gap
+wizard-inner-gap = Inner gap
+wizard-active-hint = Active window hint
+wizard-corners = Corner roundness
+wizard-corners-sharp = Sharp
+wizard-corners-subtle = Subtle
+wizard-corners-rounded = Rounded
+wizard-corners-very-rounded = Very Rounded
+wizard-frosted = Frosted glass
+wizard-theme-name = Theme name
+wizard-export = Export as RON
+wizard-apply = Apply
+wizard-back = Back
+wizard-next = Next
+
 # Errors
 error-load-config = Failed to load configuration
 error-save-config = Failed to save configuration

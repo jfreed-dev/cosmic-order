@@ -71,6 +71,51 @@ pub enum ThemesMessage {
     SyncTools,
     /// Sync completed with result
     SyncComplete(Result<String, String>),
+    /// Theme creation wizard
+    Wizard(WizardMessage),
+}
+
+/// Theme creation wizard messages
+#[derive(Debug, Clone)]
+pub enum WizardMessage {
+    /// Open the wizard (snapshot current theme)
+    Open,
+    /// Close wizard and restore previous theme
+    Close,
+    /// Move to next step
+    NextStep,
+    /// Move to previous step
+    PrevStep,
+    /// Select a bundled theme as base (by registry index)
+    SetBaseTheme(usize),
+    /// Toggle dark/light mode for the new theme
+    SetDarkMode(bool),
+    /// Accent color hex input changed
+    SetAccentHex(String),
+    /// Accent color preset clicked (packed RGB u32)
+    SetAccentPreset(u32),
+    /// Background color hex input changed
+    SetBgHex(String),
+    /// Toggle custom background override on/off
+    SetBgOverride(bool),
+    /// Set outer window gap
+    SetOuterGap(u32),
+    /// Set inner window gap
+    SetInnerGap(u32),
+    /// Set active window hint size
+    SetActiveHint(u32),
+    /// Set corner radii preset index
+    SetCornerPreset(usize),
+    /// Toggle frosted glass
+    SetFrosted(bool),
+    /// Theme name text input changed
+    SetName(String),
+    /// Export theme as RON file (opens file dialog)
+    Export,
+    /// Export completed
+    ExportComplete(Result<String, String>),
+    /// Apply theme (keep applied, close wizard, no export)
+    Apply,
 }
 
 /// Screensaver page messages
