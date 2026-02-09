@@ -19,6 +19,8 @@ pub enum PageId {
     Wallpapers,
     /// Screensaver configuration page
     Screensaver,
+    /// Tool sync configuration page
+    ToolSync,
 }
 
 /// Messages from pages
@@ -30,6 +32,8 @@ pub enum Message {
     Wallpapers(WallpapersMessage),
     /// Screensaver page messages
     Screensaver(ScreensaverMessage),
+    /// Tool sync page messages
+    ToolSync(ThemesMessage),
 }
 
 use crate::theme_config::ThemeId;
@@ -37,10 +41,6 @@ use crate::theme_config::ThemeId;
 /// Theme page messages
 #[derive(Debug, Clone)]
 pub enum ThemesMessage {
-    /// Toggle dark/light mode
-    SetDarkMode(bool),
-    /// Set accent color (RGB 0.0-1.0)
-    SetAccentColor(f32, f32, f32),
     /// Export current theme
     Export,
     /// Export completed with result (path or error message)

@@ -57,14 +57,6 @@ pub struct ThemePreview {
     pub name: String,
     /// Whether this is a dark theme
     pub is_dark: bool,
-    /// Whether this is high contrast
-    pub is_high_contrast: bool,
-    /// Accent color
-    pub accent: Srgba,
-    /// Background color
-    pub background: Srgba,
-    /// Text color
-    pub text: Srgba,
 }
 
 impl ThemePreview {
@@ -89,10 +81,6 @@ impl ThemePreview {
             id,
             name: theme.name.clone(),
             is_dark: theme.is_dark,
-            is_high_contrast: theme.is_high_contrast,
-            accent: theme.accent.base,
-            background: theme.background.base,
-            text: theme.primary.on,
         }
     }
 

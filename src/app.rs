@@ -207,6 +207,12 @@ impl Application for App {
 
         nav_model
             .insert()
+            .text(fl!("tool-sync"))
+            .icon(widget::icon::from_name("preferences-other-symbolic"))
+            .data(PageId::ToolSync);
+
+        nav_model
+            .insert()
             .text(fl!("screensaver"))
             .icon(widget::icon::from_name(
                 "preferences-desktop-screensaver-symbolic",
@@ -218,7 +224,8 @@ impl Application for App {
         let position = match active_page {
             PageId::Themes => 0,
             PageId::Wallpapers => 1,
-            PageId::Screensaver => 2,
+            PageId::ToolSync => 2,
+            PageId::Screensaver => 3,
         };
         nav_model.activate_position(position);
 
@@ -407,6 +414,7 @@ impl Application for App {
         match self.active_page {
             PageId::Themes => self.view_themes_page(),
             PageId::Wallpapers => self.view_wallpapers_page(),
+            PageId::ToolSync => self.view_tool_sync_page(),
             PageId::Screensaver => self.view_screensaver_page(),
         }
     }
@@ -438,7 +446,9 @@ impl App {
     /// Handle page-specific messages
     fn handle_page_message(&mut self, message: pages::Message) -> Task<Message> {
         match message {
-            pages::Message::Themes(msg) => self.handle_themes_message(msg),
+            pages::Message::Themes(msg) | pages::Message::ToolSync(msg) => {
+                self.handle_themes_message(msg)
+            }
             pages::Message::Wallpapers(msg) => self.handle_wallpapers_message(msg),
             pages::Message::Screensaver(msg) => self.handle_screensaver_message(msg),
         }
@@ -448,35 +458,6 @@ impl App {
     #[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
     fn handle_themes_message(&mut self, message: pages::ThemesMessage) -> Task<Message> {
         match message {
-            pages::ThemesMessage::SetDarkMode(is_dark) => {
-                if let Err(e) = crate::theme_config::ThemeConfig::set_dark_mode(is_dark) {
-                    tracing::error!("Failed to set dark mode: {e}");
-                } else {
-                    // Optimistically update local state (system theme updates async)
-                    self.theme_config.is_dark = is_dark;
-                    // Update theme name to match mode
-                    self.theme_config.name = if is_dark {
-                        fl!("theme-mode-dark")
-                    } else {
-                        fl!("theme-mode-light")
-                    };
-                    tracing::info!("Dark mode set to: {is_dark}");
-                }
-                Task::none()
-            }
-            pages::ThemesMessage::SetAccentColor(r, g, b) => {
-                let is_dark = self.theme_config.is_dark;
-                if let Err(e) = crate::theme_config::ThemeConfig::set_accent_color(r, g, b, is_dark)
-                {
-                    tracing::error!("Failed to set accent color: {e}");
-                } else {
-                    // Optimistically update local state
-                    self.theme_config.accent_color =
-                        cosmic::cosmic_theme::palette::Srgba::new(r, g, b, 1.0);
-                    tracing::info!("Accent color set to: ({r}, {g}, {b})");
-                }
-                Task::none()
-            }
             pages::ThemesMessage::Export => {
                 let default_name = crate::theme_config::ThemeConfig::default_export_filename();
                 cosmic::task::future(async move {
@@ -1725,7 +1706,6 @@ impl App {
     /// View for the Themes page
     fn view_themes_page(&self) -> Element<'_, Message> {
         let spacing = cosmic::theme::spacing();
-        let cfg = &self.theme_config;
 
         let mut column = widget::column()
             .spacing(spacing.space_m)
@@ -1738,72 +1718,48 @@ impl App {
             column = column.push(banner);
         }
 
-        column =
-            column
-                // Theme presets
-                .push(widget::settings::section().title(fl!("theme-presets")).add(
-                    widget::settings::item(fl!("available-themes"), self.view_theme_list()),
-                ))
-                // Community themes
-                .push(self.view_community_themes())
-                // Mode selection
-                .push(widget::settings::section().title(fl!("theme-mode")).add(
-                    widget::settings::item(
-                        fl!("dark-mode"),
-                        widget::toggler(cfg.is_dark).on_toggle(|enabled| {
-                            Message::Page(pages::Message::Themes(
-                                pages::ThemesMessage::SetDarkMode(enabled),
-                            ))
-                        }),
+        column = column
+            // Community themes
+            .push(self.view_community_themes())
+            // Export & Import
+            .push(
+                widget::settings::section()
+                    .title(fl!("theme-export-import"))
+                    .add(
+                        widget::column()
+                            .spacing(spacing.space_xs)
+                            .push(widget::text::body(fl!("theme-export-description")))
+                            .push(widget::tooltip(
+                                widget::button::standard(fl!("theme-export")).on_press(
+                                    Message::Page(pages::Message::Themes(
+                                        pages::ThemesMessage::Export,
+                                    )),
+                                ),
+                                widget::text::body(fl!("tooltip-export")),
+                                widget::tooltip::Position::Top,
+                            )),
+                    )
+                    .add(
+                        widget::column()
+                            .spacing(spacing.space_xs)
+                            .push(widget::text::body(fl!("theme-import-description")))
+                            .push(widget::tooltip(
+                                widget::button::standard(fl!("theme-import")).on_press(
+                                    Message::Page(pages::Message::Themes(
+                                        pages::ThemesMessage::Import,
+                                    )),
+                                ),
+                                widget::text::body(fl!("tooltip-import")),
+                                widget::tooltip::Position::Top,
+                            )),
                     ),
-                ))
-                // Accent color selection
-                .push(
-                    widget::settings::section()
-                        .title(fl!("theme-accent-color"))
-                        .add(self.view_accent_color_presets()),
-                )
-                // Export & Import
-                .push(
-                    widget::settings::section()
-                        .title(fl!("theme-export-import"))
-                        .add(
-                            widget::column()
-                                .spacing(spacing.space_xs)
-                                .push(widget::text::body(fl!("theme-export-description")))
-                                .push(widget::tooltip(
-                                    widget::button::standard(fl!("theme-export")).on_press(
-                                        Message::Page(pages::Message::Themes(
-                                            pages::ThemesMessage::Export,
-                                        )),
-                                    ),
-                                    widget::text::body(fl!("tooltip-export")),
-                                    widget::tooltip::Position::Top,
-                                )),
-                        )
-                        .add(
-                            widget::column()
-                                .spacing(spacing.space_xs)
-                                .push(widget::text::body(fl!("theme-import-description")))
-                                .push(widget::tooltip(
-                                    widget::button::standard(fl!("theme-import")).on_press(
-                                        Message::Page(pages::Message::Themes(
-                                            pages::ThemesMessage::Import,
-                                        )),
-                                    ),
-                                    widget::text::body(fl!("tooltip-import")),
-                                    widget::tooltip::Position::Top,
-                                )),
-                        ),
-                )
-                // Tool Sync
-                .push(self.view_tool_sync_section());
+            );
 
         widget::scrollable(column).into()
     }
 
-    /// Create tool sync settings section
-    fn view_tool_sync_section(&self) -> Element<'_, Message> {
+    /// View for the Tool Sync page
+    fn view_tool_sync_page(&self) -> Element<'_, Message> {
         let spacing = cosmic::theme::spacing();
 
         let mut section = widget::settings::section()
@@ -1811,7 +1767,7 @@ impl App {
             .add(widget::settings::item(
                 fl!("tool-sync-auto"),
                 widget::toggler(self.tool_sync_config.auto_sync).on_toggle(|enabled| {
-                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SetAutoSync(
+                    Message::Page(pages::Message::ToolSync(pages::ThemesMessage::SetAutoSync(
                         enabled,
                     )))
                 }),
@@ -1819,7 +1775,7 @@ impl App {
             .add(widget::settings::item(
                 fl!("tool-sync-ghostty"),
                 widget::toggler(self.tool_sync_config.ghostty_enabled).on_toggle(|enabled| {
-                    Message::Page(pages::Message::Themes(
+                    Message::Page(pages::Message::ToolSync(
                         pages::ThemesMessage::SetGhosttySync(enabled),
                     ))
                 }),
@@ -1827,7 +1783,7 @@ impl App {
             .add(widget::settings::item(
                 fl!("tool-sync-btop"),
                 widget::toggler(self.tool_sync_config.btop_enabled).on_toggle(|enabled| {
-                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SetBtopSync(
+                    Message::Page(pages::Message::ToolSync(pages::ThemesMessage::SetBtopSync(
                         enabled,
                     )))
                 }),
@@ -1835,7 +1791,7 @@ impl App {
             .add(widget::settings::item(
                 fl!("tool-sync-nvim"),
                 widget::toggler(self.tool_sync_config.nvim_enabled).on_toggle(|enabled| {
-                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SetNvimSync(
+                    Message::Page(pages::Message::ToolSync(pages::ThemesMessage::SetNvimSync(
                         enabled,
                     )))
                 }),
@@ -1843,15 +1799,15 @@ impl App {
             .add(widget::settings::item(
                 fl!("tool-sync-zellij"),
                 widget::toggler(self.tool_sync_config.zellij_enabled).on_toggle(|enabled| {
-                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SetZellijSync(
-                        enabled,
-                    )))
+                    Message::Page(pages::Message::ToolSync(
+                        pages::ThemesMessage::SetZellijSync(enabled),
+                    ))
                 }),
             ))
             .add(widget::settings::item(
                 fl!("tool-sync-fzf"),
                 widget::toggler(self.tool_sync_config.fzf_enabled).on_toggle(|enabled| {
-                    Message::Page(pages::Message::Themes(pages::ThemesMessage::SetFzfSync(
+                    Message::Page(pages::Message::ToolSync(pages::ThemesMessage::SetFzfSync(
                         enabled,
                     )))
                 }),
@@ -1859,7 +1815,7 @@ impl App {
             .add(widget::settings::item(
                 fl!("tool-sync-fzf-shell"),
                 widget::toggler(self.tool_sync_config.fzf_shell_integration).on_toggle(|enabled| {
-                    Message::Page(pages::Message::Themes(
+                    Message::Page(pages::Message::ToolSync(
                         pages::ThemesMessage::SetFzfShellIntegration(enabled),
                     ))
                 }),
@@ -1867,7 +1823,7 @@ impl App {
             .add(widget::settings::item(
                 fl!("tool-sync-lazygit"),
                 widget::toggler(self.tool_sync_config.lazygit_enabled).on_toggle(|enabled| {
-                    Message::Page(pages::Message::Themes(
+                    Message::Page(pages::Message::ToolSync(
                         pages::ThemesMessage::SetLazygitSync(enabled),
                     ))
                 }),
@@ -1875,7 +1831,7 @@ impl App {
             .add(widget::settings::item(
                 fl!("tool-sync-hooks"),
                 widget::toggler(self.tool_sync_config.hooks_enabled).on_toggle(|enabled| {
-                    Message::Page(pages::Message::Themes(
+                    Message::Page(pages::Message::ToolSync(
                         pages::ThemesMessage::SetHooksEnabled(enabled),
                     ))
                 }),
@@ -1884,7 +1840,7 @@ impl App {
         // Sync button + status row
         let mut sync_row = widget::row().spacing(spacing.space_m).push(widget::tooltip(
             widget::button::suggested(fl!("tool-sync-now")).on_press(Message::Page(
-                pages::Message::Themes(pages::ThemesMessage::SyncTools),
+                pages::Message::ToolSync(pages::ThemesMessage::SyncTools),
             )),
             widget::text::body(fl!("tool-sync-description")),
             widget::tooltip::Position::Top,
@@ -1896,130 +1852,14 @@ impl App {
 
         section = section.add(sync_row);
 
-        section.into()
-    }
+        let column = widget::column()
+            .spacing(spacing.space_m)
+            .padding(spacing.space_m)
+            .push(widget::text::title2(fl!("tool-sync")))
+            .push(widget::text::body(fl!("tool-sync-description")))
+            .push(section);
 
-    /// Build a single accent color swatch button
-    fn view_accent_swatch(
-        current: &cosmic::cosmic_theme::palette::Srgba,
-        r: f32,
-        g: f32,
-        b: f32,
-    ) -> Element<'static, Message> {
-        use cosmic::iced::Length;
-
-        let color = cosmic::iced::Color::from_rgb(r, g, b);
-        let msg = Message::Page(pages::Message::Themes(
-            pages::ThemesMessage::SetAccentColor(r, g, b),
-        ));
-
-        let is_selected = (current.red - r).abs() < 0.05
-            && (current.green - g).abs() < 0.05
-            && (current.blue - b).abs() < 0.05;
-
-        widget::button::custom(
-            widget::container(widget::Space::new(Length::Fixed(18.0), Length::Fixed(18.0)))
-                .width(Length::Fixed(18.0))
-                .height(Length::Fixed(18.0))
-                .class(cosmic::theme::Container::custom(move |_| {
-                    widget::container::Style {
-                        background: Some(cosmic::iced::Background::Color(color)),
-                        border: cosmic::iced::Border {
-                            radius: 3.0.into(),
-                            width: if is_selected { 2.0 } else { 0.0 },
-                            color: cosmic::iced::Color::WHITE,
-                        },
-                        ..Default::default()
-                    }
-                })),
-        )
-        .width(Length::Fixed(22.0))
-        .height(Length::Fixed(22.0))
-        .padding(2)
-        .on_press(msg)
-        .into()
-    }
-
-    /// Create accent color preset section with COSMIC and Cosmictron palettes
-    fn view_accent_color_presets(&self) -> Element<'_, Message> {
-        let spacing = cosmic::theme::spacing();
-        let current = &self.theme_config.accent_color;
-
-        // COSMIC official accent palette — dark and light variants
-        // From cosmic-settings: resources/accent_palette_{dark,light}.ron
-        #[allow(clippy::unreadable_literal)]
-        let cosmic_palette: [(f32, f32, f32); 9] = if self.theme_config.is_dark {
-            [
-                (0.388_235_3, 0.815_686_3, 0.874_509_8), // Blue
-                (0.631_372_6, 0.752_941_2, 0.92156863),  // Indigo
-                (0.90588235, 0.611_764_7, 0.99607843),   // Purple
-                (1.0, 0.611_764_7, 0.69411765),          // Pink
-                (0.99215686, 0.631_372_6, 0.627_451),    // Red
-                (1.0, 0.678_431_4, 0.0),                 // Orange
-                (0.96862745, 0.878_431_4, 0.38431373),   // Yellow
-                (0.57254902, 0.811_764_7, 0.611_764_7),  // Green
-                (0.792_156_9, 0.729_411_8, 0.705_882_4), // Warm Grey
-            ]
-        } else {
-            [
-                (0.0, 0.32156863, 0.352_941_2),        // Blue
-                (0.18039216, 0.28627451, 0.42745098),  // Indigo
-                (0.40784314, 0.12941176, 0.486_274_5), // Purple
-                (0.525_490_2, 0.01568627, 0.22745098), // Pink
-                (0.47058824, 0.160_784_3, 0.18039216), // Red
-                (0.38431373, 0.25098039, 0.0),         // Orange
-                (0.325_490_2, 0.28235294, 0.0),        // Yellow
-                (0.09411765, 0.33333333, 0.160_784_3), // Green
-                (0.33333333, 0.27843137, 0.25882353),  // Warm Grey
-            ]
-        };
-
-        // Cosmictron accent colors (from Cosmictron theme accent overrides)
-        #[allow(clippy::unreadable_literal)]
-        let cosmictron_palette: [(f32, f32, f32); 8] = [
-            (0.505_882_4, 0.631_372_6, 0.75686276), // Blue
-            (0.75686276, 0.666_666_7, 0.505_882_4), // Brown
-            (0.53333336, 0.75686276, 0.505_882_4),  // Green
-            (0.75686276, 0.505_882_4, 0.75686276),  // Pink
-            (0.52156866, 0.505_882_4, 0.75686276),  // Purple
-            (0.75686276, 0.505_882_4, 0.505_882_4), // Red
-            (0.505_882_4, 0.749_019_6, 0.75686276), // Teal
-            (0.74509805, 0.75686276, 0.505_882_4),  // Yellow
-        ];
-
-        let cosmic_row: Vec<Element<'_, Message>> = cosmic_palette
-            .iter()
-            .map(|&(r, g, b)| Self::view_accent_swatch(current, r, g, b))
-            .collect();
-
-        let cosmictron_row: Vec<Element<'_, Message>> = cosmictron_palette
-            .iter()
-            .map(|&(r, g, b)| Self::view_accent_swatch(current, r, g, b))
-            .collect();
-
-        widget::column()
-            .spacing(spacing.space_xxs)
-            .push(
-                widget::column()
-                    .spacing(spacing.space_xxxs)
-                    .push(widget::text::caption(fl!("accent-presets-cosmic")))
-                    .push(
-                        widget::flex_row(cosmic_row)
-                            .column_spacing(4)
-                            .row_spacing(4),
-                    ),
-            )
-            .push(
-                widget::column()
-                    .spacing(spacing.space_xxxs)
-                    .push(widget::text::caption(fl!("accent-presets-cosmictron")))
-                    .push(
-                        widget::flex_row(cosmictron_row)
-                            .column_spacing(4)
-                            .row_spacing(4),
-                    ),
-            )
-            .into()
+        widget::scrollable(column).into()
     }
 
     /// Build a single theme preview card with mini-UI mockup and "Try" button
@@ -2168,44 +2008,6 @@ impl App {
                 widget::tooltip::Position::Top,
             ))
             .into()
-    }
-
-    /// Create built-in theme list with mini-UI mockup cards
-    fn view_theme_list(&self) -> Element<'_, Message> {
-        let spacing = cosmic::theme::spacing();
-
-        let is_previewing = self.theme_preview_backup.is_some();
-        let previewing_id = self.theme_preview_backup.as_ref().map(|b| b.previewing_id);
-
-        let themes: Vec<_> = crate::theme_config::ThemePreview::built_in_themes()
-            .into_iter()
-            .filter(|t| !t.is_high_contrast)
-            .collect();
-
-        let mut row = widget::row().spacing(spacing.space_m);
-
-        for preview in themes {
-            let theme_id = preview.id;
-            let is_current = !is_previewing && self.theme_config.is_dark == preview.is_dark;
-            let is_preview_active = previewing_id == Some(theme_id);
-            let display_name = if preview.is_dark {
-                fl!("theme-mode-dark")
-            } else {
-                fl!("theme-mode-light")
-            };
-
-            row = row.push(self.view_theme_card(
-                theme_id,
-                display_name,
-                preview.accent,
-                preview.background,
-                preview.text,
-                is_current,
-                is_preview_active,
-            ));
-        }
-
-        row.into()
     }
 
     /// Create community themes section with dark and light sub-groups
