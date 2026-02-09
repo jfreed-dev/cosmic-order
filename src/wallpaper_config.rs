@@ -71,18 +71,11 @@ impl std::fmt::Display for ScalingMode {
 
 /// Wallpaper operation errors
 #[derive(Debug, thiserror::Error)]
-#[allow(dead_code)] // Variants available for future error paths
 pub enum WallpaperError {
-    #[error("Failed to read wallpaper config: {0}")]
-    ConfigRead(String),
     #[error("Failed to write wallpaper config: {0}")]
     ConfigWrite(String),
     #[error("Failed to serialize wallpaper config: {0}")]
     SerializeError(String),
-    #[error("Failed to deserialize wallpaper config: {0}")]
-    DeserializeError(String),
-    #[error("Failed to copy wallpaper file: {0}")]
-    FileCopy(String),
     #[error("Failed to create directory: {0}")]
     CreateDir(String),
 }
@@ -111,9 +104,6 @@ pub struct WallpaperConfig {
 /// Wallpapers for a specific theme
 #[derive(Debug, Clone)]
 pub struct ThemeWallpapers {
-    /// Theme name (used in collection display)
-    #[allow(dead_code)]
-    pub name: String,
     /// Directory path
     pub path: PathBuf,
     /// Number of wallpapers
@@ -273,31 +263,6 @@ impl WallpaperConfig {
         Ok(())
     }
 
-    /// Set wallpaper to the given path and write config to disk
-    #[allow(dead_code)] // Available for programmatic use
-    pub fn set_wallpaper(&mut self, path: &str) -> Result<(), WallpaperError> {
-        self.current_source = path.to_string();
-        self.save()
-    }
-
-    /// Get the full path for a wallpaper given its theme and filename
-    #[allow(dead_code)] // Available for programmatic use
-    pub fn full_path(theme: &str, filename: &str) -> Option<PathBuf> {
-        let path = PathBuf::from(Self::SYSTEM_WALLPAPERS)
-            .join(theme)
-            .join(filename);
-        if path.exists() {
-            return Some(path);
-        }
-
-        let user_path = Self::user_wallpapers_dir().join(filename);
-        if user_path.exists() {
-            return Some(user_path);
-        }
-
-        None
-    }
-
     /// Scan system and user wallpaper directories
     fn scan_wallpapers(&mut self) {
         // Scan system wallpapers
@@ -315,7 +280,6 @@ impl WallpaperConfig {
                 self.available_themes.insert(
                     "custom".to_string(),
                     ThemeWallpapers {
-                        name: "custom".to_string(),
                         path: user_dir,
                         count,
                         wallpapers,
@@ -339,7 +303,6 @@ impl WallpaperConfig {
                     self.available_themes.insert(
                         name.to_string(),
                         ThemeWallpapers {
-                            name: name.to_string(),
                             path,
                             count,
                             wallpapers,
@@ -411,27 +374,6 @@ impl WallpaperConfig {
             .and_then(|p| p.file_name())
             .and_then(|n| n.to_str())
             .map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string)
-    }
-
-    /// Format rotation frequency for display
-    #[allow(dead_code)] // Available for display use
-    pub fn format_rotation(&self) -> String {
-        if !self.rotation_enabled || self.rotation_frequency == 0 {
-            "Disabled".to_string()
-        } else if self.rotation_frequency < 60 {
-            format!("{} seconds", self.rotation_frequency)
-        } else if self.rotation_frequency.is_multiple_of(60) {
-            let minutes = self.rotation_frequency / 60;
-            if minutes == 1 {
-                "1 minute".to_string()
-            } else {
-                format!("{minutes} minutes")
-            }
-        } else {
-            let minutes = self.rotation_frequency / 60;
-            let secs = self.rotation_frequency % 60;
-            format!("{minutes}m {secs}s")
-        }
     }
 }
 
@@ -540,12 +482,6 @@ impl ThumbnailCache {
 
         Ok(())
     }
-
-    /// Clear the thumbnail cache (forces regeneration)
-    #[allow(dead_code)]
-    pub fn clear(&self) {
-        let _ = fs::remove_dir_all(&self.cache_dir);
-    }
 }
 
 #[cfg(test)]
@@ -632,30 +568,6 @@ mod tests {
     }
 
     #[test]
-    fn test_format_rotation() {
-        let mut config = WallpaperConfig::default();
-
-        config.rotation_enabled = false;
-        assert_eq!(config.format_rotation(), "Disabled");
-
-        config.rotation_enabled = true;
-        config.rotation_frequency = 0;
-        assert_eq!(config.format_rotation(), "Disabled");
-
-        config.rotation_frequency = 30;
-        assert_eq!(config.format_rotation(), "30 seconds");
-
-        config.rotation_frequency = 60;
-        assert_eq!(config.format_rotation(), "1 minute");
-
-        config.rotation_frequency = 600;
-        assert_eq!(config.format_rotation(), "10 minutes");
-
-        config.rotation_frequency = 90;
-        assert_eq!(config.format_rotation(), "1m 30s");
-    }
-
-    #[test]
     fn test_scaling_mode_display() {
         assert_eq!(ScalingMode::Zoom.as_str(), "Zoom");
         assert_eq!(ScalingMode::Fit.as_str(), "Fit");
@@ -665,10 +577,12 @@ mod tests {
 
     #[test]
     fn test_to_bg_entry() {
-        let mut config = WallpaperConfig::default();
-        config.current_source = "/test/path.jpg".to_string();
-        config.rotation_enabled = false;
-        config.rotation_frequency = 600;
+        let config = WallpaperConfig {
+            current_source: "/test/path.jpg".to_string(),
+            rotation_enabled: false,
+            rotation_frequency: 600,
+            ..Default::default()
+        };
 
         let entry = config.to_bg_entry();
         assert_eq!(entry.rotation_frequency, 0); // Disabled overrides value

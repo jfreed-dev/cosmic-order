@@ -41,9 +41,6 @@ pub enum ThemesMessage {
     SetDarkMode(bool),
     /// Set accent color (RGB 0.0-1.0)
     SetAccentColor(f32, f32, f32),
-    /// Select and apply a theme preset (retained for programmatic use)
-    #[allow(dead_code)]
-    SelectTheme(ThemeId),
     /// Export current theme
     Export,
     /// Export completed with result (path or error message)

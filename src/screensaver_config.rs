@@ -348,27 +348,6 @@ SESSION_LOCK="{}"
         )
     }
 
-    /// Format timeout value for display (used in tests, may be useful in future UI)
-    #[allow(dead_code)]
-    pub fn format_timeout(seconds: u32) -> String {
-        if seconds == 0 {
-            "Disabled".to_string()
-        } else if seconds < 60 {
-            format!("{seconds} seconds")
-        } else if seconds.is_multiple_of(60) {
-            let minutes = seconds / 60;
-            if minutes == 1 {
-                "1 minute".to_string()
-            } else {
-                format!("{minutes} minutes")
-            }
-        } else {
-            let minutes = seconds / 60;
-            let secs = seconds % 60;
-            format!("{minutes}m {secs}s")
-        }
-    }
-
     /// Path to the fullscreen launcher script (sibling of screensaver-ctl)
     pub fn fullscreen_launcher_path() -> PathBuf {
         let ctl = Self::ctl_path();
@@ -614,14 +593,5 @@ IDLE_TIMEOUT="300"
 
         // before-sleep always present
         assert!(content.contains("before-sleep 'loginctl lock-session'"));
-    }
-
-    #[test]
-    fn test_format_timeout() {
-        assert_eq!(ScreensaverConfig::format_timeout(0), "Disabled");
-        assert_eq!(ScreensaverConfig::format_timeout(30), "30 seconds");
-        assert_eq!(ScreensaverConfig::format_timeout(60), "1 minute");
-        assert_eq!(ScreensaverConfig::format_timeout(300), "5 minutes");
-        assert_eq!(ScreensaverConfig::format_timeout(90), "1m 30s");
     }
 }

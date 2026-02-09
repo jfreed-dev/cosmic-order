@@ -8,8 +8,6 @@
 use std::fmt;
 use std::time::Duration;
 
-use crate::fl;
-
 /// Current system power state
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct PowerState {
@@ -41,25 +39,6 @@ impl PowerState {
             // AC otherwise — standard
             (false, _) => EffectProfile::Standard,
         }
-    }
-
-    /// Format power state for UI display using localized strings
-    #[allow(dead_code)]
-    pub fn display_string(&self) -> String {
-        let source = match (self.on_battery, self.battery_percent) {
-            (false, None) => fl!("screensaver-power-no-battery"),
-            (false, Some(_)) => fl!("screensaver-power-ac"),
-            (true, Some(pct)) => fl!("screensaver-power-battery", percent = pct.to_string()),
-            (true, None) => fl!("screensaver-power-battery", percent = "?".to_string()),
-        };
-
-        let profile = match self.power_profile {
-            PowerProfile::Performance => fl!("screensaver-power-profile-performance"),
-            PowerProfile::Balanced => fl!("screensaver-power-profile-balanced"),
-            PowerProfile::PowerSaver => fl!("screensaver-power-profile-powersaver"),
-        };
-
-        format!("{source} · {profile}")
     }
 
     /// Format power state as shell KEY="value" pairs for screensaver-ctl
@@ -116,20 +95,6 @@ impl fmt::Display for EffectProfile {
             Self::Simple => write!(f, "simple"),
             Self::Minimal => write!(f, "minimal"),
             Self::Skip => write!(f, "skip"),
-        }
-    }
-}
-
-impl EffectProfile {
-    /// Localized display name for the UI
-    #[allow(dead_code)]
-    pub fn display_name(self) -> String {
-        match self {
-            Self::Full => fl!("screensaver-effect-full"),
-            Self::Standard => fl!("screensaver-effect-standard"),
-            Self::Simple => fl!("screensaver-effect-simple"),
-            Self::Minimal => fl!("screensaver-effect-minimal"),
-            Self::Skip => fl!("screensaver-effect-skip"),
         }
     }
 }

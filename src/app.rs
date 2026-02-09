@@ -85,13 +85,14 @@ pub struct App {
 
 /// Application messages
 #[derive(Debug, Clone)]
-#[allow(dead_code)] // Variants constructed by libcosmic framework
 pub enum Message {
-    /// Navigation item selected
+    /// Navigation item selected (constructed by libcosmic framework)
+    #[allow(dead_code)]
     NavSelect(nav_bar::Id),
     /// Page-specific message
     Page(pages::Message),
-    /// Configuration changed
+    /// Configuration changed (constructed by cosmic-config subscription)
+    #[allow(dead_code)]
     ConfigChanged(Config),
     /// Power state updated from D-Bus subscription
     PowerStateUpdate(power::PowerState),
@@ -103,8 +104,6 @@ pub enum Message {
     IdleEvent(wayland_idle::IdleEvent),
     /// Logind sleep event (`PrepareForSleep`)
     SleepEvent(sleep_lock::SleepEvent),
-    /// Restart swayidle fallback service
-    RestartSwayidle,
     /// Lock screen timer elapsed
     LockScreen,
     /// No-op (used by fire-and-forget async tasks)
@@ -382,10 +381,6 @@ impl Application for App {
                 self.lock_timer_handle = None;
                 self.lock_screen()
             }
-            Message::RestartSwayidle => {
-                Self::restart_swayidle_sync();
-                Task::none()
-            }
             Message::None => Task::none(),
         }
     }
@@ -462,20 +457,6 @@ impl App {
                     self.theme_config.accent_color =
                         cosmic::cosmic_theme::palette::Srgba::new(r, g, b, 1.0);
                     tracing::info!("Accent color set to: ({r}, {g}, {b})");
-                }
-                Task::none()
-            }
-            pages::ThemesMessage::SelectTheme(theme_id) => {
-                let previews = crate::theme_config::ThemePreview::built_in_themes();
-                if let Some(preview) = previews.iter().find(|p| p.id == theme_id) {
-                    if let Err(e) = preview.apply() {
-                        tracing::error!("Failed to apply theme: {e}");
-                    } else {
-                        // Update local state
-                        self.theme_config.is_dark = preview.is_dark;
-                        self.theme_config.name.clone_from(&preview.name);
-                        tracing::info!("Applied theme: {}", preview.name);
-                    }
                 }
                 Task::none()
             }

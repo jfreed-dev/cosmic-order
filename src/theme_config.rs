@@ -114,12 +114,6 @@ pub struct ThemeConfig {
     pub is_dark: bool,
     /// Accent color (RGBA)
     pub accent_color: Srgba,
-    /// Background color (RGBA) — used by `ColorPalette::from_cosmic()` via `theme::active()`
-    #[allow(dead_code)]
-    pub background_color: Srgba,
-    /// Primary text color (RGBA) — used by `ColorPalette::from_cosmic()` via `theme::active()`
-    #[allow(dead_code)]
-    pub text_color: Srgba,
 }
 
 impl Default for ThemeConfig {
@@ -128,8 +122,6 @@ impl Default for ThemeConfig {
             name: "Unknown".to_string(),
             is_dark: true,
             accent_color: Srgba::new(0.39, 0.82, 0.87, 1.0),
-            background_color: Srgba::new(0.11, 0.11, 0.11, 1.0),
-            text_color: Srgba::new(1.0, 1.0, 1.0, 1.0),
         }
     }
 }
@@ -144,8 +136,6 @@ impl ThemeConfig {
             name: cosmic.name.clone(),
             is_dark: cosmic.is_dark,
             accent_color: cosmic.accent.base,
-            background_color: cosmic.background.base,
-            text_color: cosmic.primary.on,
         }
     }
 

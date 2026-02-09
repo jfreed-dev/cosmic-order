@@ -124,23 +124,6 @@ screensaver-clock-15sec = 15 seconds
 screensaver-terminal-ghostty = Ghostty
 screensaver-terminal-cosmic-term = COSMIC Terminal
 
-# Screensaver Power Status
-screensaver-power-status = Power Status
-screensaver-power-unknown = Checking...
-screensaver-power-ac = AC Power
-screensaver-power-battery = Battery { $percent }%
-screensaver-power-no-battery = AC Power (no battery)
-screensaver-power-profile = Power Profile
-screensaver-power-profile-performance = Performance
-screensaver-power-profile-balanced = Balanced
-screensaver-power-profile-powersaver = Power Saver
-screensaver-effect-profile = Effect Profile
-screensaver-effect-full = Full Effects
-screensaver-effect-standard = Standard Effects
-screensaver-effect-simple = Simple Effects
-screensaver-effect-minimal = Minimal Effects
-screensaver-effect-skip = Screensaver Disabled (low battery)
-
 # Session Lock
 screensaver-session-lock = Session Lock
 screensaver-session-lock-native = Native session lock
