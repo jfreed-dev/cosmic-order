@@ -9,7 +9,7 @@ use std::path::PathBuf;
 
 use crate::colors::ColorPalette;
 
-/// Generate LazyVim colorscheme plugin spec from a color palette
+/// Generate `LazyVim` colorscheme plugin spec from a color palette
 pub fn generate_theme(palette: &ColorPalette) -> String {
     format!(
         r#"-- COSMIC theme for Neovim (tokyonight)
@@ -78,6 +78,7 @@ pub async fn write_theme(palette: &ColorPalette) -> Result<PathBuf, std::io::Err
 }
 
 /// Darken a hex color by reducing each channel by ~40%
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 fn darken_hex(hex: &str) -> String {
     let Some((r, g, b)) = crate::colors::hex_to_rgb(hex) else {
         return hex.to_string();
@@ -87,30 +88,32 @@ fn darken_hex(hex: &str) -> String {
 }
 
 /// Lighten a hex color by blending toward white by ~20%
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 fn lighten_hex(hex: &str) -> String {
     let Some((r, g, b)) = crate::colors::hex_to_rgb(hex) else {
         return hex.to_string();
     };
     let lighten = |v: u8| {
         let f = f32::from(v);
-        (f + (255.0 - f) * 0.15) as u8
+        (255.0 - f).mul_add(0.15, f) as u8
     };
     format!("#{:02X}{:02X}{:02X}", lighten(r), lighten(g), lighten(b))
 }
 
 fn nvim_colorscheme_path() -> PathBuf {
-    directories::BaseDirs::new()
-        .map(|d| {
+    directories::BaseDirs::new().map_or_else(
+        || {
+            let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
+            PathBuf::from(home).join(".config/nvim/lua/plugins/colorscheme.lua")
+        },
+        |d| {
             d.config_dir()
                 .join("nvim")
                 .join("lua")
                 .join("plugins")
                 .join("colorscheme.lua")
-        })
-        .unwrap_or_else(|| {
-            let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
-            PathBuf::from(home).join(".config/nvim/lua/plugins/colorscheme.lua")
-        })
+        },
+    )
 }
 
 #[cfg(test)]

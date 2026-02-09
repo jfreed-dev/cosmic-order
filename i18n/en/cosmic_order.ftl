@@ -201,6 +201,11 @@ none = None
 seconds = seconds
 minutes = minutes
 
+# Wallpaper URL Download
+wallpaper-url-placeholder = Enter image URL...
+wallpaper-downloading = Downloading...
+wallpaper-download = Download
+
 # Tooltips
 tooltip-save = Save settings
 tooltip-save-test = Save and preview screensaver
@@ -210,6 +215,7 @@ tooltip-export = Export to file
 tooltip-try = Preview this theme
 tooltip-prev-page = Previous page
 tooltip-next-page = Next page
+tooltip-url-download = Download wallpaper from URL
 
 # File Dialog Filters
 filter-text-files = Text files

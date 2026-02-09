@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::pages::PageId;
 
-/// Application identifier for cosmic-config (must match crate::APP_ID)
+/// Application identifier for cosmic-config (must match `crate::APP_ID`)
 const APP_ID: &str = crate::APP_ID;
 
 /// Application configuration

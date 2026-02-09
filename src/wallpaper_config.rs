@@ -144,8 +144,10 @@ impl WallpaperConfig {
     /// COSMIC background config path
     pub fn config_path() -> PathBuf {
         directories::BaseDirs::new()
-            .map(|dirs| dirs.config_dir().to_path_buf())
-            .unwrap_or_else(|| PathBuf::from(".config"))
+            .map_or_else(
+                || PathBuf::from(".config"),
+                |dirs| dirs.config_dir().to_path_buf(),
+            )
             .join("cosmic")
             .join("com.system76.CosmicBackground")
             .join("v1")
@@ -155,8 +157,10 @@ impl WallpaperConfig {
     /// User wallpapers directory for imported files
     pub fn user_wallpapers_dir() -> PathBuf {
         directories::BaseDirs::new()
-            .map(|dirs| dirs.data_local_dir().to_path_buf())
-            .unwrap_or_else(|| PathBuf::from(".local/share"))
+            .map_or_else(
+                || PathBuf::from(".local/share"),
+                |dirs| dirs.data_local_dir().to_path_buf(),
+            )
             .join("backgrounds")
             .join("custom")
     }
@@ -234,7 +238,7 @@ impl WallpaperConfig {
         }
     }
 
-    /// Build a CosmicBgEntry from the current config state
+    /// Build a `CosmicBgEntry` from the current config state
     fn to_bg_entry(&self) -> CosmicBgEntry {
         CosmicBgEntry {
             output: "all".to_string(),
@@ -393,8 +397,7 @@ impl WallpaperConfig {
         PathBuf::from(&self.current_source)
             .file_name()
             .and_then(|n| n.to_str())
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| "Unknown".to_string())
+            .map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string)
     }
 
     /// Get the current wallpaper theme (directory name)
@@ -407,8 +410,7 @@ impl WallpaperConfig {
             .parent()
             .and_then(|p| p.file_name())
             .and_then(|n| n.to_str())
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| "Unknown".to_string())
+            .map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string)
     }
 
     /// Format rotation frequency for display
@@ -423,12 +425,12 @@ impl WallpaperConfig {
             if minutes == 1 {
                 "1 minute".to_string()
             } else {
-                format!("{} minutes", minutes)
+                format!("{minutes} minutes")
             }
         } else {
             let minutes = self.rotation_frequency / 60;
             let secs = self.rotation_frequency % 60;
-            format!("{}m {}s", minutes, secs)
+            format!("{minutes}m {secs}s")
         }
     }
 }
@@ -449,8 +451,10 @@ impl ThumbnailCache {
 
     pub fn new() -> Self {
         let cache_dir = directories::BaseDirs::new()
-            .map(|dirs| dirs.cache_dir().to_path_buf())
-            .unwrap_or_else(|| PathBuf::from(".cache"))
+            .map_or_else(
+                || PathBuf::from(".cache"),
+                |dirs| dirs.cache_dir().to_path_buf(),
+            )
             .join("cosmic-order")
             .join("thumbnails");
         Self { cache_dir }
@@ -483,20 +487,22 @@ impl ThumbnailCache {
             .parent()
             .and_then(|p| p.file_name())
             .and_then(|n| n.to_str())
-            .map(|parent| {
-                let fname = source
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("unknown");
-                format!("{parent}__{fname}")
-            })
-            .unwrap_or_else(|| {
-                source
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("unknown")
-                    .to_string()
-            });
+            .map_or_else(
+                || {
+                    source
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("unknown")
+                        .to_string()
+                },
+                |parent| {
+                    let fname = source
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("unknown");
+                    format!("{parent}__{fname}")
+                },
+            );
         self.cache_dir.join(&key)
     }
 
@@ -519,56 +525,6 @@ impl ThumbnailCache {
             }
         }
         count
-    }
-
-    /// Get the thumbnail path for a wallpaper. Generates it if missing.
-    /// Returns the original path if thumbnail generation fails.
-    pub fn get_or_create(&self, source_path: &str) -> PathBuf {
-        let source = Path::new(source_path);
-
-        // Build a cache key from parent dir name + filename
-        let key = source
-            .parent()
-            .and_then(|p| p.file_name())
-            .and_then(|n| n.to_str())
-            .map(|parent| {
-                let fname = source
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("unknown");
-                format!("{parent}__{fname}")
-            })
-            .unwrap_or_else(|| {
-                source
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("unknown")
-                    .to_string()
-            });
-
-        let thumb_path = self.cache_dir.join(&key);
-
-        if thumb_path.exists() {
-            // Check for failure marker (empty file)
-            if fs::metadata(&thumb_path)
-                .map(|m| m.len() == 0)
-                .unwrap_or(false)
-            {
-                return source.to_path_buf();
-            }
-            return thumb_path;
-        }
-
-        // Generate thumbnail
-        if let Err(e) = self.generate_thumbnail(source, &thumb_path) {
-            tracing::warn!("Thumbnail generation failed for {source_path}: {e}");
-            // Write empty marker to avoid retrying every frame
-            let _ = fs::create_dir_all(&self.cache_dir);
-            let _ = fs::write(&thumb_path, b"");
-            return source.to_path_buf();
-        }
-
-        thumb_path
     }
 
     fn generate_thumbnail(&self, source: &Path, dest: &Path) -> Result<(), String> {

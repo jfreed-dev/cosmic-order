@@ -23,6 +23,7 @@ use crate::wayland_idle;
 use std::path::PathBuf;
 
 /// Application state
+#[allow(clippy::struct_excessive_bools)]
 pub struct App {
     /// Core COSMIC application state
     core: Core,
@@ -74,6 +75,12 @@ pub struct App {
     session_lock_enabled: bool,
     /// Abort handle for the lock delay timer (cancelled on user resume)
     lock_timer_handle: Option<cosmic::iced::task::Handle>,
+    /// Whether the URL input field is shown on the wallpapers page
+    show_url_input: bool,
+    /// Current text in the URL input field
+    url_input: String,
+    /// Status message for wallpaper operations (download progress, errors)
+    wallpaper_status: Option<String>,
 }
 
 /// Application messages
@@ -249,6 +256,9 @@ impl Application for App {
             idle_screensaver_child: None,
             session_lock_enabled,
             lock_timer_handle: None,
+            show_url_input: false,
+            url_input: String::new(),
+            wallpaper_status: None,
         };
 
         let init_task = app.spawn_thumbnail_generation();
@@ -271,7 +281,7 @@ impl Application for App {
         }
 
         // Get the page ID from the navigation item
-        if let Some(page_id) = self.nav_model.data::<PageId>(id).cloned() {
+        if let Some(page_id) = self.nav_model.data::<PageId>(id).copied() {
             self.active_page = page_id;
             self.nav_model.activate(id);
 
@@ -423,7 +433,7 @@ impl App {
     }
 
     /// Handle theme page messages
-    #[allow(clippy::cognitive_complexity)]
+    #[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
     fn handle_themes_message(&mut self, message: pages::ThemesMessage) -> Task<Message> {
         match message {
             pages::ThemesMessage::SetDarkMode(is_dark) => {
@@ -463,7 +473,7 @@ impl App {
                     } else {
                         // Update local state
                         self.theme_config.is_dark = preview.is_dark;
-                        self.theme_config.name = preview.name.clone();
+                        self.theme_config.name.clone_from(&preview.name);
                         tracing::info!("Applied theme: {}", preview.name);
                     }
                 }
@@ -482,10 +492,10 @@ impl App {
                 match &result {
                     Ok(path) => tracing::info!("Theme exported to: {path}"),
                     Err(e) => {
-                        if e != "cancelled" {
-                            tracing::error!("Theme export failed: {e}");
-                        } else {
+                        if e == "cancelled" {
                             tracing::debug!("Theme export cancelled by user");
+                        } else {
+                            tracing::error!("Theme export failed: {e}");
                         }
                     }
                 }
@@ -504,10 +514,10 @@ impl App {
                         self.theme_config = ThemeConfig::load();
                     }
                     Err(e) => {
-                        if e != "cancelled" {
-                            tracing::error!("Theme import failed: {e}");
-                        } else {
+                        if e == "cancelled" {
                             tracing::debug!("Theme import cancelled by user");
+                        } else {
+                            tracing::error!("Theme import failed: {e}");
                         }
                     }
                 }
@@ -533,7 +543,7 @@ impl App {
                         self.theme_preview_backup = None;
                     } else {
                         self.theme_config.is_dark = preview.is_dark;
-                        self.theme_config.name = preview.name.clone();
+                        self.theme_config.name.clone_from(&preview.name);
                         tracing::info!("Previewing theme: {}", preview.name);
                     }
                 }
@@ -682,7 +692,7 @@ impl App {
                     let result = crate::tool_sync::sync_tools(&config).await;
                     let msg = match result {
                         Ok(r) => {
-                            let live = crate::tool_sync::signal_running_apps(&config).await;
+                            let live = crate::tool_sync::signal_running_apps(&config);
 
                             let mut parts =
                                 vec![format!("colors.toml: {}", r.colors_path.display())];
@@ -704,13 +714,13 @@ impl App {
                             if r.lazygit_synced {
                                 parts.push("lazygit: synced".to_string());
                             }
-                            if let Some(ref hr) = r.hooks_result {
-                                if hr.hooks_run > 0 {
-                                    parts.push(format!(
-                                        "hooks: {}/{} ok",
-                                        hr.hooks_succeeded, hr.hooks_run
-                                    ));
-                                }
+                            if let Some(ref hr) = r.hooks_result
+                                && hr.hooks_run > 0
+                            {
+                                parts.push(format!(
+                                    "hooks: {}/{} ok",
+                                    hr.hooks_succeeded, hr.hooks_run
+                                ));
                             }
                             if !live.is_empty() {
                                 parts.push(format!("live: {}", live.join(", ")));
@@ -743,7 +753,7 @@ impl App {
     }
 
     /// Handle wallpaper page messages
-    #[allow(clippy::cognitive_complexity)]
+    #[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
     fn handle_wallpapers_message(&mut self, message: pages::WallpapersMessage) -> Task<Message> {
         match message {
             pages::WallpapersMessage::SelectCollection(collection) => {
@@ -772,7 +782,7 @@ impl App {
             pages::WallpapersMessage::ApplyComplete(result) => {
                 match &result {
                     Ok(path) => {
-                        self.wallpaper_config.current_source = path.clone();
+                        self.wallpaper_config.current_source.clone_from(path);
                         tracing::info!("Wallpaper applied: {path}");
                     }
                     Err(e) => {
@@ -822,15 +832,55 @@ impl App {
                 match &result {
                     Ok(path) => {
                         tracing::info!("Wallpaper imported: {path}");
-                        // Reload wallpaper config to pick up the new file
                         self.wallpaper_config = WallpaperConfig::load();
                     }
                     Err(e) => {
-                        if e != "cancelled" {
-                            tracing::error!("Wallpaper import failed: {e}");
-                        } else {
+                        if e == "cancelled" {
                             tracing::debug!("Wallpaper import cancelled by user");
+                        } else {
+                            tracing::error!("Wallpaper import failed: {e}");
                         }
+                    }
+                }
+                Task::none()
+            }
+            pages::WallpapersMessage::ShowUrlInput(show) => {
+                self.show_url_input = show;
+                if !show {
+                    self.url_input.clear();
+                    self.wallpaper_status = None;
+                }
+                Task::none()
+            }
+            pages::WallpapersMessage::SetUrlInput(text) => {
+                self.url_input = text;
+                Task::none()
+            }
+            pages::WallpapersMessage::DownloadFromUrl => {
+                let url = self.url_input.trim().to_string();
+                if url.is_empty() {
+                    return Task::none();
+                }
+                self.wallpaper_status = Some(fl!("wallpaper-downloading"));
+                cosmic::task::future(async move {
+                    let result = Self::run_wallpaper_url_download(&url).await;
+                    Message::Page(pages::Message::Wallpapers(
+                        pages::WallpapersMessage::DownloadComplete(result),
+                    ))
+                })
+            }
+            pages::WallpapersMessage::DownloadComplete(result) => {
+                match &result {
+                    Ok(path) => {
+                        tracing::info!("Wallpaper downloaded: {path}");
+                        self.wallpaper_config = WallpaperConfig::load();
+                        self.show_url_input = false;
+                        self.url_input.clear();
+                        self.wallpaper_status = None;
+                    }
+                    Err(e) => {
+                        tracing::error!("Wallpaper download failed: {e}");
+                        self.wallpaper_status = Some(e.clone());
                     }
                 }
                 Task::none()
@@ -851,7 +901,7 @@ impl App {
     }
 
     /// Handle screensaver page messages
-    #[allow(clippy::cognitive_complexity)]
+    #[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
     fn handle_screensaver_message(&mut self, message: pages::ScreensaverMessage) -> Task<Message> {
         match message {
             pages::ScreensaverMessage::SetEnabled(enabled) => {
@@ -908,14 +958,14 @@ impl App {
             pages::ScreensaverMessage::SetFadeInEffect(index) => {
                 let effects = Self::fade_effect_values();
                 if let Some(effect) = effects.get(index) {
-                    self.screensaver_config.fade_in_effect = effect.clone();
+                    self.screensaver_config.fade_in_effect.clone_from(effect);
                 }
                 Task::none()
             }
             pages::ScreensaverMessage::SetFadeOutEffect(index) => {
                 let effects = Self::fade_effect_values();
                 if let Some(effect) = effects.get(index) {
-                    self.screensaver_config.fade_out_effect = effect.clone();
+                    self.screensaver_config.fade_out_effect.clone_from(effect);
                 }
                 Task::none()
             }
@@ -974,7 +1024,7 @@ impl App {
             pages::ScreensaverMessage::SelectLogoComplete(result) => {
                 match &result {
                     Ok(path) => {
-                        self.screensaver_config.logo_file = path.clone();
+                        self.screensaver_config.logo_file.clone_from(path);
                         tracing::info!("Logo selected: {path}");
                     }
                     Err(e) => {
@@ -1202,6 +1252,7 @@ impl App {
     }
 
     /// Handle logind sleep events
+    #[allow(clippy::needless_pass_by_value)] // Elm architecture message pattern
     fn handle_sleep_event(&mut self, event: sleep_lock::SleepEvent) -> Task<Message> {
         match event {
             sleep_lock::SleepEvent::PrepareForSleep => {
@@ -1227,6 +1278,7 @@ impl App {
     /// the lock disrupts the main app's Wayland connection (broken pipe),
     /// crashing the app while the lock is held. A separate binary would be
     /// needed for native session lock; for now we use loginctl lock-session.
+    #[allow(clippy::unused_self)] // Method pattern; may use self in future lock strategies
     fn lock_screen(&mut self) -> Task<Message> {
         tracing::info!("Locking screen via logind D-Bus");
         cosmic::task::future(async {
@@ -1333,12 +1385,13 @@ impl App {
         let url = response.url();
         let path = url
             .to_file_path()
-            .map_err(|_| "Invalid file path".to_string())?;
+            .map_err(|()| "Invalid file path".to_string())?;
 
         Ok(path.to_string_lossy().to_string())
     }
 
     /// Build a timeout slider row with label, slider, and value display
+    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
     fn view_timeout_slider<'a, F>(
         label_text: String,
         value_seconds: u32,
@@ -1357,8 +1410,7 @@ impl App {
             .iter()
             .enumerate()
             .min_by_key(|(_, v)| (**v as i32 - minutes as i32).unsigned_abs())
-            .map(|(i, _)| i as u32)
-            .unwrap_or(0);
+            .map_or(0, |(i, _)| i as u32);
 
         // Value display
         let value_label = if minutes == 0 {
@@ -1509,7 +1561,7 @@ impl App {
         let url = response.url();
         let src_path = url
             .to_file_path()
-            .map_err(|_| "Invalid file path".to_string())?;
+            .map_err(|()| "Invalid file path".to_string())?;
 
         let dest_dir = WallpaperConfig::user_wallpapers_dir();
         tokio::fs::create_dir_all(&dest_dir)
@@ -1524,6 +1576,75 @@ impl App {
         tokio::fs::copy(&src_path, &dest_path)
             .await
             .map_err(|e| format!("Failed to copy: {e}"))?;
+
+        Ok(dest_path.to_string_lossy().to_string())
+    }
+
+    /// Download a wallpaper from a URL and save to the user wallpapers directory
+    async fn run_wallpaper_url_download(url: &str) -> Result<String, String> {
+        let parsed = reqwest::Url::parse(url).map_err(|e| format!("Invalid URL: {e}"))?;
+
+        let response = reqwest::get(parsed)
+            .await
+            .map_err(|e| format!("Download failed: {e}"))?;
+
+        if !response.status().is_success() {
+            return Err(format!("HTTP error: {}", response.status()));
+        }
+
+        // Extract filename from URL path
+        let url_path = response.url().path();
+        let filename = url_path
+            .rsplit('/')
+            .next()
+            .filter(|s| !s.is_empty() && s.contains('.'))
+            .unwrap_or("downloaded-wallpaper.png");
+
+        // Sanitize filename: keep only alphanumeric, dots, hyphens, underscores
+        let safe_filename: String = filename
+            .chars()
+            .map(|c| {
+                if c.is_alphanumeric() || c == '.' || c == '-' || c == '_' {
+                    c
+                } else {
+                    '_'
+                }
+            })
+            .collect();
+
+        let dest_dir = WallpaperConfig::user_wallpapers_dir();
+        tokio::fs::create_dir_all(&dest_dir)
+            .await
+            .map_err(|e| format!("Failed to create directory: {e}"))?;
+
+        let dest_path = dest_dir.join(&safe_filename);
+
+        let bytes = response
+            .bytes()
+            .await
+            .map_err(|e| format!("Failed to read response: {e}"))?;
+
+        // Write to a temp file first, then validate
+        let tmp_path = dest_path.with_extension("tmp");
+        tokio::fs::write(&tmp_path, &bytes)
+            .await
+            .map_err(|e| format!("Failed to write file: {e}"))?;
+
+        // Validate that it's a real image
+        let tmp_clone = tmp_path.clone();
+        let valid = tokio::task::spawn_blocking(move || image::open(&tmp_clone).is_ok())
+            .await
+            .unwrap_or(false);
+
+        if !valid {
+            let _ = tokio::fs::remove_file(&tmp_path).await;
+            return Err("Downloaded file is not a valid image".to_string());
+        }
+
+        // Move temp file to final location
+        tokio::fs::rename(&tmp_path, &dest_path)
+            .await
+            .map_err(|e| format!("Failed to save file: {e}"))?;
 
         Ok(dest_path.to_string_lossy().to_string())
     }
@@ -1548,7 +1669,7 @@ impl App {
             .ok_or_else(|| "No file URL returned".to_string())?;
         let path = url
             .to_file_path()
-            .map_err(|_| "Invalid file path".to_string())?;
+            .map_err(|()| "Invalid file path".to_string())?;
 
         crate::theme_config::ThemeConfig::export_theme(&path)
             .await
@@ -1572,7 +1693,7 @@ impl App {
         let url = response.url();
         let path = url
             .to_file_path()
-            .map_err(|_| "Invalid file path".to_string())?;
+            .map_err(|()| "Invalid file path".to_string())?;
 
         crate::theme_config::ThemeConfig::import_theme(&path)
             .await
@@ -1818,6 +1939,7 @@ impl App {
     }
 
     /// Create theme list with mini-UI mockup cards and "Try" button
+    #[allow(clippy::too_many_lines)]
     fn view_theme_list(&self) -> Element<'_, Message> {
         use cosmic::iced::Length;
         let spacing = cosmic::theme::spacing();
@@ -2121,11 +2243,67 @@ impl App {
             widget::tooltip::Position::Top,
         );
 
+        let url_toggle_button = widget::button::standard(fl!("wallpaper-add-url")).on_press(
+            Message::Page(pages::Message::Wallpapers(
+                pages::WallpapersMessage::ShowUrlInput(!self.show_url_input),
+            )),
+        );
+        let url_with_tooltip = widget::tooltip(
+            url_toggle_button,
+            widget::text::body(fl!("tooltip-url-download")),
+            widget::tooltip::Position::Top,
+        );
+
         buttons_row = buttons_row
             .push(apply_with_tooltip)
-            .push(import_with_tooltip);
+            .push(import_with_tooltip)
+            .push(url_with_tooltip);
 
         section = section.add(buttons_row);
+
+        // Inline URL input (shown when toggled)
+        if self.show_url_input {
+            let is_downloading = self
+                .wallpaper_status
+                .as_deref()
+                .is_some_and(|s| s == fl!("wallpaper-downloading"));
+
+            let url_field = widget::text_input(fl!("wallpaper-url-placeholder"), &self.url_input)
+                .on_input(|text| {
+                    Message::Page(pages::Message::Wallpapers(
+                        pages::WallpapersMessage::SetUrlInput(text),
+                    ))
+                });
+
+            let mut url_row = widget::row().spacing(spacing.space_s).push(url_field);
+
+            if is_downloading {
+                url_row = url_row.push(widget::text::body(fl!("wallpaper-downloading")));
+            } else {
+                let download_enabled = !self.url_input.trim().is_empty();
+                let download_button = if download_enabled {
+                    widget::button::suggested(fl!("wallpaper-download")).on_press(Message::Page(
+                        pages::Message::Wallpapers(pages::WallpapersMessage::DownloadFromUrl),
+                    ))
+                } else {
+                    widget::button::suggested(fl!("wallpaper-download"))
+                };
+                let cancel_button =
+                    widget::button::standard(fl!("cancel")).on_press(Message::Page(
+                        pages::Message::Wallpapers(pages::WallpapersMessage::ShowUrlInput(false)),
+                    ));
+                url_row = url_row.push(download_button).push(cancel_button);
+            }
+
+            section = section.add(url_row);
+
+            // Show error status if present (and not the downloading message)
+            if let Some(status) = &self.wallpaper_status
+                && *status != fl!("wallpaper-downloading")
+            {
+                section = section.add(widget::text::caption(status));
+            }
+        }
 
         section.into()
     }
@@ -2339,7 +2517,7 @@ impl App {
         // Scaling mode options
         let scaling_options: Vec<String> = crate::wallpaper_config::ScalingMode::all()
             .iter()
-            .map(|m| m.to_string())
+            .map(std::string::ToString::to_string)
             .collect();
         let scaling_selected = crate::wallpaper_config::ScalingMode::all()
             .iter()
@@ -2423,7 +2601,7 @@ impl App {
     }
 
     /// View for the Screensaver page
-    #[allow(clippy::cognitive_complexity)]
+    #[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
     fn view_screensaver_page(&self) -> Element<'_, Message> {
         let spacing = cosmic::theme::spacing();
         let cfg = &self.screensaver_config;

@@ -1,3 +1,14 @@
+cosmic-order (0.14.0~beta-1) unstable; urgency=medium
+
+  * Beta release: stabilization and cleanup
+  * Remove dead code (session_lock.rs, unused get_or_create)
+  * Fix signal_running_apps async signature
+  * Pin git dependencies to known-good commits
+  * Clippy pedantic cleanup (zero warnings)
+  * Add wallpaper URL download feature
+
+ -- jfreed-dev <jfreed@users.noreply.github.com>  Sat, 08 Feb 2026 00:00:00 +0000
+
 cosmic-order (0.13.0-1) unstable; urgency=medium
 
   * Phase 8: CLI interface for scripting

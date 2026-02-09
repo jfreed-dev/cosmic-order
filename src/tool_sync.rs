@@ -14,6 +14,7 @@ use crate::generators;
 
 /// Per-tool sync enable/disable flags
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(clippy::struct_excessive_bools)] // Config struct with one bool per tool
 pub struct ToolSyncConfig {
     #[serde(default = "default_true")]
     pub ghostty_enabled: bool,
@@ -83,6 +84,7 @@ impl ToolSyncConfig {
 
 /// Result of a sync operation
 #[derive(Debug, Clone)]
+#[allow(clippy::struct_excessive_bools)] // One bool per synced tool
 pub struct SyncResult {
     pub colors_path: PathBuf,
     pub ghostty_synced: bool,
@@ -187,7 +189,8 @@ pub async fn sync_tools(config: &ToolSyncConfig) -> Result<SyncResult, String> {
 /// Send reload signals to running applications after theme sync.
 ///
 /// Best-effort: logs warnings on failure but never returns an error.
-pub async fn signal_running_apps(config: &ToolSyncConfig) -> Vec<String> {
+#[allow(clippy::cognitive_complexity)]
+pub fn signal_running_apps(config: &ToolSyncConfig) -> Vec<String> {
     let mut reloaded = Vec::new();
 
     // Ghostty: SIGUSR2 triggers config reload
@@ -221,53 +224,50 @@ pub async fn signal_running_apps(config: &ToolSyncConfig) -> Vec<String> {
     }
 
     // Neovim: send colorscheme command via --remote-send
-    if config.nvim_enabled {
-        if let Some(runtime_dir) = std::env::var_os("XDG_RUNTIME_DIR") {
-            let runtime_path = PathBuf::from(&runtime_dir);
-            let mut nvim_count = 0u32;
-            if let Ok(entries) = std::fs::read_dir(&runtime_path) {
-                for entry in entries.flatten() {
-                    let name = entry.file_name();
-                    let name_str = name.to_string_lossy();
-                    if name_str.starts_with("nvim.") && name_str.ends_with(".0") {
-                        let socket = entry.path();
-                        match std::process::Command::new("nvim")
-                            .args([
-                                "--server",
-                                &socket.to_string_lossy(),
-                                "--remote-send",
-                                ":colorscheme tokyonight<CR>",
-                            ])
-                            .output()
-                        {
-                            Ok(output) if output.status.success() => {
-                                nvim_count += 1;
-                            }
-                            Ok(output) => {
-                                tracing::warn!(
-                                    "Neovim remote-send failed for {}: {}",
-                                    socket.display(),
-                                    String::from_utf8_lossy(&output.stderr)
-                                );
-                            }
-                            Err(e) => {
-                                tracing::warn!(
-                                    "Failed to send to Neovim at {}: {e}",
-                                    socket.display()
-                                );
-                            }
+    if config.nvim_enabled
+        && let Some(runtime_dir) = std::env::var_os("XDG_RUNTIME_DIR")
+    {
+        let runtime_path = PathBuf::from(&runtime_dir);
+        let mut nvim_count = 0u32;
+        if let Ok(entries) = std::fs::read_dir(&runtime_path) {
+            for entry in entries.flatten() {
+                let name = entry.file_name();
+                let name_str = name.to_string_lossy();
+                if name_str.starts_with("nvim.") && name_str.ends_with(".0") {
+                    let socket = entry.path();
+                    match std::process::Command::new("nvim")
+                        .args([
+                            "--server",
+                            &socket.to_string_lossy(),
+                            "--remote-send",
+                            ":colorscheme tokyonight<CR>",
+                        ])
+                        .output()
+                    {
+                        Ok(output) if output.status.success() => {
+                            nvim_count += 1;
+                        }
+                        Ok(output) => {
+                            tracing::warn!(
+                                "Neovim remote-send failed for {}: {}",
+                                socket.display(),
+                                String::from_utf8_lossy(&output.stderr)
+                            );
+                        }
+                        Err(e) => {
+                            tracing::warn!("Failed to send to Neovim at {}: {e}", socket.display());
                         }
                     }
                 }
             }
-            if nvim_count > 0 {
-                tracing::debug!("Reloaded {nvim_count} Neovim instance(s)");
-                reloaded.push(if nvim_count == 1 {
-                    "Neovim".to_string()
-                } else {
-                    format!("Neovim ({nvim_count})")
-                });
-            }
+        }
+        if nvim_count > 0 {
+            tracing::debug!("Reloaded {nvim_count} Neovim instance(s)");
+            reloaded.push(if nvim_count == 1 {
+                "Neovim".to_string()
+            } else {
+                format!("Neovim ({nvim_count})")
+            });
         }
     }
 
@@ -275,12 +275,13 @@ pub async fn signal_running_apps(config: &ToolSyncConfig) -> Vec<String> {
 }
 
 fn config_path() -> PathBuf {
-    directories::BaseDirs::new()
-        .map(|d| d.config_dir().join("cosmic-order").join("tool-sync.toml"))
-        .unwrap_or_else(|| {
+    directories::BaseDirs::new().map_or_else(
+        || {
             let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
             PathBuf::from(home).join(".config/cosmic-order/tool-sync.toml")
-        })
+        },
+        |d| d.config_dir().join("cosmic-order").join("tool-sync.toml"),
+    )
 }
 
 #[cfg(test)]

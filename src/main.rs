@@ -50,16 +50,15 @@ fn main() -> ExitCode {
     // Parse CLI arguments
     let args = cli::Cli::parse();
 
-    match args.command {
-        Some(cmd) => cli::run(cmd),
-        None => {
-            tracing::info!("Starting COSMIC ORDER");
-            match cosmic::app::run::<app::App>(cosmic::app::Settings::default(), ()) {
-                Ok(()) => ExitCode::SUCCESS,
-                Err(e) => {
-                    tracing::error!("Application error: {e}");
-                    ExitCode::FAILURE
-                }
+    if let Some(cmd) = args.command {
+        cli::run(cmd)
+    } else {
+        tracing::info!("Starting COSMIC ORDER");
+        match cosmic::app::run::<app::App>(cosmic::app::Settings::default(), ()) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                tracing::error!("Application error: {e}");
+                ExitCode::FAILURE
             }
         }
     }

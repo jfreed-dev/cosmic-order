@@ -182,6 +182,7 @@ pub fn idle_subscription(config: IdleSubscriptionConfig) -> cosmic::iced::Subscr
 struct IdleSubscriptionMarker;
 
 /// Blocking Wayland event loop that runs in `spawn_blocking`.
+#[allow(clippy::needless_pass_by_value)] // Owned for spawn_blocking move
 fn run_wayland_idle_loop(config: IdleSubscriptionConfig, tx: std_mpsc::Sender<IdleEvent>) {
     let conn = match Connection::connect_to_env() {
         Ok(c) => c,

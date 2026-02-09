@@ -6,12 +6,13 @@
 //! built-in generators complete. Each hook receives palette env vars
 //! and the path to `colors.toml` as its first argument.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::colors::ColorPalette;
 
 /// Results from running user hooks
 #[derive(Debug, Clone, Default)]
+#[allow(clippy::struct_field_names)] // Fields mirror the domain concept "hooks"
 pub struct HookResults {
     pub hooks_run: u32,
     pub hooks_succeeded: u32,
@@ -27,7 +28,8 @@ pub async fn ensure_hooks_dir() -> Result<PathBuf, std::io::Error> {
 }
 
 /// Run all executable hooks in `hooks.d/` with palette env vars
-pub async fn run_hooks(palette: &ColorPalette, colors_path: &PathBuf) -> HookResults {
+#[allow(clippy::cognitive_complexity)]
+pub async fn run_hooks(palette: &ColorPalette, colors_path: &Path) -> HookResults {
     let dir = match ensure_hooks_dir().await {
         Ok(d) => d,
         Err(e) => {
@@ -62,19 +64,19 @@ pub async fn run_hooks(palette: &ColorPalette, colors_path: &PathBuf) -> HookRes
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            if let Ok(meta) = tokio::fs::metadata(hook_path).await {
-                if meta.permissions().mode() & 0o111 == 0 {
-                    tracing::debug!("Skipping non-executable hook: {}", hook_path.display());
-                    continue;
-                }
+            if let Ok(meta) = tokio::fs::metadata(hook_path).await
+                && meta.permissions().mode() & 0o111 == 0
+            {
+                tracing::debug!("Skipping non-executable hook: {}", hook_path.display());
+                continue;
             }
         }
 
         results.hooks_run += 1;
-        let hook_name = hook_path
-            .file_name()
-            .map(|n| n.to_string_lossy().to_string())
-            .unwrap_or_else(|| "unknown".to_string());
+        let hook_name = hook_path.file_name().map_or_else(
+            || "unknown".to_string(),
+            |n| n.to_string_lossy().to_string(),
+        );
 
         tracing::info!("Running hook: {hook_name}");
 
@@ -115,7 +117,7 @@ pub async fn run_hooks(palette: &ColorPalette, colors_path: &PathBuf) -> HookRes
 }
 
 /// Build environment variables from palette for hooks
-fn build_env_vars(palette: &ColorPalette, colors_path: &PathBuf) -> Vec<(String, String)> {
+fn build_env_vars(palette: &ColorPalette, colors_path: &Path) -> Vec<(String, String)> {
     let mut vars = Vec::with_capacity(24);
     vars.push(("COSMIC_BG".to_string(), palette.background.clone()));
     vars.push(("COSMIC_FG".to_string(), palette.foreground.clone()));
@@ -143,12 +145,13 @@ fn build_env_vars(palette: &ColorPalette, colors_path: &PathBuf) -> Vec<(String,
 }
 
 fn hooks_dir() -> PathBuf {
-    directories::BaseDirs::new()
-        .map(|d| d.config_dir().join("cosmic-order").join("hooks.d"))
-        .unwrap_or_else(|| {
+    directories::BaseDirs::new().map_or_else(
+        || {
             let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
             PathBuf::from(home).join(".config/cosmic-order/hooks.d")
-        })
+        },
+        |d| d.config_dir().join("cosmic-order").join("hooks.d"),
+    )
 }
 
 #[cfg(test)]

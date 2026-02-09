@@ -85,7 +85,7 @@ Documentation is maintained alongside code development.
 
 ---
 
-## Phase 3: Wallpaper Management
+## Phase 3: Wallpaper Management ✓
 
 **Goal**: Organize and manage wallpapers with theme association.
 
@@ -97,7 +97,7 @@ Documentation is maintained alongside code development.
 - [x] Add wallpaper to theme association
 - [x] Implement wallpaper rotation configuration
 - [x] Add wallpaper import (file picker)
-- [ ] Add wallpaper download (URL)
+- [x] Add wallpaper download (URL)
 - [x] Organize wallpapers by collection/theme
 
 ### Deliverables
@@ -371,7 +371,7 @@ See [NATIVE-MIGRATION.md](development/NATIVE-MIGRATION.md) for details.
 
 - In-process ext-session-lock-v1 is **not viable** — acquiring the lock disrupts the main app's Wayland connection (broken pipe), crashing the app while locked
 - Fullscreen screensaver window resets compositor idle timer — Wayland idle lock notification unreliable after screensaver starts
-- `src/session_lock.rs` retained for potential future standalone lock binary
+- `src/session_lock.rs` deleted (non-viable approach, no longer needed)
 
 ## Phase 8: CLI Interface ✅ (v0.13.0)
 
@@ -437,6 +437,7 @@ See [SCREENSAVER-INTEGRATION.md](SCREENSAVER-INTEGRATION.md) for detailed resear
 | 0.12.0 | 7A | Native idle detection |
 | 0.12.1 | 7B | Session lock via logind D-Bus |
 | 0.13.0 | 8 | CLI interface for scripting |
+| 0.14.0-beta | Beta | Stabilization, cleanup, wallpaper URL download |
 | 1.0.0 | 7 | First stable release |
 
 ## Success Criteria

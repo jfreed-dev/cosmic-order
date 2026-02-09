@@ -112,6 +112,7 @@ struct SyncOutput {
 }
 
 #[derive(Serialize)]
+#[allow(clippy::struct_field_names)] // Mirrors HookResults field names for JSON output
 struct HooksOutput {
     hooks_run: u32,
     hooks_succeeded: u32,
@@ -218,7 +219,7 @@ async fn cmd_sync(reload: bool, json: bool) -> ExitCode {
     let hooks_output = result.hooks_result.as_ref().map(HooksOutput::from);
 
     let apps_reloaded = if reload {
-        tool_sync::signal_running_apps(&config).await
+        tool_sync::signal_running_apps(&config)
     } else {
         Vec::new()
     };
@@ -237,10 +238,10 @@ async fn cmd_sync(reload: bool, json: bool) -> ExitCode {
         if !tools_synced.is_empty() {
             println!("  tools: {}", tools_synced.join(", "));
         }
-        if let Some(ref h) = result.hooks_result {
-            if h.hooks_run > 0 {
-                println!("  hooks: {}/{} succeeded", h.hooks_succeeded, h.hooks_run);
-            }
+        if let Some(ref h) = result.hooks_result
+            && h.hooks_run > 0
+        {
+            println!("  hooks: {}/{} succeeded", h.hooks_succeeded, h.hooks_run);
         }
         if !apps_reloaded.is_empty() {
             println!("  reloaded: {}", apps_reloaded.join(", "));
@@ -337,12 +338,9 @@ async fn cmd_theme(action: ThemeAction) -> ExitCode {
             }
         },
         ThemeAction::SetAccent { hex } => {
-            let (r, g, b) = match colors::hex_to_rgb(&hex) {
-                Some(rgb) => rgb,
-                None => {
-                    eprintln!("{}: {hex}", fl!("cli-error-invalid-hex"));
-                    return ExitCode::FAILURE;
-                }
+            let Some((r, g, b)) = colors::hex_to_rgb(&hex) else {
+                eprintln!("{}: {hex}", fl!("cli-error-invalid-hex"));
+                return ExitCode::FAILURE;
             };
 
             let config = ThemeConfig::load();

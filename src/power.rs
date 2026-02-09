@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-//! Power state monitoring via D-Bus (UPower + system76-power)
+//! Power state monitoring via D-Bus (`UPower` + system76-power)
 //!
 //! Provides live power state tracking through D-Bus subscriptions so the
 //! screensaver can adapt effect complexity to the current power situation.
@@ -25,6 +25,7 @@ pub struct PowerState {
 
 impl PowerState {
     /// Determine the appropriate effect profile based on power state
+    #[allow(clippy::match_same_arms)] // Intentionally separate arms for battery vs AC
     pub fn effect_profile(&self) -> EffectProfile {
         match (self.on_battery, self.battery_percent) {
             // Critical battery — skip screensaver entirely
@@ -186,7 +187,8 @@ async fn get_dbus_property(
     reply.body().deserialize()
 }
 
-/// Query UPower DisplayDevice for battery state
+/// Query `UPower` `DisplayDevice` for battery state
+#[allow(clippy::cognitive_complexity)]
 async fn query_upower() -> Result<(bool, Option<u8>), zbus::Error> {
     let connection = zbus::Connection::system().await?;
 
@@ -199,12 +201,11 @@ async fn query_upower() -> Result<(bool, Option<u8>), zbus::Error> {
         "OnBattery",
     )
     .await?;
-    let on_battery = match on_battery_val.downcast_ref::<bool>() {
-        Ok(v) => v,
-        Err(_) => {
-            tracing::debug!("UPower OnBattery: unexpected type, defaulting to false");
-            false
-        }
+    let on_battery = if let Ok(v) = on_battery_val.downcast_ref::<bool>() {
+        v
+    } else {
+        tracing::debug!("UPower OnBattery: unexpected type, defaulting to false");
+        false
     };
 
     // Check device Type to determine if a battery exists
@@ -218,13 +219,14 @@ async fn query_upower() -> Result<(bool, Option<u8>), zbus::Error> {
     )
     .await
     {
-        Ok(v) => match v.downcast_ref::<u32>() {
-            Ok(t) => t,
-            Err(_) => {
+        Ok(v) => {
+            if let Ok(t) = v.downcast_ref::<u32>() {
+                t
+            } else {
                 tracing::debug!("UPower Device Type: unexpected type, defaulting to 0");
                 0
             }
-        },
+        }
         Err(_) => 0,
     };
 
@@ -243,13 +245,15 @@ async fn query_upower() -> Result<(bool, Option<u8>), zbus::Error> {
     )
     .await
     {
-        Ok(v) => match v.downcast_ref::<f64>() {
-            Ok(p) => Some(p.clamp(0.0, 100.0) as u8),
-            Err(_) => {
+        Ok(v) => {
+            if let Ok(p) = v.downcast_ref::<f64>() {
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                Some(p.clamp(0.0, 100.0) as u8)
+            } else {
                 tracing::debug!("UPower Percentage: unexpected type, skipping");
                 None
             }
-        },
+        }
         Err(e) => {
             tracing::debug!("UPower Percentage query failed: {e}");
             None

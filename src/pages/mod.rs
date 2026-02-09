@@ -107,6 +107,14 @@ pub enum WallpapersMessage {
     ImportFromFile,
     /// Import completed with result (path or error)
     ImportComplete(Result<String, String>),
+    /// Toggle the URL input field visibility
+    ShowUrlInput(bool),
+    /// Update the URL text input content
+    SetUrlInput(String),
+    /// Download wallpaper from the entered URL
+    DownloadFromUrl,
+    /// Download completed with result (path or error)
+    DownloadComplete(Result<String, String>),
     /// Show next page of wallpaper thumbnails
     GridNextPage,
     /// Show previous page of wallpaper thumbnails

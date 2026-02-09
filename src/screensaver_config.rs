@@ -5,6 +5,7 @@
 //! Reads the shell-style config from ~/.config/cosmic-screensaver/config
 
 use std::collections::HashMap;
+use std::fmt::Write;
 use std::fs;
 use std::path::PathBuf;
 
@@ -12,6 +13,7 @@ use directories::BaseDirs;
 
 /// Screensaver configuration
 #[derive(Debug, Clone, Default)]
+#[allow(clippy::struct_excessive_bools)] // Config struct with toggle fields
 pub struct ScreensaverConfig {
     /// Whether screensaver is enabled
     pub enabled: bool,
@@ -69,8 +71,10 @@ impl ScreensaverConfig {
     /// Get the config file path
     pub fn config_path() -> PathBuf {
         BaseDirs::new()
-            .map(|dirs| dirs.config_dir().to_path_buf())
-            .unwrap_or_else(|| PathBuf::from(".config"))
+            .map_or_else(
+                || PathBuf::from(".config"),
+                |dirs| dirs.config_dir().to_path_buf(),
+            )
             .join("cosmic-screensaver")
             .join("config")
     }
@@ -89,6 +93,7 @@ impl ScreensaverConfig {
     }
 
     /// Parse configuration from string content
+    #[allow(clippy::unnecessary_wraps)] // Result for consistency with load()
     fn parse(content: &str) -> Result<Self, ConfigError> {
         let mut values: HashMap<String, String> = HashMap::new();
 
@@ -153,8 +158,7 @@ impl ScreensaverConfig {
     fn parse_bool(values: &HashMap<String, String>, key: &str, default: bool) -> bool {
         values
             .get(key)
-            .map(|v| v.eq_ignore_ascii_case("true") || v == "1")
-            .unwrap_or(default)
+            .map_or(default, |v| v.eq_ignore_ascii_case("true") || v == "1")
     }
 
     /// Parse a u32 value from the config
@@ -269,8 +273,10 @@ SESSION_LOCK="{}"
     /// Path to the power state env file (sourced by screensaver-ctl)
     pub fn power_env_path() -> PathBuf {
         BaseDirs::new()
-            .map(|dirs| dirs.config_dir().to_path_buf())
-            .unwrap_or_else(|| PathBuf::from(".config"))
+            .map_or_else(
+                || PathBuf::from(".config"),
+                |dirs| dirs.config_dir().to_path_buf(),
+            )
             .join("cosmic-screensaver")
             .join("power-state.env")
     }
@@ -278,8 +284,10 @@ SESSION_LOCK="{}"
     /// Path to the swayidle configuration file
     pub fn swayidle_config_path() -> PathBuf {
         BaseDirs::new()
-            .map(|dirs| dirs.config_dir().to_path_buf())
-            .unwrap_or_else(|| PathBuf::from(".config"))
+            .map_or_else(
+                || PathBuf::from(".config"),
+                |dirs| dirs.config_dir().to_path_buf(),
+            )
             .join("cosmic-screensaver")
             .join("swayidle.conf")
     }
@@ -303,17 +311,18 @@ SESSION_LOCK="{}"
 
         if self.lock_timeout > 0 {
             let lock_time = idle + self.lock_timeout;
-            conf.push_str(&format!("timeout {lock_time} '{}'\n", Self::LOCK_COMMAND));
+            let _ = writeln!(conf, "timeout {lock_time} '{}'", Self::LOCK_COMMAND);
         }
 
         if self.dpms_timeout > 0 {
             let dpms = self.dpms_timeout;
-            conf.push_str(&format!(
-                "timeout {dpms} 'cosmic-randr output \"*\" --off' resume 'cosmic-randr output \"*\" --on'\n"
-            ));
+            let _ = writeln!(
+                conf,
+                "timeout {dpms} 'cosmic-randr output \"*\" --off' resume 'cosmic-randr output \"*\" --on'"
+            );
         }
 
-        conf.push_str(&format!("before-sleep '{}'\n", Self::LOCK_COMMAND));
+        let _ = writeln!(conf, "before-sleep '{}'", Self::LOCK_COMMAND);
 
         conf
     }
@@ -333,9 +342,10 @@ SESSION_LOCK="{}"
 
     /// Path to the screensaver-ctl script
     pub fn ctl_path() -> PathBuf {
-        BaseDirs::new()
-            .map(|dirs| dirs.home_dir().join(".local/bin/screensaver-ctl"))
-            .unwrap_or_else(|| PathBuf::from("screensaver-ctl"))
+        BaseDirs::new().map_or_else(
+            || PathBuf::from("screensaver-ctl"),
+            |dirs| dirs.home_dir().join(".local/bin/screensaver-ctl"),
+        )
     }
 
     /// Format timeout value for display (used in tests, may be useful in future UI)
@@ -344,18 +354,18 @@ SESSION_LOCK="{}"
         if seconds == 0 {
             "Disabled".to_string()
         } else if seconds < 60 {
-            format!("{} seconds", seconds)
+            format!("{seconds} seconds")
         } else if seconds.is_multiple_of(60) {
             let minutes = seconds / 60;
             if minutes == 1 {
                 "1 minute".to_string()
             } else {
-                format!("{} minutes", minutes)
+                format!("{minutes} minutes")
             }
         } else {
             let minutes = seconds / 60;
             let secs = seconds % 60;
-            format!("{}m {}s", minutes, secs)
+            format!("{minutes}m {secs}s")
         }
     }
 
@@ -381,22 +391,24 @@ SESSION_LOCK="{}"
         PathBuf::from(path)
             .file_stem()
             .and_then(|s| s.to_str())
-            .map(|s| {
-                s.split(['-', '_'])
-                    .map(|word| {
-                        let mut chars = word.chars();
-                        match chars.next() {
-                            Some(c) => {
-                                let upper: String = c.to_uppercase().collect();
-                                format!("{upper}{}", chars.as_str())
+            .map_or_else(
+                || "Custom".to_string(),
+                |s| {
+                    s.split(['-', '_'])
+                        .map(|word| {
+                            let mut chars = word.chars();
+                            match chars.next() {
+                                Some(c) => {
+                                    let upper: String = c.to_uppercase().collect();
+                                    format!("{upper}{}", chars.as_str())
+                                }
+                                None => String::new(),
                             }
-                            None => String::new(),
-                        }
-                    })
-                    .collect::<Vec<_>>()
-                    .join(" ")
-            })
-            .unwrap_or_else(|| "Custom".to_string())
+                        })
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                },
+            )
     }
 
     /// Resolve the logos directory by following the screensaver-ctl symlink
@@ -419,16 +431,14 @@ SESSION_LOCK="{}"
 
     /// Scan available logo files from the logos directory
     pub fn scan_logos() -> Vec<(String, PathBuf)> {
-        let dir = match Self::logos_dir() {
-            Some(d) => d,
-            None => return Vec::new(),
+        let Some(dir) = Self::logos_dir() else {
+            return Vec::new();
         };
 
         let mut logos: Vec<(String, PathBuf)> = Vec::new();
 
-        let entries = match fs::read_dir(&dir) {
-            Ok(e) => e,
-            Err(_) => return Vec::new(),
+        let Ok(entries) = fs::read_dir(&dir) else {
+            return Vec::new();
         };
 
         for entry in entries.flatten() {

@@ -1,6 +1,6 @@
 [package]
 name = "cosmic-order"
-version = "0.13.0"
+version = "0.14.0-beta"
 edition = "2024"
 rust-version = "1.90"
 license = "GPL-3.0-only"
@@ -11,7 +11,7 @@ categories = ["gui"]
 
 [dependencies]
 # COSMIC / libcosmic
-libcosmic = { git = "https://github.com/pop-os/libcosmic.git", default-features = false, features = [
+libcosmic = { git = "https://github.com/pop-os/libcosmic.git", rev = "3e78eb23", default-features = false, features = [
     "dbus-config",
     "desktop",
     "multi-window",
@@ -20,7 +20,7 @@ libcosmic = { git = "https://github.com/pop-os/libcosmic.git", default-features 
     "winit",
     "xdg-portal",
 ] }
-cosmic-config = { git = "https://github.com/pop-os/libcosmic.git" }
+cosmic-config = { git = "https://github.com/pop-os/libcosmic.git", rev = "3e78eb23" }
 
 # Async runtime
 tokio = { version = "1", features = ["fs", "sync", "rt"] }
@@ -48,8 +48,11 @@ unic-langid = "0.9"
 thiserror = "2"
 anyhow = "1"
 
-# Image processing (thumbnail generation)
-image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
+# Image processing (thumbnail generation + wallpaper validation)
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp", "gif", "bmp"] }
+
+# HTTP client (wallpaper URL download)
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 
 # D-Bus (power monitoring via UPower)
 zbus = { version = "5", default-features = false, features = ["tokio"] }

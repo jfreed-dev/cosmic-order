@@ -5,6 +5,7 @@
 //! Generates a Ghostty theme file from the COSMIC color palette
 //! and activates it in the user's Ghostty config.
 
+use std::fmt::Write;
 use std::path::PathBuf;
 
 use crate::colors::ColorPalette;
@@ -12,20 +13,22 @@ use crate::colors::ColorPalette;
 /// Generate Ghostty theme file content from a color palette
 pub fn generate_theme(palette: &ColorPalette) -> String {
     let mut out = String::with_capacity(512);
-    out.push_str(&format!("background = {}\n", palette.background));
-    out.push_str(&format!("foreground = {}\n", palette.foreground));
-    out.push_str(&format!("cursor-color = {}\n", palette.cursor));
-    out.push_str(&format!(
-        "selection-foreground = {}\n",
+    let _ = writeln!(out, "background = {}", palette.background);
+    let _ = writeln!(out, "foreground = {}", palette.foreground);
+    let _ = writeln!(out, "cursor-color = {}", palette.cursor);
+    let _ = writeln!(
+        out,
+        "selection-foreground = {}",
         palette.selection_foreground
-    ));
-    out.push_str(&format!(
-        "selection-background = {}\n",
+    );
+    let _ = writeln!(
+        out,
+        "selection-background = {}",
         palette.selection_background
-    ));
+    );
 
     for (i, color) in palette.colors.iter().enumerate() {
-        out.push_str(&format!("palette = {i}={color}\n"));
+        let _ = writeln!(out, "palette = {i}={color}");
     }
 
     out
@@ -126,21 +129,23 @@ pub async fn activate_theme() -> Result<(), std::io::Error> {
 }
 
 fn ghostty_config_path() -> PathBuf {
-    directories::BaseDirs::new()
-        .map(|d| d.config_dir().join("ghostty").join("config"))
-        .unwrap_or_else(|| {
+    directories::BaseDirs::new().map_or_else(
+        || {
             let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
             PathBuf::from(home).join(".config/ghostty/config")
-        })
+        },
+        |d| d.config_dir().join("ghostty").join("config"),
+    )
 }
 
 fn ghostty_themes_dir() -> PathBuf {
-    directories::BaseDirs::new()
-        .map(|d| d.config_dir().join("ghostty").join("themes"))
-        .unwrap_or_else(|| {
+    directories::BaseDirs::new().map_or_else(
+        || {
             let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
             PathBuf::from(home).join(".config/ghostty/themes")
-        })
+        },
+        |d| d.config_dir().join("ghostty").join("themes"),
+    )
 }
 
 #[cfg(test)]

@@ -5,6 +5,7 @@
 //! Generates a lazygit `gui.theme` YAML block from the COSMIC palette
 //! and updates the user's lazygit config using a comment-marker approach.
 
+use std::fmt::Write;
 use std::path::PathBuf;
 
 use crate::colors::ColorPalette;
@@ -15,54 +16,64 @@ const MARKER: &str = "# COSMIC ORDER theme — auto-generated";
 /// Generate the lazygit gui.theme YAML block
 pub fn generate_theme_block(palette: &ColorPalette) -> String {
     let mut out = String::with_capacity(512);
-    out.push_str(MARKER);
-    out.push('\n');
+    let _ = writeln!(out, "{MARKER}");
     out.push_str("gui:\n");
     out.push_str("  theme:\n");
-    out.push_str(&format!(
+    let _ = write!(
+        out,
         "    activeBorderColor:\n      - \"{}\"\n      - bold\n",
         palette.accent
-    ));
-    out.push_str(&format!(
+    );
+    let _ = write!(
+        out,
         "    inactiveBorderColor:\n      - \"{}\"\n",
         palette.colors[8]
-    ));
-    out.push_str(&format!(
+    );
+    let _ = write!(
+        out,
         "    searchingActiveBorderColor:\n      - \"{}\"\n      - bold\n",
         palette.accent
-    ));
-    out.push_str(&format!(
+    );
+    let _ = write!(
+        out,
         "    optionsTextColor:\n      - \"{}\"\n",
         palette.colors[4]
-    ));
-    out.push_str(&format!(
+    );
+    let _ = write!(
+        out,
         "    selectedLineBgColor:\n      - \"{}\"\n",
         palette.colors[0]
-    ));
-    out.push_str(&format!(
+    );
+    let _ = write!(
+        out,
         "    cherryPickedCommitFgColor:\n      - \"{}\"\n",
         palette.colors[4]
-    ));
-    out.push_str(&format!(
+    );
+    let _ = write!(
+        out,
         "    cherryPickedCommitBgColor:\n      - \"{}\"\n",
         palette.colors[5]
-    ));
-    out.push_str(&format!(
+    );
+    let _ = write!(
+        out,
         "    markedBaseCommitFgColor:\n      - \"{}\"\n",
         palette.colors[4]
-    ));
-    out.push_str(&format!(
+    );
+    let _ = write!(
+        out,
         "    markedBaseCommitBgColor:\n      - \"{}\"\n",
         palette.colors[3]
-    ));
-    out.push_str(&format!(
+    );
+    let _ = write!(
+        out,
         "    unstagedChangesColor:\n      - \"{}\"\n",
         palette.colors[1]
-    ));
-    out.push_str(&format!(
+    );
+    let _ = write!(
+        out,
         "    defaultFgColor:\n      - \"{}\"\n",
         palette.foreground
-    ));
+    );
 
     out
 }
@@ -124,14 +135,12 @@ fn update_config(contents: &str, theme_block: &str) -> String {
     }
 
     // Append the new block
-    if !found_block {
-        if lines.last().is_some_and(|l| !l.is_empty()) {
-            lines.push(String::new());
-        }
+    if !found_block && lines.last().is_some_and(|l| !l.is_empty()) {
+        lines.push(String::new());
     }
 
     // Trim trailing empty lines before appending
-    while lines.last().is_some_and(|l| l.is_empty()) {
+    while lines.last().is_some_and(std::string::String::is_empty) {
         lines.pop();
     }
 
@@ -146,12 +155,13 @@ fn update_config(contents: &str, theme_block: &str) -> String {
 }
 
 fn lazygit_config_path() -> PathBuf {
-    directories::BaseDirs::new()
-        .map(|d| d.config_dir().join("lazygit").join("config.yml"))
-        .unwrap_or_else(|| {
+    directories::BaseDirs::new().map_or_else(
+        || {
             let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
             PathBuf::from(home).join(".config/lazygit/config.yml")
-        })
+        },
+        |d| d.config_dir().join("lazygit").join("config.yml"),
+    )
 }
 
 #[cfg(test)]

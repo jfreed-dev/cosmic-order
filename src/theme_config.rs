@@ -67,20 +67,20 @@ impl ThemePreview {
     /// Get all built-in theme previews
     pub fn built_in_themes() -> Vec<Self> {
         vec![
-            Self::from_cosmic_theme(ThemeId::Dark, CosmicTheme::dark_default()),
-            Self::from_cosmic_theme(ThemeId::Light, CosmicTheme::light_default()),
+            Self::from_cosmic_theme(ThemeId::Dark, &CosmicTheme::dark_default()),
+            Self::from_cosmic_theme(ThemeId::Light, &CosmicTheme::light_default()),
             Self::from_cosmic_theme(
                 ThemeId::HighContrastDark,
-                CosmicTheme::high_contrast_dark_default(),
+                &CosmicTheme::high_contrast_dark_default(),
             ),
             Self::from_cosmic_theme(
                 ThemeId::HighContrastLight,
-                CosmicTheme::high_contrast_light_default(),
+                &CosmicTheme::high_contrast_light_default(),
             ),
         ]
     }
 
-    fn from_cosmic_theme(id: ThemeId, theme: CosmicTheme) -> Self {
+    fn from_cosmic_theme(id: ThemeId, theme: &CosmicTheme) -> Self {
         Self {
             id,
             name: theme.name.clone(),
@@ -114,10 +114,10 @@ pub struct ThemeConfig {
     pub is_dark: bool,
     /// Accent color (RGBA)
     pub accent_color: Srgba,
-    /// Background color (RGBA) — used by ColorPalette::from_cosmic() via theme::active()
+    /// Background color (RGBA) — used by `ColorPalette::from_cosmic()` via `theme::active()`
     #[allow(dead_code)]
     pub background_color: Srgba,
-    /// Primary text color (RGBA) — used by ColorPalette::from_cosmic() via theme::active()
+    /// Primary text color (RGBA) — used by `ColorPalette::from_cosmic()` via `theme::active()`
     #[allow(dead_code)]
     pub text_color: Srgba,
 }
@@ -251,6 +251,7 @@ impl ThemeConfig {
     }
 
     /// Format a color as hex string
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn color_to_hex(color: &Srgba) -> String {
         format!(
             "#{:02X}{:02X}{:02X}",
@@ -261,7 +262,7 @@ impl ThemeConfig {
     }
 
     /// Format a color as RGB string
-    #[allow(dead_code)] // Available for future use
+    #[allow(dead_code, clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn color_to_rgb(color: &Srgba) -> String {
         format!(
             "rgb({}, {}, {})",
