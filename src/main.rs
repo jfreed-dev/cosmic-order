@@ -17,7 +17,6 @@ mod localize;
 mod pages;
 mod power;
 mod screensaver_config;
-mod session_lock;
 mod sleep_lock;
 mod systemd;
 mod theme_config;
