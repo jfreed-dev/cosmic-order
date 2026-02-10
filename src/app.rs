@@ -1797,13 +1797,13 @@ impl App {
         }
 
         column = column
-            // Theme preview (left) + community theme dropdowns (right)
+            // Theme preview (centered above) + community theme dropdowns (below)
             .push(
-                widget::row()
-                    .spacing(spacing.space_m)
-                    .push(self.view_theme_preview_panel())
-                    .push(self.view_theme_selectors()),
+                widget::container(self.view_theme_preview_panel())
+                    .align_x(cosmic::iced::alignment::Horizontal::Center)
+                    .width(cosmic::iced::Length::Fill),
             )
+            .push(self.view_theme_selectors())
             // Export & Import + Create Theme
             .push(
                 widget::settings::section()
@@ -2415,15 +2415,18 @@ impl App {
                         })),
                 ),
         )
-        .width(Length::Fixed(200.0))
-        .height(Length::Fixed(130.0))
+        .width(Length::Fixed(300.0))
+        .height(Length::Fixed(195.0))
         .class(cosmic::theme::Container::custom(move |_| {
             widget::container::Style {
                 background: Some(cosmic::iced::Background::Color(background)),
                 border: cosmic::iced::Border {
                     radius: 8.0.into(),
-                    width: 2.0,
-                    color: accent,
+                    width: 1.0,
+                    color: cosmic::iced::Color {
+                        a: 0.3,
+                        ..text_color
+                    },
                 },
                 ..Default::default()
             }
@@ -2617,19 +2620,25 @@ impl App {
         let logo_preview: Element<'_, Message> = if self.logo_preview_text.is_empty() {
             widget::container(widget::text::caption(fl!("screensaver-no-logo")))
                 .padding(spacing.space_m)
-                .width(cosmic::iced::Length::Fill)
-                .height(cosmic::iced::Length::Fixed(200.0))
+                .width(cosmic::iced::Length::Fixed(300.0))
+                .height(cosmic::iced::Length::Fixed(195.0))
                 .align_x(cosmic::iced::alignment::Horizontal::Center)
                 .align_y(cosmic::iced::alignment::Vertical::Center)
                 .class(cosmic::theme::Container::custom(|theme| {
-                    let bg = theme.cosmic().bg_divider();
+                    let cosmic = theme.cosmic();
+                    let bg = cosmic.bg_divider();
+                    let on_bg = cosmic.on_bg_color();
                     widget::container::Style {
                         background: Some(cosmic::iced::Background::Color(
                             cosmic::iced::Color::from(bg),
                         )),
                         border: cosmic::iced::Border {
                             radius: 8.0.into(),
-                            ..Default::default()
+                            width: 1.0,
+                            color: cosmic::iced::Color {
+                                a: 0.3,
+                                ..cosmic::iced::Color::from(on_bg)
+                            },
                         },
                         ..Default::default()
                     }
@@ -2637,28 +2646,48 @@ impl App {
                 .into()
         } else {
             let lines = self.logo_preview_text.lines().count().max(1);
-            let available_height = f32::from(spacing.space_m).mul_add(-2.0, 200.0);
+            let max_cols = self
+                .logo_preview_text
+                .lines()
+                .map(str::len)
+                .max()
+                .unwrap_or(1)
+                .max(1);
+            let pad = f32::from(spacing.space_m) * 2.0;
+            let available_height = 195.0 - pad;
+            let available_width = 300.0 - pad;
+            // Monospace: char width ≈ 0.6 × font size
             #[allow(clippy::cast_precision_loss)]
-            let font_size = (available_height / (lines as f32 * 1.2)).clamp(4.0, 14.0);
+            let size_by_height = available_height / (lines as f32 * 1.2);
+            #[allow(clippy::cast_precision_loss)]
+            let size_by_width = available_width / (max_cols as f32 * 0.6);
+            let font_size = size_by_height.min(size_by_width).clamp(2.0, 14.0);
 
             widget::container(
                 widget::text(&self.logo_preview_text)
                     .size(font_size)
-                    .font(cosmic::iced::Font::MONOSPACE)
-                    .width(cosmic::iced::Length::Fill),
+                    .font(cosmic::iced::Font::MONOSPACE),
             )
             .padding(spacing.space_m)
-            .width(cosmic::iced::Length::Fill)
-            .height(cosmic::iced::Length::Fixed(200.0))
+            .width(cosmic::iced::Length::Fixed(300.0))
+            .height(cosmic::iced::Length::Fixed(195.0))
+            .align_x(cosmic::iced::alignment::Horizontal::Center)
+            .align_y(cosmic::iced::alignment::Vertical::Center)
             .class(cosmic::theme::Container::custom(|theme| {
-                let bg = theme.cosmic().bg_divider();
+                let cosmic = theme.cosmic();
+                let bg = cosmic.bg_divider();
+                let on_bg = cosmic.on_bg_color();
                 widget::container::Style {
                     background: Some(cosmic::iced::Background::Color(cosmic::iced::Color::from(
                         bg,
                     ))),
                     border: cosmic::iced::Border {
                         radius: 8.0.into(),
-                        ..Default::default()
+                        width: 1.0,
+                        color: cosmic::iced::Color {
+                            a: 0.3,
+                            ..cosmic::iced::Color::from(on_bg)
+                        },
                     },
                     ..Default::default()
                 }
@@ -2792,10 +2821,14 @@ impl App {
                 ))
             });
 
+        let centered_preview = widget::container(logo_preview)
+            .align_x(cosmic::iced::alignment::Horizontal::Center)
+            .width(cosmic::iced::Length::Fill);
+
         widget::column()
             .spacing(spacing.space_s)
             .push(widget::text::title4(fl!("screensaver-preview")))
-            .push(logo_preview)
+            .push(centered_preview)
             .push(test_btn)
             // Logo selector
             .push(self.view_screensaver_logo_section())
