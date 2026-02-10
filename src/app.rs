@@ -1788,8 +1788,7 @@ impl App {
         let mut column = widget::column()
             .spacing(spacing.space_m)
             .padding(spacing.space_m)
-            .push(widget::text::title2(fl!("visuals")))
-            .push(widget::text::body(fl!("visuals-description")));
+            .push(widget::text::title2(fl!("visuals")));
 
         // Insert preview banner when actively previewing
         if let Some(banner) = self.view_preview_banner() {
@@ -1797,13 +1796,19 @@ impl App {
         }
 
         column = column
-            // Theme preview (centered above) + community theme dropdowns (below)
+            // Community theme selectors (left) + theme preview (right)
             .push(
-                widget::container(self.view_theme_preview_panel())
-                    .align_x(cosmic::iced::alignment::Horizontal::Center)
-                    .width(cosmic::iced::Length::Fill),
+                widget::row()
+                    .spacing(spacing.space_m)
+                    .push(
+                        widget::container(self.view_theme_selectors())
+                            .width(cosmic::iced::Length::FillPortion(2)),
+                    )
+                    .push(
+                        widget::container(self.view_theme_preview_panel())
+                            .width(cosmic::iced::Length::FillPortion(1)),
+                    ),
             )
-            .push(self.view_theme_selectors())
             // Export & Import + Create Theme
             .push(
                 widget::settings::section()
@@ -2415,7 +2420,8 @@ impl App {
                         })),
                 ),
         )
-        .width(Length::Fixed(300.0))
+        .width(Length::Fill)
+        .max_width(300.0)
         .height(Length::Fixed(195.0))
         .class(cosmic::theme::Container::custom(move |_| {
             widget::container::Style {
