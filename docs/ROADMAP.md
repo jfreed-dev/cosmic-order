@@ -334,7 +334,7 @@ See [NATIVE-MIGRATION.md](development/NATIVE-MIGRATION.md) for details.
 
 ### Future Ideas
 
-- [ ] Theme creation wizard
+- [x] Theme creation wizard (UI Reorg)
 - [ ] Online theme repository integration
 - [ ] Wallpaper slideshow scheduling
 - [ ] Per-workspace wallpapers
@@ -420,6 +420,23 @@ See [SCREENSAVER-INTEGRATION.md](SCREENSAVER-INTEGRATION.md) for detailed resear
 
 ---
 
+## UI Reorganization ✅ (post-beta)
+
+**Goal**: Modernize the Visuals page with streamlined theme management.
+
+### Completed
+
+- [x] Merge Themes + Wallpapers pages into single "Visuals" page
+- [x] Replace theme card grids with compact source-split dropdowns
+- [x] Add theme preview panel (centered, scaled to match COSMIC Settings)
+- [x] Add wallpaper preview panel with dual-tier thumbnail cache
+- [x] Add theme creation wizard (4-step: base, colors, appearance, save)
+- [x] Remove wallpaper UI (wallpaper download moved to CLI)
+- [x] Responsive layout — selectors left, preview right
+- [x] Restore "COSMIC ORDER" display name
+
+---
+
 ## Version Milestones
 
 | Version | Phase | Description |
@@ -440,6 +457,7 @@ See [SCREENSAVER-INTEGRATION.md](SCREENSAVER-INTEGRATION.md) for detailed resear
 | 0.12.1 | 7B | Session lock via logind D-Bus |
 | 0.13.0 | 8 | CLI interface for scripting |
 | 0.14.0-beta | Beta | Stabilization, cleanup, wallpaper URL download |
+| — | UI Reorg | Theme wizard, preview panels, dropdown selectors |
 | 1.0.0 | 7 | First stable release |
 
 ## Success Criteria
