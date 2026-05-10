@@ -182,9 +182,13 @@ impl App {
                         Ok(r) => {
                             let live = crate::tool_sync::signal_running_apps(&config);
                             let mut summary = r.summary();
-                            if !live.is_empty() {
+                            if !live.reloaded.is_empty() {
                                 use std::fmt::Write;
-                                let _ = write!(summary, ", live: {}", live.join(", "));
+                                let _ = write!(summary, ", live: {}", live.reloaded.join(", "));
+                            }
+                            if !live.skipped.is_empty() {
+                                use std::fmt::Write;
+                                let _ = write!(summary, ", manual: {}", live.skipped.join(", "));
                             }
                             Ok(summary)
                         }

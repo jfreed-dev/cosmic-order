@@ -126,6 +126,9 @@ struct SyncOutput {
     tools_synced: Vec<String>,
     hooks: Option<HooksOutput>,
     apps_reloaded: Vec<String>,
+    /// Tools that have no live-reload mechanism; each entry tells the
+    /// user what manual step is needed (e.g. re-source shell, restart).
+    apps_manual: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -218,10 +221,10 @@ async fn cmd_sync(reload: bool, json: bool) -> ExitCode {
 
     let hooks_output = result.hooks_result.as_ref().map(HooksOutput::from);
 
-    let apps_reloaded = if reload {
+    let signal_result = if reload {
         tool_sync::signal_running_apps(&config)
     } else {
-        Vec::new()
+        tool_sync::SignalResult::default()
     };
 
     if json {
@@ -229,7 +232,8 @@ async fn cmd_sync(reload: bool, json: bool) -> ExitCode {
             colors_path: result.colors_path.display().to_string(),
             tools_synced,
             hooks: hooks_output,
-            apps_reloaded,
+            apps_reloaded: signal_result.reloaded,
+            apps_manual: signal_result.skipped,
         };
         print_json(&output);
     } else {
@@ -243,8 +247,11 @@ async fn cmd_sync(reload: bool, json: bool) -> ExitCode {
         {
             println!("  hooks: {}/{} succeeded", h.hooks_succeeded, h.hooks_run);
         }
-        if !apps_reloaded.is_empty() {
-            println!("  reloaded: {}", apps_reloaded.join(", "));
+        if !signal_result.reloaded.is_empty() {
+            println!("  reloaded: {}", signal_result.reloaded.join(", "));
+        }
+        if !signal_result.skipped.is_empty() {
+            println!("  manual: {}", signal_result.skipped.join(", "));
         }
     }
 
@@ -812,9 +819,11 @@ mod tests {
                 hooks_timed_out: 0,
             }),
             apps_reloaded: vec!["ghostty".to_string()],
+            apps_manual: vec!["fzf (re-source shell)".to_string()],
         };
         let json = serde_json::to_string_pretty(&output).unwrap();
         assert!(json.contains("colors_path"));
+        assert!(json.contains("apps_manual"));
         assert!(json.contains("Ghostty"));
         assert!(json.contains("hooks_run"));
         assert!(json.contains("apps_reloaded"));

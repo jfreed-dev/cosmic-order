@@ -286,12 +286,34 @@ fn send_sigusr2(process_name: &str) -> bool {
     }
 }
 
+/// Result of attempting live-reload across enabled tools.
+///
+/// `reloaded` lists tools that received a working reload signal.
+/// `skipped` lists tools that have no live-reload mechanism, with a short
+/// note explaining what the user must do (e.g. re-attach a Zellij session,
+/// re-source the shell). Only tools that the user enabled in the sync
+/// config and whose theme was just rewritten contribute to `skipped`.
+#[derive(Debug, Clone, Default)]
+pub struct SignalResult {
+    pub reloaded: Vec<String>,
+    pub skipped: Vec<String>,
+}
+
 /// Send reload signals to running applications after theme sync.
 ///
 /// Best-effort: logs warnings on failure but never returns an error.
+///
+/// Reload mechanisms by tool:
+/// - Ghostty / btop: `SIGUSR2` triggers config/theme reload in-place.
+/// - Neovim: send `:colorscheme <name><CR>` over the RPC socket.
+/// - Zellij: no signal-based reload; user must `zellij action switch-mode session`
+///   and re-attach for the new theme to take effect.
+/// - fzf: env vars (`FZF_DEFAULT_OPTS`) are read at shell init only;
+///   user must re-source their shell rc.
+/// - lazygit: config is read on launch; user must restart lazygit.
 #[allow(clippy::cognitive_complexity)]
-pub fn signal_running_apps(config: &ToolSyncConfig) -> Vec<String> {
-    let mut reloaded = Vec::new();
+pub fn signal_running_apps(config: &ToolSyncConfig) -> SignalResult {
+    let mut result = SignalResult::default();
 
     // Ghostty & btop: SIGUSR2 triggers config/theme reload
     for (enabled, name) in [
@@ -299,7 +321,7 @@ pub fn signal_running_apps(config: &ToolSyncConfig) -> Vec<String> {
         (config.btop_enabled, "btop"),
     ] {
         if enabled && send_sigusr2(&name.to_lowercase()) {
-            reloaded.push(name.to_string());
+            result.reloaded.push(name.to_string());
         }
     }
 
@@ -339,7 +361,7 @@ pub fn signal_running_apps(config: &ToolSyncConfig) -> Vec<String> {
         }
         if nvim_count > 0 {
             tracing::debug!("Reloaded {nvim_count} Neovim instance(s)");
-            reloaded.push(if nvim_count == 1 {
+            result.reloaded.push(if nvim_count == 1 {
                 "Neovim".to_string()
             } else {
                 format!("Neovim ({nvim_count})")
@@ -347,7 +369,22 @@ pub fn signal_running_apps(config: &ToolSyncConfig) -> Vec<String> {
         }
     }
 
-    reloaded
+    // Tools without a live-reload mechanism: surface a hint so the user
+    // knows the theme file was written but the running app won't pick it
+    // up until they take an action.
+    if config.zellij_enabled {
+        result
+            .skipped
+            .push("Zellij (re-attach session)".to_string());
+    }
+    if config.fzf_enabled {
+        result.skipped.push("fzf (re-source shell)".to_string());
+    }
+    if config.lazygit_enabled {
+        result.skipped.push("lazygit (restart)".to_string());
+    }
+
+    result
 }
 
 #[cfg(test)]
