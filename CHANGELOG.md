@@ -5,6 +5,50 @@ All notable changes to COSMIC ORDER are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- COSMIC built-in themes selector (Dark, Light, High Contrast Dark, High
+  Contrast Light) on the Visuals page (#9).
+- Power Settings section on the Screensaver page: live UPower state,
+  active power profile, system76-power availability, plus widgets for
+  `disable_on_battery`, `battery_idle_timeout`, and the four per-profile
+  effect overrides (#4).
+- Clock font text input on the Screensaver page (#5).
+- Warning banner on the Screensaver page when the bundled shell scripts
+  (`launch-fullscreen.sh`, `screensaver-ctl.sh`, `cosmic-screensaver.sh`)
+  are missing (#10).
+- `--set` flag on `cosmic-order wallpaper add` to apply the downloaded
+  image as the active wallpaper via `cosmic-bg`'s cosmic-config schema
+  (#8).
+- `nvim_colorscheme` field in `tool-sync.toml` (default `tokyonight`)
+  used by both the Neovim generator and the live-reload remote-send
+  command, so non-tokyonight setups stop hitting silent failures (#7).
+- Sync results now flag tools with no live-reload mechanism (Zellij,
+  fzf, lazygit) and the manual step the user must take. Surfaced both
+  in the GUI status banner and as `apps_manual` in CLI JSON output
+  (#6).
+- Window size now persists across sessions and is restored on launch
+  (#3).
+- `docs/development/WORKFLOW.md` documents distribution packaging
+  status: `.deb` shipped, Flatpak deferred with rationale (#12).
+
+### Changed
+
+- High-contrast theme presets are now applied via
+  `CosmicTheme::write_entry` instead of only toggling dark mode, so
+  selecting a high-contrast variant actually rewrites the active
+  theme (#2).
+- `tool_sync::signal_running_apps` returns `SignalResult { reloaded,
+  skipped }` instead of `Vec<String>`. The CLI `sync --json` payload
+  gains an `apps_manual` array.
+
+### Removed
+
+- Unused `Message::ConfigChanged` variant and its no-op handler (no
+  cosmic-config subscription was ever wired up to construct it) (#11).
+
 ## [0.14.0] — 2026-05-10
 
 First public release. Repository moved to
