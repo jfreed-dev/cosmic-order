@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `.github/dependabot.yml` — weekly tracking of GitHub Actions versions
+  in `.github/workflows/`. Cargo dependencies are intentionally left
+  out (`just outdated` + the cargo-audit recipe already cover that
+  surface).
 - `.github/workflows/ci.yml` — minimal GitHub Actions workflow that
   installs system deps (cmake, just, libexpat, libfontconfig,
   libfreetype, libxkbcommon, pkg-config), provisions Rust stable with
