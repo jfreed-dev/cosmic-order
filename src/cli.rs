@@ -115,6 +115,9 @@ pub enum WallpaperAction {
         /// Output as JSON
         #[arg(long)]
         json: bool,
+        /// Set the downloaded image as the active COSMIC wallpaper
+        #[arg(long)]
+        set: bool,
     },
 }
 
@@ -429,7 +432,7 @@ async fn cmd_hooks(action: HooksAction) -> ExitCode {
 
 async fn cmd_wallpaper(action: WallpaperAction) -> ExitCode {
     match action {
-        WallpaperAction::Add { url, json } => {
+        WallpaperAction::Add { url, json, set } => {
             let parsed = match reqwest::Url::parse(&url) {
                 Ok(u) => u,
                 Err(e) => {
@@ -528,11 +531,30 @@ async fn cmd_wallpaper(action: WallpaperAction) -> ExitCode {
             }
 
             let saved = dest_path.display().to_string();
+
+            let active_set = if set {
+                match set_active_wallpaper(&dest_path) {
+                    Ok(()) => true,
+                    Err(e) => {
+                        eprintln!("warning: failed to set active wallpaper: {e}");
+                        false
+                    }
+                }
+            } else {
+                false
+            };
+
             if json {
-                let output = WallpaperOutput { path: saved };
+                let output = WallpaperOutput {
+                    path: saved,
+                    active_set,
+                };
                 print_json(&output);
             } else {
                 println!("{}: {saved}", fl!("cli-wallpaper-added"));
+                if active_set {
+                    println!("  active wallpaper: set");
+                }
             }
 
             ExitCode::SUCCESS
@@ -543,6 +565,51 @@ async fn cmd_wallpaper(action: WallpaperAction) -> ExitCode {
 #[derive(Serialize)]
 struct WallpaperOutput {
     path: String,
+    /// True if --set was passed and the wallpaper was successfully applied
+    /// to cosmic-bg's config. False otherwise.
+    active_set: bool,
+}
+
+/// Apply a downloaded image as the active COSMIC wallpaper by writing
+/// to cosmic-bg's cosmic-config files directly.
+///
+/// Schema (from pop-os/cosmic-bg, v1):
+/// - `same-on-all` file contains the RON `true`
+/// - `all` file contains a RON-serialized `Background` struct
+///
+/// Writing the files by hand keeps us off cosmic-bg-config as a build
+/// dep. This is best-effort: if the schema changes, the daemon may
+/// reject the new value. The caller should treat any error here as
+/// non-fatal — the wallpaper file is already saved.
+fn set_active_wallpaper(path: &std::path::Path) -> Result<(), String> {
+    let abs_path = path
+        .canonicalize()
+        .map_err(|e| format!("canonicalize: {e}"))?;
+    let path_str = abs_path
+        .to_str()
+        .ok_or_else(|| "wallpaper path is not valid UTF-8".to_string())?;
+    if path_str.contains('"') || path_str.contains('\\') {
+        return Err("wallpaper path contains characters that need RON escaping".to_string());
+    }
+
+    let config_dir = directories::BaseDirs::new()
+        .ok_or_else(|| "cannot resolve user config dir".to_string())?
+        .config_dir()
+        .join("cosmic/com.system76.CosmicBackground/v1");
+
+    std::fs::create_dir_all(&config_dir).map_err(|e| format!("mkdir: {e}"))?;
+
+    let bg_ron = format!(
+        "(output: All, source: Path(\"{path_str}\"), filter_by_theme: false, \
+         rotation_frequency: 0, filter_method: Lanczos, scaling_mode: Zoom, \
+         sampling_method: Aspect)"
+    );
+
+    std::fs::write(config_dir.join("same-on-all"), "true")
+        .map_err(|e| format!("write same-on-all: {e}"))?;
+    std::fs::write(config_dir.join("all"), bg_ron).map_err(|e| format!("write all: {e}"))?;
+
+    Ok(())
 }
 
 fn print_json<T: Serialize>(value: &T) {
@@ -737,11 +804,30 @@ mod tests {
         .unwrap();
         match cli.command {
             Some(Commands::Wallpaper {
-                action: WallpaperAction::Add { url, json },
+                action: WallpaperAction::Add { url, json, set },
             }) => {
                 assert_eq!(url, "https://example.com/wall.png");
                 assert!(!json);
+                assert!(!set);
             }
+            other => panic!("Expected Wallpaper Add, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_cli_wallpaper_add_set() {
+        let cli = Cli::try_parse_from([
+            "cosmic-order",
+            "wallpaper",
+            "add",
+            "https://example.com/wall.png",
+            "--set",
+        ])
+        .unwrap();
+        match cli.command {
+            Some(Commands::Wallpaper {
+                action: WallpaperAction::Add { set, .. },
+            }) => assert!(set),
             other => panic!("Expected Wallpaper Add, got {other:?}"),
         }
     }
@@ -846,8 +932,10 @@ mod tests {
     fn test_wallpaper_output_serializes() {
         let output = WallpaperOutput {
             path: "/home/user/backgrounds/wall.png".to_string(),
+            active_set: false,
         };
         let json = serde_json::to_string(&output).unwrap();
         assert!(json.contains("wall.png"));
+        assert!(json.contains("active_set"));
     }
 }
