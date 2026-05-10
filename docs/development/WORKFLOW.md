@@ -75,6 +75,44 @@ git push --tags
 
 Create a GitHub release with a changelog from the tag.
 
+## Distribution Packaging
+
+| Format  | Status        | Notes                                                       |
+|---------|---------------|-------------------------------------------------------------|
+| `.deb`  | **Shipped**   | `just release-deb VERSION` builds in `ubuntu:noble` Docker. |
+| Flatpak | Deferred      | See below.                                                  |
+
+### .deb (primary)
+
+The Debian package targets Ubuntu noble / Pop!_OS. The `debian/`
+directory holds `control`, `rules`, `copyright`, `source/format`, and
+`changelog`. `just release-deb VERSION` runs `dpkg-buildpackage` inside
+a pinned `ubuntu:noble` builder image (`scripts/Dockerfile.deb-builder`)
+and lands artifacts in `dist/`. Tag-driven release with
+`just release-tag VERSION` once the changelog and Cargo.toml are
+aligned.
+
+### Flatpak (deferred)
+
+A Flatpak target is feasible but not yet implemented because COSMIC
+ORDER has several capabilities that need careful sandbox planning:
+
+- D-Bus access to UPower, logind, and (optionally) system76-power
+- cosmic-config writes to the user config dir and to other COSMIC
+  components' config namespaces (e.g. `com.system76.CosmicBackground`
+  for the wallpaper apply path)
+- `ext-idle-notify-v1` Wayland protocol access
+- Spawning installed shell scripts (`launch-fullscreen.sh`,
+  `screensaver-ctl.sh`, `cosmic-screensaver.sh`)
+- Tool-sync writes to user config dirs of unrelated tools
+  (`~/.config/ghostty`, `~/.config/btop`, `~/.config/nvim`, etc.)
+
+Several of these go against the Flatpak sandbox model in ways that
+either break the feature or require broad `--filesystem=home` /
+`--talk-name=...` permissions. Until that surface area is reduced (or
+explicit portal flows are designed for each capability), `.deb` is the
+recommended distribution format.
+
 ## Contributing
 
 External contributions follow the standard fork-and-PR model. See
