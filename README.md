@@ -2,6 +2,7 @@
 
 [![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/jfreed-dev/cosmic-order)](https://github.com/jfreed-dev/cosmic-order/releases)
+[![CI](https://github.com/jfreed-dev/cosmic-order/actions/workflows/ci.yml/badge.svg)](https://github.com/jfreed-dev/cosmic-order/actions/workflows/ci.yml)
 
 OMARCHY-inspired workflow and aesthetics for COSMIC Desktop.
 

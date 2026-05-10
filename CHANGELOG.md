@@ -9,9 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- README banner badges (License GPL-3.0, Latest release) directly under
-  the H1, mirroring the niri-screensaver layout. CI badge deferred until
-  a workflow lands in `.github/workflows/`.
+- `.github/workflows/ci.yml` — minimal GitHub Actions workflow that
+  installs system deps (cmake, libexpat, libfontconfig, libfreetype,
+  libxkbcommon, pkg-config), pulls Rust stable with rustfmt+clippy,
+  caches with Swatinem/rust-cache, and runs `just pre-commit`
+  (fmt-check + clippy --pedantic + tests). Triggers on push/PR to
+  `main`. Mirrors the gating pattern used by `jfreed-dev/niri-screensaver`.
+- README banner badges (License GPL-3.0, Latest release, CI) directly
+  under the H1, mirroring the niri-screensaver layout.
 - README `Trademarks` section explicitly disclaiming affiliation with
   System76. "COSMIC" is a trademark of System76, Inc.; the project name
   and the surviving `cosmic-*` ASCII logos reference that mark for
