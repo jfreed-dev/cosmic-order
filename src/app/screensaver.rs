@@ -390,11 +390,41 @@ impl App {
     /// View for the Screensaver page
     pub(super) fn view_screensaver_page(&self) -> Element<'_, Message> {
         let spacing = cosmic::theme::spacing();
-        let column = widget::column()
+        let mut column = widget::column()
             .spacing(spacing.space_m)
             .padding(spacing.space_m)
             .push(widget::text::title2(fl!("screensaver")))
-            .push(widget::text::body(fl!("screensaver-description")))
+            .push(widget::text::body(fl!("screensaver-description")));
+
+        let missing = ScreensaverConfig::missing_scripts();
+        if !missing.is_empty() {
+            let names = missing.join(", ");
+            column = column.push(
+                widget::container(widget::text::body(fl!(
+                    "screensaver-scripts-missing",
+                    names = names
+                )))
+                .padding(spacing.space_s)
+                .class(cosmic::theme::Container::custom(|theme| {
+                    let warn = theme.cosmic().warning_color();
+                    widget::container::Style {
+                        background: Some(cosmic::iced::Background::Color(
+                            cosmic::iced::Color::from_rgba(warn.red, warn.green, warn.blue, 0.15),
+                        )),
+                        border: cosmic::iced::Border {
+                            color: cosmic::iced::Color::from_rgba(
+                                warn.red, warn.green, warn.blue, 0.5,
+                            ),
+                            width: 1.0,
+                            radius: 4.0.into(),
+                        },
+                        ..widget::container::Style::default()
+                    }
+                })),
+            );
+        }
+
+        column = column
             .push(self.view_screensaver_preview_section())
             .push(self.view_screensaver_settings_section());
         widget::scrollable(column).into()

@@ -7,7 +7,7 @@
 use std::collections::HashMap;
 use std::fmt::Write;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::paths;
 
@@ -325,6 +325,54 @@ SESSION_LOCK="{}"
     /// Path to the screensaver-ctl script
     pub fn ctl_path() -> PathBuf {
         paths::screensaver_ctl()
+    }
+
+    /// Resolve the screensaver script directory for installed scripts.
+    ///
+    /// Checks the system data dir first, then resolves via the
+    /// screensaver-ctl symlink for dev/manual installs. Returns the
+    /// directory holding `launch-fullscreen.sh` and friends, or `None`
+    /// if neither location is present.
+    fn scripts_dir() -> Option<PathBuf> {
+        let system = paths::screensaver_data_dir();
+        if system.join("launch-fullscreen.sh").exists() {
+            return Some(system);
+        }
+        let ctl = Self::ctl_path();
+        fs::read_link(&ctl)
+            .ok()
+            .and_then(|link| {
+                if link.is_absolute() {
+                    Some(link)
+                } else {
+                    ctl.parent().map(|p| p.join(&link))
+                }
+            })
+            .and_then(|p| fs::canonicalize(p).ok())
+            .and_then(|p| p.parent().map(Path::to_path_buf))
+    }
+
+    /// Validate that the expected screensaver shell scripts are installed.
+    ///
+    /// Returns the names of any missing scripts. The empty vec means all
+    /// scripts are present; a non-empty result means the screensaver
+    /// will not function until the user installs the package or runs
+    /// `just install`.
+    pub fn missing_scripts() -> Vec<&'static str> {
+        const REQUIRED: [&str; 3] = [
+            "launch-fullscreen.sh",
+            "screensaver-ctl.sh",
+            "cosmic-screensaver.sh",
+        ];
+
+        let Some(dir) = Self::scripts_dir() else {
+            return REQUIRED.to_vec();
+        };
+
+        REQUIRED
+            .into_iter()
+            .filter(|name| !dir.join(name).exists())
+            .collect()
     }
 
     /// Path to the fullscreen launcher script

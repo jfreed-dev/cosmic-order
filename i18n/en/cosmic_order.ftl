@@ -54,6 +54,7 @@ screensaver-clock-format = Format
 screensaver-clock-duration = Clock Duration
 screensaver-clock-font = Clock Font
 screensaver-clock-font-placeholder = e.g. monospace, JetBrains Mono
+screensaver-scripts-missing = Screensaver scripts not installed: {$names}. Run "just install" or install the .deb package.
 screensaver-power = Power Settings
 screensaver-disable-on-battery = Disable on Battery
 screensaver-battery-idle-timeout = Battery Idle Timeout
