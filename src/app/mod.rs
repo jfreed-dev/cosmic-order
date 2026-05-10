@@ -169,6 +169,8 @@ pub struct App {
     logo_preview_text: String,
     /// Active theme creation wizard state (None when wizard is closed)
     wizard_state: Option<WizardState>,
+    /// Last observed window size, persisted on exit
+    last_window_size: (u32, u32),
 }
 
 /// Application messages
@@ -304,6 +306,7 @@ impl Application for App {
         let idle_subscription_config = Self::compute_idle_config(&screensaver_config);
         let session_lock_enabled = screensaver_config.session_lock;
         let logo_preview_text = Self::load_logo_text(&screensaver_config.logo_file);
+        let last_window_size = (config.window_width, config.window_height);
         let app = Self {
             core,
             config,
@@ -327,9 +330,22 @@ impl Application for App {
             lock_timer_handle: None,
             logo_preview_text,
             wizard_state: None,
+            last_window_size,
         };
 
-        (app, Task::none())
+        let init_task = if let Some(id) = app.core.main_window_id() {
+            let (w, h) = last_window_size;
+            if w > 0 && h > 0 {
+                #[allow(clippy::cast_precision_loss)]
+                cosmic::iced::window::resize(id, cosmic::iced::Size::new(w as f32, h as f32))
+            } else {
+                Task::none()
+            }
+        } else {
+            Task::none()
+        };
+
+        (app, init_task)
     }
 
     fn nav_model(&self) -> Option<&nav_bar::Model> {
@@ -374,6 +390,13 @@ impl Application for App {
         Task::none()
     }
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    fn on_window_resize(&mut self, _id: cosmic::iced::window::Id, width: f32, height: f32) {
+        if width > 0.0 && height > 0.0 {
+            self.last_window_size = (width.round() as u32, height.round() as u32);
+        }
+    }
+
     fn subscription(&self) -> cosmic::iced::Subscription<Self::Message> {
         let subs = vec![
             power::power_subscription().map(Message::PowerStateUpdate),
@@ -410,6 +433,15 @@ impl Application for App {
         if self.native_idle_active {
             self.kill_idle_screensaver();
             Self::restart_swayidle_sync();
+        }
+
+        let (w, h) = self.last_window_size;
+        if w > 0 && h > 0 && (self.config.window_width != w || self.config.window_height != h) {
+            self.config.window_width = w;
+            self.config.window_height = h;
+            if let Err(e) = self.config.save() {
+                tracing::warn!("Failed to persist window size: {e}");
+            }
         }
         None
     }
