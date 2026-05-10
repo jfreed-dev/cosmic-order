@@ -13,7 +13,12 @@ categories = ["gui"]
 
 [dependencies]
 # COSMIC / libcosmic
-libcosmic = { git = "https://github.com/pop-os/libcosmic.git", rev = "03d0171b", default-features = false, features = [
+#
+# The git URL must match the form used by libcosmic's own transitive deps
+# (bare URL, no `.git`, no `rev`) so `cargo vendor` does not see two
+# source URLs for the same crate. The exact commit is pinned via the
+# tracked Cargo.lock.
+libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = false, features = [
     "dbus-config",
     "desktop",
     "multi-window",
@@ -22,7 +27,7 @@ libcosmic = { git = "https://github.com/pop-os/libcosmic.git", rev = "03d0171b",
     "winit",
     "xdg-portal",
 ] }
-cosmic-config = { git = "https://github.com/pop-os/libcosmic.git", rev = "03d0171b" }
+cosmic-config = { git = "https://github.com/pop-os/libcosmic" }
 
 # Async runtime
 tokio = { version = "1", features = ["fs", "sync", "rt", "time"] }
