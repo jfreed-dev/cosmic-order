@@ -23,6 +23,8 @@ pub struct ToolSyncConfig {
     pub btop_enabled: bool,
     #[serde(default = "default_true")]
     pub nvim_enabled: bool,
+    #[serde(default = "default_nvim_colorscheme")]
+    pub nvim_colorscheme: String,
     #[serde(default = "default_true")]
     pub zellij_enabled: bool,
     #[serde(default = "default_true")]
@@ -45,12 +47,17 @@ const fn default_false() -> bool {
     false
 }
 
+fn default_nvim_colorscheme() -> String {
+    "tokyonight".to_string()
+}
+
 impl Default for ToolSyncConfig {
     fn default() -> Self {
         Self {
             ghostty_enabled: true,
             btop_enabled: true,
             nvim_enabled: true,
+            nvim_colorscheme: default_nvim_colorscheme(),
             zellij_enabled: true,
             fzf_enabled: true,
             fzf_shell_integration: false,
@@ -204,11 +211,6 @@ pub async fn sync_tools(config: &ToolSyncConfig) -> Result<SyncResult, String> {
             },
         },
         ToolEntry {
-            name: "Neovim",
-            enabled: config.nvim_enabled,
-            sync_fn: |p| write_only(p, "Neovim", |p| Box::pin(generators::nvim::write_theme(p))),
-        },
-        ToolEntry {
             name: "Zellij",
             enabled: config.zellij_enabled,
             sync_fn: |p| {
@@ -239,6 +241,15 @@ pub async fn sync_tools(config: &ToolSyncConfig) -> Result<SyncResult, String> {
             (tool.sync_fn)(&palette).await?;
             synced_tools.push(tool.name.to_string());
         }
+    }
+
+    // Neovim is synced outside the ToolEntry table because the generator
+    // takes a configurable colorscheme name from the user's tool-sync.toml.
+    if config.nvim_enabled {
+        generators::nvim::write_theme(&palette, &config.nvim_colorscheme)
+            .await
+            .map_err(|e| format!("Failed to write Neovim theme: {e}"))?;
+        synced_tools.push("Neovim".to_string());
     }
 
     let hooks_result = if config.hooks_enabled {
@@ -304,13 +315,9 @@ pub fn signal_running_apps(config: &ToolSyncConfig) -> Vec<String> {
                 let name_str = name.to_string_lossy();
                 if name_str.starts_with("nvim.") && name_str.ends_with(".0") {
                     let socket = entry.path();
+                    let cmd = format!(":colorscheme {}<CR>", config.nvim_colorscheme);
                     match std::process::Command::new("nvim")
-                        .args([
-                            "--server",
-                            &socket.to_string_lossy(),
-                            "--remote-send",
-                            ":colorscheme tokyonight<CR>",
-                        ])
+                        .args(["--server", &socket.to_string_lossy(), "--remote-send", &cmd])
                         .output()
                     {
                         Ok(output) if output.status.success() => {
@@ -354,6 +361,7 @@ mod tests {
         assert!(config.ghostty_enabled);
         assert!(config.btop_enabled);
         assert!(config.nvim_enabled);
+        assert_eq!(config.nvim_colorscheme, "tokyonight");
         assert!(config.zellij_enabled);
         assert!(config.fzf_enabled);
         assert!(!config.fzf_shell_integration);
@@ -368,6 +376,7 @@ mod tests {
             ghostty_enabled: false,
             btop_enabled: true,
             nvim_enabled: false,
+            nvim_colorscheme: "catppuccin".to_string(),
             zellij_enabled: true,
             fzf_enabled: true,
             fzf_shell_integration: true,
@@ -380,6 +389,7 @@ mod tests {
         assert!(!deserialized.ghostty_enabled);
         assert!(deserialized.btop_enabled);
         assert!(!deserialized.nvim_enabled);
+        assert_eq!(deserialized.nvim_colorscheme, "catppuccin");
         assert!(deserialized.zellij_enabled);
         assert!(deserialized.fzf_enabled);
         assert!(deserialized.fzf_shell_integration);
@@ -397,6 +407,7 @@ mod tests {
         // New fields should default to true (except fzf_shell_integration)
         assert!(config.btop_enabled);
         assert!(config.nvim_enabled);
+        assert_eq!(config.nvim_colorscheme, "tokyonight");
         assert!(config.zellij_enabled);
         assert!(config.fzf_enabled);
         assert!(!config.fzf_shell_integration);
