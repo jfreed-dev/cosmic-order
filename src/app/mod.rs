@@ -179,9 +179,6 @@ pub enum Message {
     NavSelect(nav_bar::Id),
     /// Page-specific message
     Page(pages::Message),
-    /// Configuration changed (constructed by cosmic-config subscription)
-    #[allow(dead_code)]
-    ConfigChanged(Config),
     /// Power state updated from D-Bus subscription
     PowerStateUpdate(power::PowerState),
     /// Toggle caffeine mode (idle inhibitor)
@@ -422,10 +419,6 @@ impl Application for App {
         match message {
             Message::NavSelect(id) => self.on_nav_select(id),
             Message::Page(page_message) => self.handle_page_message(page_message),
-            Message::ConfigChanged(config) => {
-                self.config = config;
-                Task::none()
-            }
             Message::PowerStateUpdate(state) => {
                 // Write power-state.env for screensaver-ctl (fire-and-forget)
                 let env_content = state.to_env_format();
