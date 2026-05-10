@@ -86,7 +86,7 @@ or compatible permissive licenses:
 
 ## License
 
-Copyright © 2025-2026 Freed Dev LLC
+Copyright © 2025-2026 Jonathan Freed
 
 This project is licensed under the **GNU General Public License v3.0 only**
 (GPL-3.0-only). See [LICENSE](LICENSE) for the full license text.
