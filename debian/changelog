@@ -1,3 +1,18 @@
+cosmic-order (0.15.0) noble; urgency=medium
+
+  * Visuals: COSMIC built-in themes selector (Dark/Light/HC variants).
+  * Screensaver: power settings section with live D-Bus state and
+    per-profile effect overrides.
+  * Screensaver: clock font input.
+  * Screensaver: warn when bundled shell scripts are not installed.
+  * Wallpaper: cosmic-order wallpaper add --set applies the image.
+  * Tool sync: configurable Neovim colorscheme (default tokyonight).
+  * Tool sync: surface manual-reload hints for Zellij, fzf, lazygit.
+  * Theme: high-contrast variants apply via CosmicTheme::write_entry.
+  * Window size persists across sessions.
+
+ -- Jonathan Freed <jon@freed-dev.com>  Sun, 10 May 2026 12:00:00 -0400
+
 cosmic-order (0.14.0) noble; urgency=medium
 
   * First public release.
