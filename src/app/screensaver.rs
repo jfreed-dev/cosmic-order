@@ -94,6 +94,10 @@ impl App {
                 }
                 Task::none()
             }
+            pages::ScreensaverMessage::SetClockFont(font) => {
+                self.screensaver_config.clock_font = font;
+                Task::none()
+            }
             pages::ScreensaverMessage::SetTerminal(index) => {
                 let terminals = ["ghostty", "cosmic-term"];
                 if let Some(&term) = terminals.get(index) {
@@ -747,6 +751,14 @@ impl App {
             ))
         });
 
+        let clock_font_input =
+            widget::text_input(fl!("screensaver-clock-font-placeholder"), &cfg.clock_font)
+                .on_input(|font| {
+                    Message::Page(pages::Message::Screensaver(
+                        pages::ScreensaverMessage::SetClockFont(font),
+                    ))
+                });
+
         widget::column()
             .spacing(spacing.space_s)
             .push(widget::text::title4(fl!("screensaver-settings")))
@@ -786,6 +798,10 @@ impl App {
                     .add(widget::settings::item(
                         fl!("screensaver-clock-format"),
                         clock_fmt_dropdown,
+                    ))
+                    .add(widget::settings::item(
+                        fl!("screensaver-clock-font"),
+                        clock_font_input,
                     )),
             )
             // Cursor & Dismiss section

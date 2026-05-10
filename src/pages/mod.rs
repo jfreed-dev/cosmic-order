@@ -145,6 +145,8 @@ pub enum ScreensaverMessage {
     SetClockDuration(usize),
     /// Set clock format (dropdown index)
     SetClockFormat(usize),
+    /// Set clock font (free-form font name; empty = default)
+    SetClockFont(String),
     /// Set terminal emulator (dropdown index)
     SetTerminal(usize),
     /// Select a logo from the grid by its file path
