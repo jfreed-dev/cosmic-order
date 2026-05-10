@@ -161,3 +161,49 @@ health-check-quick:
 # Run with memory profiler (requires heaptrack)
 heaptrack:
     heaptrack cargo run --release
+
+# Activate tracked git hooks (.githooks/) for this clone
+setup-hooks:
+    git config core.hooksPath .githooks
+    @echo "Hooks active: pre-commit (just pre-commit), pre-push (just health-check-quick)"
+
+# --- Release pipeline (local CI/CD) ---
+
+# Output dir for release artifacts
+dist-dir := 'dist'
+deb-builder-image := 'cosmic-order-deb-builder:noble'
+
+# Build the .deb-builder docker image (cached after first run)
+release-image:
+    docker build -f scripts/Dockerfile.deb-builder -t {{deb-builder-image}} scripts/
+
+# Pre-flight checks for release: clean tree, on main, version sanity, tests
+release-check VERSION:
+    @if [ -n "$(git status --porcelain)" ]; then echo "release-check: working tree not clean"; exit 1; fi
+    @if [ "$(git rev-parse --abbrev-ref HEAD)" != "main" ]; then echo "release-check: not on main branch"; exit 1; fi
+    @if ! grep -q '^version = "{{VERSION}}"' Cargo.toml; then echo "release-check: Cargo.toml version != {{VERSION}}"; exit 1; fi
+    @if ! head -1 debian/changelog | grep -q "^cosmic-order ({{VERSION}})"; then echo "release-check: top of debian/changelog != {{VERSION}}"; exit 1; fi
+    @if git rev-parse "v{{VERSION}}" >/dev/null 2>&1; then echo "release-check: tag v{{VERSION}} already exists"; exit 1; fi
+    just health-check-quick
+
+# Build .deb in debian:noble container; result lands in dist/
+release-deb VERSION: release-image vendor
+    mkdir -p {{dist-dir}}
+    docker run --rm \
+        --user "$(id -u):$(id -g)" \
+        -v "$(pwd)":/work \
+        -e HOME=/tmp \
+        -e VENDOR=0 \
+        {{deb-builder-image}} \
+        bash -c "git config --global --add safe.directory /work && dpkg-buildpackage -us -uc -b -d"
+    mv ../cosmic-order_{{VERSION}}_*.deb ../cosmic-order_{{VERSION}}_*.buildinfo ../cosmic-order_{{VERSION}}_*.changes {{dist-dir}}/ 2>/dev/null || true
+    just clean-vendor
+    @echo "Built .deb in {{dist-dir}}/"
+
+# Full release: pre-flight + .deb + annotated tag. Push tag manually after.
+release VERSION: (release-check VERSION) (release-deb VERSION)
+    git tag -a "v{{VERSION}}" -m "Release v{{VERSION}}"
+    @echo ""
+    @echo "Release v{{VERSION}} ready."
+    @echo "  Tag:     v{{VERSION}} (push: git push origin v{{VERSION}})"
+    @echo "  Package: $(ls {{dist-dir}}/cosmic-order_{{VERSION}}_*.deb 2>/dev/null | head -1)"

@@ -72,6 +72,9 @@ coverage/
 /vendor/
 vendor.tar
 
+# Release artifacts (just release VERSION)
+/dist/
+
 # Debian build artifacts
 debian/.debhelper/
 debian/cosmic-order/

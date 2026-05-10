@@ -1,0 +1,36 @@
+# Build container for cosmic-order .deb packaging.
+# Targets debian:noble (matches debian/changelog distribution).
+# Used by `just release-deb VERSION`.
+FROM debian:noble
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        ca-certificates \
+        cmake \
+        curl \
+        debhelper \
+        devscripts \
+        dpkg-dev \
+        fakeroot \
+        git \
+        libexpat1-dev \
+        libfontconfig-dev \
+        libfreetype-dev \
+        libxkbcommon-dev \
+        pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# Project requires Rust >= 1.90; noble's rustc is too old. Install via rustup.
+ENV RUSTUP_HOME=/usr/local/rustup CARGO_HOME=/usr/local/cargo
+ENV PATH=/usr/local/cargo/bin:$PATH
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+        | sh -s -- -y --default-toolchain stable --profile minimal --no-modify-path \
+    && chmod -R a+rwX /usr/local/rustup /usr/local/cargo
+
+# debian/control requires just >= 1.13; noble repo is older. Install upstream.
+RUN curl --proto '=https' --tlsv1.2 -sSfL https://just.systems/install.sh \
+        | bash -s -- --to /usr/local/bin
+
+WORKDIR /work

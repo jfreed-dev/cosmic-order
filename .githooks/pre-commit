@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Local CI: fmt-check + clippy + tests before every commit.
+# Bypass with `git commit --no-verify` if you really need to.
+# Activate with: just setup-hooks
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+if ! command -v just >/dev/null 2>&1; then
+    echo "pre-commit: 'just' not installed; skipping checks" >&2
+    exit 0
+fi
+
+exec just pre-commit
