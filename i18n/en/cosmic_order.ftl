@@ -23,6 +23,8 @@ community-themes = Community Themes
 community-themes-dark = Community Themes (Dark)
 community-themes-cosmictron = Cosmictron (Dark)
 community-themes-light = Community Themes (Light)
+builtin-themes = COSMIC Built-in Themes
+builtin-themes-select = Theme
 
 # Screensaver Page
 screensaver-description = Configure the terminal-based screensaver

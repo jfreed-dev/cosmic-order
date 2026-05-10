@@ -1194,6 +1194,19 @@ impl App {
     fn view_theme_selectors(&self) -> Element<'_, Message> {
         let previewing_id = self.theme_preview_backup.as_ref().map(|b| b.previewing_id);
 
+        let builtin_previews = crate::theme_config::ThemePreview::built_in_themes();
+        let builtin_names: Vec<String> = builtin_previews.iter().map(|p| p.name.clone()).collect();
+        let builtin_selected =
+            previewing_id.and_then(|id| builtin_previews.iter().position(|p| p.id == id));
+        let builtin_ids: Vec<crate::theme_config::ThemeId> =
+            builtin_previews.iter().map(|p| p.id).collect();
+        let builtin_dropdown = widget::dropdown(builtin_names, builtin_selected, move |idx| {
+            let theme_id = builtin_ids[idx];
+            Message::Page(pages::Message::Visuals(pages::ThemesMessage::PreviewTheme(
+                theme_id,
+            )))
+        });
+
         let cosmic_dark = crate::bundled_themes::cosmic_dark_themes();
         let cosmic_dark_names: Vec<String> =
             cosmic_dark.iter().map(|(m, _)| m.name.clone()).collect();
@@ -1243,20 +1256,32 @@ impl App {
             )))
         });
 
-        widget::settings::section()
-            .title(fl!("community-themes"))
-            .add(widget::settings::item(
-                fl!("community-themes-dark"),
-                cosmic_dark_dropdown,
-            ))
-            .add(widget::settings::item(
-                fl!("community-themes-cosmictron"),
-                cosmictron_dropdown,
-            ))
-            .add(widget::settings::item(
-                fl!("community-themes-light"),
-                light_dropdown,
-            ))
+        widget::column()
+            .spacing(cosmic::theme::spacing().space_s)
+            .push(
+                widget::settings::section()
+                    .title(fl!("builtin-themes"))
+                    .add(widget::settings::item(
+                        fl!("builtin-themes-select"),
+                        builtin_dropdown,
+                    )),
+            )
+            .push(
+                widget::settings::section()
+                    .title(fl!("community-themes"))
+                    .add(widget::settings::item(
+                        fl!("community-themes-dark"),
+                        cosmic_dark_dropdown,
+                    ))
+                    .add(widget::settings::item(
+                        fl!("community-themes-cosmictron"),
+                        cosmictron_dropdown,
+                    ))
+                    .add(widget::settings::item(
+                        fl!("community-themes-light"),
+                        light_dropdown,
+                    )),
+            )
             .into()
     }
 
