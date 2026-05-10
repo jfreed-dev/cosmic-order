@@ -122,6 +122,27 @@ impl App {
                 self.session_lock_enabled = enabled;
                 Task::none()
             }
+            pages::ScreensaverMessage::SetDisableOnBattery(enabled) => {
+                self.screensaver_config.disable_on_battery = enabled;
+                Task::none()
+            }
+            pages::ScreensaverMessage::SetBatteryIdleTimeout(index) => {
+                let values: [u32; 4] = [300, 600, 900, 1800];
+                if let Some(&v) = values.get(index) {
+                    self.screensaver_config.battery_idle_timeout = v;
+                }
+                Task::none()
+            }
+            pages::ScreensaverMessage::SetEffectsForProfile(slot, text) => {
+                let cfg = &mut self.screensaver_config;
+                match slot {
+                    pages::EffectProfileSlot::Performance => cfg.effects_performance = text,
+                    pages::EffectProfileSlot::Balanced => cfg.effects_balanced = text,
+                    pages::EffectProfileSlot::Battery => cfg.effects_battery = text,
+                    pages::EffectProfileSlot::Minimal => cfg.effects_minimal = text,
+                }
+                Task::none()
+            }
             pages::ScreensaverMessage::SelectLogo(path) => {
                 self.logo_preview_text = Self::load_logo_text(&path);
                 self.screensaver_config.logo_file = path;
@@ -732,6 +753,153 @@ impl App {
             .into()
     }
 
+    /// Power section: live D-Bus status + disable/idle config + per-profile effects
+    #[allow(clippy::too_many_lines)]
+    fn view_screensaver_power_section(&self) -> Element<'_, Message> {
+        let cfg = &self.screensaver_config;
+
+        let status_line = self.power_state.as_ref().map_or_else(
+            || fl!("screensaver-power-status-unknown"),
+            |p| {
+                if p.on_battery {
+                    p.battery_percent.map_or_else(
+                        || fl!("screensaver-power-status-battery-no-pct"),
+                        |pct| fl!("screensaver-power-status-battery", pct = pct),
+                    )
+                } else {
+                    fl!("screensaver-power-status-ac")
+                }
+            },
+        );
+
+        let profile_line = self.power_state.as_ref().map(|p| {
+            let label = match p.power_profile {
+                crate::power::PowerProfile::Performance => "Performance",
+                crate::power::PowerProfile::Balanced => "Balanced",
+                crate::power::PowerProfile::PowerSaver => "Power Saver",
+            };
+            fl!("screensaver-power-profile", profile = label)
+        });
+
+        let s76_line = self.power_state.as_ref().map(|p| {
+            if p.has_system76_power {
+                fl!("screensaver-power-system76-yes")
+            } else {
+                fl!("screensaver-power-system76-no")
+            }
+        });
+
+        let battery_timeout_options: Vec<String> = vec![
+            fl!("screensaver-battery-timeout-5m"),
+            fl!("screensaver-battery-timeout-10m"),
+            fl!("screensaver-battery-timeout-15m"),
+            fl!("screensaver-battery-timeout-30m"),
+        ];
+        let battery_timeout_values: [u32; 4] = [300, 600, 900, 1800];
+        let battery_timeout_selected = battery_timeout_values
+            .iter()
+            .position(|&v| v == cfg.battery_idle_timeout);
+        let battery_timeout_dropdown =
+            widget::dropdown(battery_timeout_options, battery_timeout_selected, |index| {
+                Message::Page(pages::Message::Screensaver(
+                    pages::ScreensaverMessage::SetBatteryIdleTimeout(index),
+                ))
+            });
+
+        let perf_input = widget::text_input(
+            fl!("screensaver-effect-profile-placeholder"),
+            &cfg.effects_performance,
+        )
+        .on_input(|text| {
+            Message::Page(pages::Message::Screensaver(
+                pages::ScreensaverMessage::SetEffectsForProfile(
+                    pages::EffectProfileSlot::Performance,
+                    text,
+                ),
+            ))
+        });
+        let bal_input = widget::text_input(
+            fl!("screensaver-effect-profile-placeholder"),
+            &cfg.effects_balanced,
+        )
+        .on_input(|text| {
+            Message::Page(pages::Message::Screensaver(
+                pages::ScreensaverMessage::SetEffectsForProfile(
+                    pages::EffectProfileSlot::Balanced,
+                    text,
+                ),
+            ))
+        });
+        let bat_input = widget::text_input(
+            fl!("screensaver-effect-profile-placeholder"),
+            &cfg.effects_battery,
+        )
+        .on_input(|text| {
+            Message::Page(pages::Message::Screensaver(
+                pages::ScreensaverMessage::SetEffectsForProfile(
+                    pages::EffectProfileSlot::Battery,
+                    text,
+                ),
+            ))
+        });
+        let min_input = widget::text_input(
+            fl!("screensaver-effect-profile-placeholder"),
+            &cfg.effects_minimal,
+        )
+        .on_input(|text| {
+            Message::Page(pages::Message::Screensaver(
+                pages::ScreensaverMessage::SetEffectsForProfile(
+                    pages::EffectProfileSlot::Minimal,
+                    text,
+                ),
+            ))
+        });
+
+        let mut section = widget::settings::section()
+            .title(fl!("screensaver-power"))
+            .add(widget::settings::item(
+                fl!("screensaver-power-status"),
+                widget::text::body(status_line),
+            ));
+        if let Some(line) = profile_line {
+            section = section.add(widget::settings::item("", widget::text::body(line)));
+        }
+        if let Some(line) = s76_line {
+            section = section.add(widget::settings::item("", widget::text::body(line)));
+        }
+        section = section
+            .add(widget::settings::item(
+                fl!("screensaver-disable-on-battery"),
+                widget::toggler(cfg.disable_on_battery).on_toggle(|enabled| {
+                    Message::Page(pages::Message::Screensaver(
+                        pages::ScreensaverMessage::SetDisableOnBattery(enabled),
+                    ))
+                }),
+            ))
+            .add(widget::settings::item(
+                fl!("screensaver-battery-idle-timeout"),
+                battery_timeout_dropdown,
+            ))
+            .add(widget::settings::item(
+                fl!("screensaver-effect-profile-performance"),
+                perf_input,
+            ))
+            .add(widget::settings::item(
+                fl!("screensaver-effect-profile-balanced"),
+                bal_input,
+            ))
+            .add(widget::settings::item(
+                fl!("screensaver-effect-profile-battery"),
+                bat_input,
+            ))
+            .add(widget::settings::item(
+                fl!("screensaver-effect-profile-minimal"),
+                min_input,
+            ));
+
+        section.into()
+    }
+
     /// Settings sub-section: status, clock, cursor & dismiss, session lock, save button
     #[allow(clippy::too_many_lines)]
     fn view_screensaver_settings_section(&self) -> Element<'_, Message> {
@@ -863,6 +1031,8 @@ impl App {
                         }),
                     )),
             )
+            // Power section: live status + battery toggles + per-profile effects
+            .push(self.view_screensaver_power_section())
             // Session Lock section
             .push(
                 widget::settings::section()

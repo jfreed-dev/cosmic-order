@@ -118,6 +118,15 @@ pub enum WizardMessage {
     Apply,
 }
 
+/// Which screensaver effect profile slot a SetEffectsForProfile message targets
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EffectProfileSlot {
+    Performance,
+    Balanced,
+    Battery,
+    Minimal,
+}
+
 /// Screensaver page messages
 #[derive(Debug, Clone)]
 pub enum ScreensaverMessage {
@@ -163,6 +172,12 @@ pub enum ScreensaverMessage {
     SetDismissOnKey(bool),
     /// Toggle native session lock
     SetSessionLock(bool),
+    /// Toggle disable-on-battery for the screensaver
+    SetDisableOnBattery(bool),
+    /// Set battery idle timeout (seconds; dropdown index)
+    SetBatteryIdleTimeout(usize),
+    /// Override the effects list for a power-state effect profile
+    SetEffectsForProfile(EffectProfileSlot, String),
     /// Save configuration and reload service
     SaveConfig,
     /// Save completed (bool = launch test after save)
