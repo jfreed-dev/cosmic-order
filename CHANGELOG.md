@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   installs system deps (cmake, just, libexpat, libfontconfig,
   libfreetype, libxkbcommon, pkg-config), provisions Rust stable with
   rustfmt+clippy via the runner's pre-installed rustup, caches via
-  github-owned `actions/cache@v4`, and runs `just pre-commit`
+  github-owned `actions/cache@v5` (Node.js 24), and runs `just pre-commit`
   (fmt-check + clippy --pedantic + tests). Triggers on push/PR to
   `main`. Uses only github-owned actions to satisfy the repo's
   Actions allow-list policy. Mirrors the gating pattern used by
