@@ -187,15 +187,21 @@ release-check VERSION:
     just health-check-quick
 
 # Build .deb in debian:noble container; result lands in dist/
+#
+# dpkg-buildpackage writes its outputs (.deb, .buildinfo, .changes) to
+# the parent of the source tree. Mount the project's parent dir into
+# /build so the container user can write there, and cd into the project
+# subdir before running dpkg-buildpackage.
 release-deb VERSION: release-image vendor
     mkdir -p {{dist-dir}}
     docker run --rm \
         --user "$(id -u):$(id -g)" \
-        -v "$(pwd)":/work \
+        -v "$(pwd)/..":/build \
+        -w "/build/$(basename $(pwd))" \
         -e HOME=/tmp \
         -e VENDOR=0 \
         {{deb-builder-image}} \
-        bash -c "git config --global --add safe.directory /work && dpkg-buildpackage -us -uc -b -d"
+        bash -c "git config --global --add safe.directory '*' && dpkg-buildpackage -us -uc -b -d"
     mv ../cosmic-order_{{VERSION}}_*.deb ../cosmic-order_{{VERSION}}_*.buildinfo ../cosmic-order_{{VERSION}}_*.changes {{dist-dir}}/ 2>/dev/null || true
     just clean-vendor
     @echo "Built .deb in {{dist-dir}}/"
