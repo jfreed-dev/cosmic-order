@@ -21,19 +21,30 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             cmake \
+            just \
             libexpat1-dev \
             libfontconfig-dev \
             libfreetype-dev \
             libxkbcommon-dev \
             pkg-config
 
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust toolchain (rustfmt + clippy)
+        run: |
+          rustup default stable
+          rustup component add rustfmt clippy
+          rustc --version
+          cargo --version
+
+      - name: Cache cargo registry, git, and target
+        uses: actions/cache@v4
         with:
-          components: rustfmt, clippy
-
-      - uses: Swatinem/rust-cache@v2
-
-      - uses: extractions/setup-just@v2
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
       - name: just pre-commit
         run: just pre-commit

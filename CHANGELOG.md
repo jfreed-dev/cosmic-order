@@ -10,11 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `.github/workflows/ci.yml` — minimal GitHub Actions workflow that
-  installs system deps (cmake, libexpat, libfontconfig, libfreetype,
-  libxkbcommon, pkg-config), pulls Rust stable with rustfmt+clippy,
-  caches with Swatinem/rust-cache, and runs `just pre-commit`
+  installs system deps (cmake, just, libexpat, libfontconfig,
+  libfreetype, libxkbcommon, pkg-config), provisions Rust stable with
+  rustfmt+clippy via the runner's pre-installed rustup, caches via
+  github-owned `actions/cache@v4`, and runs `just pre-commit`
   (fmt-check + clippy --pedantic + tests). Triggers on push/PR to
-  `main`. Mirrors the gating pattern used by `jfreed-dev/niri-screensaver`.
+  `main`. Uses only github-owned actions to satisfy the repo's
+  Actions allow-list policy. Mirrors the gating pattern used by
+  `jfreed-dev/niri-screensaver`.
 - README banner badges (License GPL-3.0, Latest release, CI) directly
   under the H1, mirroring the niri-screensaver layout.
 - README `Trademarks` section explicitly disclaiming affiliation with
