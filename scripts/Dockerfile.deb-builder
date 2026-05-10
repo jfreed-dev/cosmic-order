@@ -1,7 +1,8 @@
 # Build container for cosmic-order .deb packaging.
-# Targets debian:noble (matches debian/changelog distribution).
+# Targets ubuntu:noble (matches debian/changelog distribution; "noble" is
+# Ubuntu 24.04 LTS, not a Debian release).
 # Used by `just release-deb VERSION`.
-FROM debian:noble
+FROM ubuntu:noble
 
 ENV DEBIAN_FRONTEND=noninteractive
 
