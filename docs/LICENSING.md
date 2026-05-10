@@ -42,18 +42,26 @@ but attribution to original projects is good practice.
 
 ## Screensaver Components
 
-| Component | Source | License |
-|-----------|--------|---------|
-| ASCII logos (`cosmic-*`) | Original | GPL-3.0-only |
-| TTE effects | terminaltexteffects | MIT |
-| Clock display | Original | GPL-3.0-only |
+| Component | Source | License | Trademark notes |
+|-----------|--------|---------|-----------------|
+| ASCII logos (`cosmic-*`) | Original ASCII art | GPL-3.0-only (file content) | Renders System76's COSMIC brand for nominative use; see below |
+| TTE effects | terminaltexteffects | MIT | n/a |
+| Clock display | Original | GPL-3.0-only | n/a |
 
 ### ASCII Logo Status
 
-Trademarked logos (Framework Computer, Pop!_OS / System76) were removed from
-`resources/screensaver/logos/` in v0.15.0+. Only the project's original
-`cosmic-*` logos ship in the repository and the `.deb` package. Users can
-drop their own logo files into `~/.local/share/cosmic-order/screensaver/`.
+Trademarked logos for **unrelated brands** (Framework Computer, Pop!_OS) were
+removed from `resources/screensaver/logos/` in v0.15.0+ — see commit
+`31c53f3`. Only the `cosmic-*` logos remain; users can drop their own logo
+files into `~/.local/share/cosmic-order/screensaver/`.
+
+The surviving `cosmic-*` files render System76's **COSMIC** brand mark, which
+is what COSMIC ORDER extends. The ASCII art itself is original work
+distributable under GPL-3.0-only, but that license cannot grant any rights in
+the underlying trademark — they are kept for **nominative use** (identifying
+the desktop environment this software targets), and shipped with an
+explicit affiliation disclaimer in `README.md` § "Trademarks" and a per-file
+notice in `resources/screensaver/logos/LICENSES.md`.
 
 ## Public-Release Status
 
@@ -67,6 +75,8 @@ drop their own logo files into `~/.local/share/cosmic-order/screensaver/`.
 | README attribution for OMARCHY + System76 | ✅ |
 | README attribution for MIT theme color sources | ✅ |
 | Trademarked ASCII logos (Framework, Pop!_OS) | ✅ Removed |
+| README "Trademarks" disclaimer for System76 / COSMIC | ✅ |
+| Per-file logo attribution (`resources/screensaver/logos/LICENSES.md`) | ✅ |
 
 ---
 

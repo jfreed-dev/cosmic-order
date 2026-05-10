@@ -5,6 +5,31 @@ All notable changes to COSMIC ORDER are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- README banner badges (License GPL-3.0, Latest release) directly under
+  the H1, mirroring the niri-screensaver layout. CI badge deferred until
+  a workflow lands in `.github/workflows/`.
+- README `Trademarks` section explicitly disclaiming affiliation with
+  System76. "COSMIC" is a trademark of System76, Inc.; the project name
+  and the surviving `cosmic-*` ASCII logos reference that mark for
+  nominative use only.
+- `resources/screensaver/logos/LICENSES.md` documents per-file
+  attribution and trademark status for every remaining bundled logo,
+  matching the pattern used in `jfreed-dev/niri-screensaver`.
+
+### Changed
+
+- `docs/LICENSING.md` § "ASCII Logo Status" now acknowledges that the
+  surviving `cosmic-*` files render System76's COSMIC brand mark (the
+  ASCII art content is GPL-3.0-only, but that license cannot grant
+  rights in the underlying trademark — they're kept for nominative
+  identification of the desktop COSMIC ORDER extends). The Public
+  Release Status table gains a Trademarks-disclaimer row and a
+  per-file-attribution row.
+
 ## [0.15.0] — 2026-05-10
 
 ### Added

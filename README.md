@@ -1,5 +1,8 @@
 # COSMIC ORDER
 
+[![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/jfreed-dev/cosmic-order)](https://github.com/jfreed-dev/cosmic-order/releases)
+
 OMARCHY-inspired workflow and aesthetics for COSMIC Desktop.
 
 Built with [libcosmic](https://github.com/pop-os/libcosmic).
@@ -83,6 +86,20 @@ or compatible permissive licenses:
 - [Gruvbox](https://github.com/morhetz/gruvbox) by morhetz
 - [Nord](https://www.nordtheme.com/) by Arctic Ice Studio
 - [Rose Pine](https://rosepinetheme.com/) by the Rose Pine team
+
+## Trademarks
+
+COSMIC ORDER is **independent third-party software** and is **not
+affiliated with or endorsed by System76**. "COSMIC" is a trademark of
+System76, Inc.; the project name and the bundled `cosmic-*` ASCII
+logos in `resources/screensaver/logos/` reference that mark to
+identify the desktop environment this software extends. Trademarked
+ASCII logos for unrelated brands (Framework, Pop!_OS) were removed in
+v0.15.0; see [docs/LICENSING.md](docs/LICENSING.md) for the audit
+trail.
+
+If you are System76 and would like the project name, bundled logos,
+or any of the integration language adjusted, please open an issue.
 
 ## License
 
