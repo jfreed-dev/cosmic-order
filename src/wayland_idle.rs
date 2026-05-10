@@ -82,12 +82,10 @@ impl Dispatch<wl_registry::WlRegistry, ()> for IdleState {
                         registry.bind::<ExtIdleNotifierV1, _, Self>(name, version, qh, ());
                     state.notifier = Some(notifier);
                 }
-                "wl_seat" => {
+                "wl_seat" if state.seat.is_none() => {
                     // Bind only the first seat
-                    if state.seat.is_none() {
-                        let seat = registry.bind::<wl_seat::WlSeat, _, Self>(name, version, qh, ());
-                        state.seat = Some(seat);
-                    }
+                    let seat = registry.bind::<wl_seat::WlSeat, _, Self>(name, version, qh, ());
+                    state.seat = Some(seat);
                 }
                 _ => {}
             }
