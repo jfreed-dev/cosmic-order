@@ -44,15 +44,16 @@ but attribution to original projects is good practice.
 
 | Component | Source | License |
 |-----------|--------|---------|
-| ASCII logos | Original/inspired | To be documented |
+| ASCII logos (`cosmic-*`) | Original | GPL-3.0-only |
 | TTE effects | terminaltexteffects | MIT |
 | Clock display | Original | GPL-3.0-only |
 
 ### ASCII Logo Status
 
-- [ ] Verify Framework logo usage rights
-- [ ] Verify Pop!_OS logo usage rights (System76 trademark)
-- [ ] Create original logos or get permission
+Trademarked logos (Framework Computer, Pop!_OS / System76) were removed from
+`resources/screensaver/logos/` in v0.15.0+. Only the project's original
+`cosmic-*` logos ship in the repository and the `.deb` package. Users can
+drop their own logo files into `~/.local/share/cosmic-order/screensaver/`.
 
 ## Public-Release Status
 
@@ -65,18 +66,7 @@ but attribution to original projects is good practice.
 | `metainfo.xml` `project_license = GPL-3.0-only` | ✅ |
 | README attribution for OMARCHY + System76 | ✅ |
 | README attribution for MIT theme color sources | ✅ |
-| Trademarked ASCII logos (Framework, Pop!_OS) | ⚠️ Open — see below |
-
-### Trademark Open Item
-
-`resources/screensaver/logos/` ships ASCII renderings of the Framework Computer
-and Pop!_OS / System76 logos. ASCII logos can still implicate trademark even
-where copyright does not apply. Resolve before any sustained public marketing
-push:
-
-- Obtain explicit usage permission from the trademark owners, or
-- Replace with original ASCII art the project owns, or
-- Ship without the trademarked logos (cosmic-* logos are fine to retain).
+| Trademarked ASCII logos (Framework, Pop!_OS) | ✅ Removed |
 
 ---
 

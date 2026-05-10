@@ -1104,10 +1104,10 @@ setup() {
 
     # Copy default logo if none exists
     if [[ ! -f "$SCREENSAVER_DIR/logo.txt" ]]; then
-        local default_logo="${SCRIPT_DIR}/logos/pop-os-name-with-icon.txt"
+        local default_logo="${SCRIPT_DIR}/logos/cosmic-name-with-icon.txt"
         if [[ -f "$default_logo" ]]; then
             cp "$default_logo" "$SCREENSAVER_DIR/logo.txt"
-            log_info "Copied default logo (pop-os-name-with-icon)"
+            log_info "Copied default logo (cosmic-name-with-icon)"
         else
             # Fallback: use first available logo
             local first_logo
