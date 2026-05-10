@@ -86,12 +86,28 @@ impl ThemePreview {
 
     /// Apply this theme preset
     pub fn apply(&self) -> Result<(), ThemeError> {
-        // Set the dark mode based on theme
         ThemeConfig::set_dark_mode(self.is_dark)?;
 
-        // Note: High contrast themes would need additional handling
-        // For now, we just switch between dark/light
-        // TODO: Add high contrast toggle support
+        let theme = match self.id {
+            ThemeId::Dark => Some(CosmicTheme::dark_default()),
+            ThemeId::Light => Some(CosmicTheme::light_default()),
+            ThemeId::HighContrastDark => Some(CosmicTheme::high_contrast_dark_default()),
+            ThemeId::HighContrastLight => Some(CosmicTheme::high_contrast_light_default()),
+            ThemeId::Bundled(_) => None,
+        };
+
+        if let Some(theme) = theme {
+            let config = if self.is_dark {
+                CosmicTheme::dark_config()
+            } else {
+                CosmicTheme::light_config()
+            }
+            .map_err(|e| ThemeError::ConfigAccess(e.to_string()))?;
+
+            theme
+                .write_entry(&config)
+                .map_err(|e| ThemeError::ConfigWrite(e.to_string()))?;
+        }
 
         Ok(())
     }
