@@ -1,0 +1,7 @@
+cosmic-order (0.14.0) noble; urgency=medium
+
+  * First public release.
+  * Bundled screensaver scripts and ASCII logos in the .deb package.
+  * Repository moved to jfreed-dev/cosmic-order.
+
+ -- Jonathan Freed <jon@freed-dev.com>  Sun, 10 May 2026 00:00:00 -0400

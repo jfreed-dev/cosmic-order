@@ -1,0 +1,129 @@
+[package]
+name = "cosmic-order"
+version = "0.14.0"
+edition = "2024"
+rust-version = "1.90"
+license = "GPL-3.0-only"
+authors = ["Jonathan Freed <jon@freed-dev.com>"]
+description = "OMARCHY-inspired workflow and aesthetics for COSMIC Desktop - establishing order in the chaos"
+repository = "https://github.com/jfreed-dev/cosmic-order"
+readme = "README.md"
+keywords = ["cosmic", "pop-os", "omarchy", "theme", "workflow", "keyboard-first"]
+categories = ["gui"]
+
+[dependencies]
+# COSMIC / libcosmic
+libcosmic = { git = "https://github.com/pop-os/libcosmic.git", rev = "03d0171b", default-features = false, features = [
+    "dbus-config",
+    "desktop",
+    "multi-window",
+    "tokio",
+    "wayland",
+    "winit",
+    "xdg-portal",
+] }
+cosmic-config = { git = "https://github.com/pop-os/libcosmic.git", rev = "03d0171b" }
+
+# Async runtime
+tokio = { version = "1", features = ["fs", "sync", "rt", "time"] }
+
+# CLI
+clap = { version = "4.5", features = ["derive"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ron = "0.8"
+toml = "0.8"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# i18n
+i18n-embed = { version = "0.15", features = ["fluent-system", "desktop-requester"] }
+i18n-embed-fl = "0.9"
+rust-embed = "8"
+unic-langid = "0.9"
+
+# Error handling
+thiserror = "2"
+
+# Image validation (CLI wallpaper download)
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp", "gif", "bmp"] }
+
+# HTTP client (CLI wallpaper download)
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+
+# D-Bus (power monitoring via UPower)
+zbus = { version = "5", default-features = false, features = ["tokio"] }
+
+# Wayland protocols (idle notification)
+wayland-client = "0.31"
+wayland-protocols = { version = "0.32", features = ["client", "staging"] }
+
+# Utilities
+directories = "5"
+
+[build-dependencies]
+# None needed yet
+
+[dev-dependencies]
+
+[features]
+default = []
+
+# Lint configuration
+[lints.rust]
+unsafe_code = "deny"
+rust_2018_idioms = { level = "warn", priority = -1 }
+
+[lints.clippy]
+# Deny dangerous patterns
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "warn"
+unimplemented = "warn"
+
+# Warn on code quality issues
+clone_on_ref_ptr = "warn"
+cognitive_complexity = "warn"
+dbg_macro = "warn"
+debug_assert_with_mut_call = "warn"
+empty_line_after_outer_attr = "warn"
+fallible_impl_from = "warn"
+imprecise_flops = "warn"
+inefficient_to_string = "warn"
+macro_use_imports = "warn"
+# match_on_vec_items removed - covered by indexing_slicing
+missing_const_for_fn = "warn"
+needless_continue = "warn"
+needless_for_each = "warn"
+option_option = "warn"
+path_buf_push_overwrite = "warn"
+redundant_pub_crate = "warn"
+suboptimal_flops = "warn"
+trivially_copy_pass_by_ref = "warn"
+unused_self = "warn"
+use_self = "warn"
+verbose_file_reads = "warn"
+
+# Allow certain patterns
+too_many_arguments = "allow"
+type_complexity = "allow"
+module_inception = "allow"
+
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+panic = "abort"
+strip = true
+
+[profile.release-with-debug]
+inherits = "release"
+debug = true
+strip = false

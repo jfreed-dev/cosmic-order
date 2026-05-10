@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.github.jfreed-dev.CosmicOrder</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <name>COSMIC ORDER</name>
+  <summary>OMARCHY-inspired workflow and aesthetics for COSMIC Desktop</summary>
+  <description>
+    <p>
+      COSMIC ORDER brings the keyboard-first workflow you love to the desktop
+      you deserve. Manage themes, wallpapers, and screensaver settings from a
+      single native COSMIC application.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Theme management with live preview, accent color presets, and import/export</li>
+      <li>Wallpaper browsing with thumbnail grid, collection filtering, and rotation</li>
+      <li>Terminal-based screensaver configuration with effects, clock, and timeouts</li>
+      <li>Power-aware screensaver that adapts to battery state</li>
+      <li>Caffeine mode to temporarily prevent idle sleep</li>
+      <li>Tool theme sync — propagate COSMIC colors to Ghostty and other tools</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">com.github.jfreed-dev.CosmicOrder.desktop</launchable>
+  <url type="homepage">https://github.com/jfreed-dev/cosmic-order</url>
+  <url type="bugtracker">https://github.com/jfreed-dev/cosmic-order/issues</url>
+  <developer id="com.github.jfreed-dev">
+    <name>jfreed-dev</name>
+  </developer>
+  <categories>
+    <category>Settings</category>
+    <category>Utility</category>
+    <category>DesktopSettings</category>
+  </categories>
+  <content_rating type="oars-1.1" />
+  <releases>
+    <release version="0.14.0" date="2026-05-10">
+      <description>
+        <p>First public release. Repository moved to jfreed-dev/cosmic-order. Adds community-health files, expanded README attribution, and a project changelog. Internal review notes and pre-release brainstorms removed.</p>
+      </description>
+    </release>
+    <release version="0.14.0-beta" date="2026-02-08">
+      <description>
+        <p>Beta release: dead code removal, clippy pedantic cleanup, pinned dependencies, wallpaper URL download, and overall stabilization.</p>
+      </description>
+    </release>
+    <release version="0.13.0" date="2026-02-08">
+      <description>
+        <p>Phase 8: CLI interface for scripting theme sync, color extraction, and theme switching with JSON output support.</p>
+      </description>
+    </release>
+    <release version="0.12.0" date="2026-02-08">
+      <description>
+        <p>Phase 7A: Native idle detection via ext-idle-notify-v1 Wayland protocol with automatic swayidle fallback and lock-before-suspend via logind.</p>
+      </description>
+    </release>
+    <release version="0.11.0" date="2026-02-08">
+      <description>
+        <p>Phase 6D: Real-time theme propagation with auto-sync on COSMIC theme change and live reload of Ghostty, Neovim, and btop.</p>
+      </description>
+    </release>
+    <release version="0.10.0" date="2026-02-08">
+      <description>
+        <p>Phase 6C: fzf and lazygit theme generators plus a hook system for user-defined custom generators.</p>
+      </description>
+    </release>
+    <release version="0.9.0" date="2026-02-08">
+      <description>
+        <p>Phase 6B: Additional tool theme generators for btop, Neovim (LazyVim), and Zellij with per-tool sync toggles.</p>
+      </description>
+    </release>
+    <release version="0.8.0" date="2026-02-08">
+      <description>
+        <p>Phase 6A: Tool theme synchronization with COSMIC color extraction, colors.toml generation, and Ghostty theme sync.</p>
+      </description>
+    </release>
+    <release version="0.7.0" date="2026-02-08">
+      <description>
+        <p>Phase 5: Polish and integration release with async thumbnails, tooltips, AppStream metadata, and Debian packaging.</p>
+      </description>
+    </release>
+  </releases>
+  <requires>
+    <display_length compare="ge">768</display_length>
+  </requires>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+</component>
