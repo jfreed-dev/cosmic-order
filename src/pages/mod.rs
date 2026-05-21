@@ -118,7 +118,7 @@ pub enum WizardMessage {
     Apply,
 }
 
-/// Which screensaver effect profile slot a SetEffectsForProfile message targets
+/// Which screensaver effect profile slot a `SetEffectsForProfile` message targets
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EffectProfileSlot {
     Performance,
