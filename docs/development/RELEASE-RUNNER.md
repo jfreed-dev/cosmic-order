@@ -58,19 +58,32 @@ loaded**, and the stack runs it as a prebuilt `image:` (no `build:`):
    **Dockge stack** at `/share/appdata/dockge/opt/stacks/cosmic-order-runner/`
    (`compose.yaml` + `.env`); deploy from the Dockge UI.
 
-> **Network note (important — not build-ready yet):** Thor's outbound network
-> is currently too unstable for builds. (1) Port 80 (HTTP) is **blocked**, so
-> the image uses HTTPS apt mirrors (the `sed` in `Dockerfile.runner`). (2) Even
-> on 443, **bulk parallel downloads fail intermittently** (`Unable to connect
-> …:443` on most packages of an `apt-get install`), so dependency installs and
-> `cargo` crate fetches fail — a single connection works (curl 200, ~6.5 s slow
-> first-connect) but many-connection workloads don't. (3) The Actions long-poll
-> drops every ~15–20 min, so the runner flaps `offline`; `docker restart
-> cosmic-order-runner` reconnects it and it picks up queued jobs. Net: the
-> runner registers and runs jobs, but **builds fail until Thor's WAN/outbound
-> is stabilized**. Until then, cut releases locally (`just release VERSION`),
-> and CI is pinned to the spark runner. Re-test with `gh workflow run
-> runner-smoke.yml` after fixing the network.
+> **Network note (resolved — build-ready):** Thor's intermittent egress was the
+> long pole; addressed in layers, all baked into the image:
+> (1) port 80 (HTTP) is blocked → HTTPS apt mirrors;
+> (2) apt's parallel download bursts were dropped → apt is serialized
+> (`Acquire::Queue-Mode access` + retries);
+> (3) the **full build toolchain** (build deps + rust under `/opt` + `just` +
+> `gh`) is baked in, so jobs do **no apt at runtime** — only `cargo` (one
+> multiplexed connection, `CARGO_NET_RETRY=10`) and the git checkout touch the
+> network. After an egress tune on Thor, a full smoke build (`runner-smoke.yml`)
+> went green end-to-end, so **releases are tag-triggered** (see below). If the
+> egress hits a rare bad window mid-build, just re-run (`gh run rerun <id>` or
+> re-push the tag). CI stays pinned to the spark runner.
+
+## Cutting a release (tag-triggered)
+
+Releases are built and published by `release.yml` on the Thor runner:
+
+```bash
+git tag -a v0.18.0 -m "v0.18.0" && git push origin v0.18.0
+```
+
+The tag push triggers `release.yml`, which builds the amd64 `.deb` on the
+runner and publishes a GitHub Release with the package attached and notes
+pulled from `CHANGELOG.md`. Bump the version (`Cargo.toml`, `Cargo.lock`,
+`debian/changelog`) and promote the CHANGELOG `[Unreleased]` section first.
+Probe the runner anytime with `gh workflow run runner-smoke.yml`.
 
 ## 2. Register a runner for this repo
 
