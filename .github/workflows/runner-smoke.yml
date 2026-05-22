@@ -1,0 +1,51 @@
+name: Runner smoke test
+
+# On-demand health check for the amd64 self-hosted runner: confirms it can
+# check out, install the toolchain, and compile the project over its network
+# (the part that has been flaky on Thor). Does not publish anything.
+#   gh workflow run runner-smoke.yml
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Build on amd64 runner
+    runs-on: [self-hosted, linux, X64]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            libexpat1-dev \
+            libfontconfig-dev \
+            libfreetype-dev \
+            libxkbcommon-dev \
+            pkg-config
+
+      - name: Install just
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl --proto '=https' --tlsv1.2 -sSfL https://just.systems/install.sh \
+            | bash -s -- --to "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install Rust toolchain
+        run: |
+          if ! command -v rustup >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+              | sh -s -- -y --default-toolchain stable --profile minimal
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+          rustup default stable
+          rustc --version
+
+      - name: Compile (downloads all deps, builds both binaries)
+        run: cargo build --bin cosmic-order --bin cosmic-order-applet
