@@ -1,3 +1,12 @@
+cosmic-order (0.17.0) noble; urgency=medium
+
+  * Panel applet: new cosmic-order-applet, a COSMIC panel button whose popup
+    gives quick screensaver control — lock now, start the screensaver, an
+    enable/disable toggle that reflects the idle-service state, and open
+    settings. Installed with an X-CosmicApplet desktop entry.
+
+ -- Jonathan Freed <jon@freed-dev.com>  Fri, 22 May 2026 14:30:00 -0400
+
 cosmic-order (0.16.0) noble; urgency=medium
 
   * Screensaver: default terminal switched to Alacritty, which self-fullscreens
