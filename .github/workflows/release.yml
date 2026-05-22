@@ -81,7 +81,10 @@ jobs:
       - name: Build .deb
         run: |
           git config --global --add safe.directory '*'
-          dpkg-buildpackage -us -uc -b -d
+          # VENDOR=0: build online (cargo downloads) instead of via vendor.tar.
+          # The offline vendor-extract (`tar pxf`) hits a chmod EFAULT on the
+          # QNAP container kernel, and the runner can reach crates.io anyway.
+          VENDOR=0 dpkg-buildpackage -us -uc -b -d
           mkdir -p dist
           mv ../cosmic-order_*_amd64.deb dist/
           ls -l dist/
