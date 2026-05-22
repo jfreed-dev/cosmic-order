@@ -4,43 +4,63 @@
 # (see .github/workflows/release.yml). A headless x86_64 build host meant
 # to run as a long-lived container on an amd64 docker host (e.g. Thor).
 #
+# The full build toolchain (system deps + rust + just) is BAKED IN, because
+# Thor's egress is intermittent: baking means a release build hits the network
+# only for `cargo` (one multiplexed, retrying connection) instead of apt's many
+# fragile ones. Build this image where egress is healthy (e.g. the dev laptop).
+#
 # Build:
 #   docker build -f scripts/Dockerfile.runner -t cosmic-order-runner scripts/
-#
 # Run / register: see docs/development/RELEASE-RUNNER.md
 #
-# Uses the official GitHub Actions runner release, checksum-verified — no
-# third-party prebuilt runner image is trusted.
+# Uses the official GitHub Actions runner release, checksum-verified.
 FROM ubuntu:noble
 
-# Pin the runner version and its linux-x64 checksum. Refresh from:
-#   gh api repos/actions/runner/releases/latest --jq .tag_name
-#   (sha256 lives in the release body as "<!-- BEGIN SHA linux-x64 -->")
 ARG RUNNER_VERSION=2.334.0
 ARG RUNNER_SHA256=048024cd2c848eb6f14d5646d56c13a4def2ae7ee3ad12122bee960c56f3d271
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Agent prerequisites only. release.yml installs the full build toolchain
-# (rust, just, build deps) itself at job time via sudo apt-get, so it is
-# deliberately not baked here — keeping this image generic.
+# Agent prerequisites + the full .deb build toolchain. Baked so release jobs
+# need no apt at runtime (see header).
 RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
         ca-certificates \
+        cmake \
         curl \
+        debhelper \
+        devscripts \
+        dpkg-dev \
+        fakeroot \
         git \
         gpg \
         jq \
+        libexpat1-dev \
+        libfontconfig-dev \
+        libfreetype-dev \
+        libxkbcommon-dev \
+        pkg-config \
         sudo \
         tar \
     && rm -rf /var/lib/apt/lists/*
 
-# Non-root runner user with passwordless sudo (release.yml uses sudo).
+# GitHub CLI (release.yml uses `gh release create`), from the official repo.
+RUN mkdir -p -m 755 /etc/apt/keyrings \
+    && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+        | tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
+    && chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+        > /etc/apt/sources.list.d/github-cli.list \
+    && apt-get update \
+    && apt-get install -y gh \
+    && rm -rf /var/lib/apt/lists/*
+
+# Non-root runner user with passwordless sudo.
 RUN useradd --create-home --shell /bin/bash runner \
     && echo 'runner ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/runner \
     && chmod 0440 /etc/sudoers.d/runner
 
-# Fetch + verify the official runner, then install its native deps (libicu
-# etc.) as root before dropping privileges.
+# Official GitHub Actions runner (checksum-verified) + its native deps.
 RUN curl -fsSL -o /tmp/runner.tar.gz \
         "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz" \
     && echo "${RUNNER_SHA256}  /tmp/runner.tar.gz" | sha256sum -c - \
@@ -50,17 +70,27 @@ RUN curl -fsSL -o /tmp/runner.tar.gz \
     && /home/runner/actions-runner/bin/installdependencies.sh \
     && chown -R runner:runner /home/runner
 
-# Point apt at HTTPS mirrors. The intended host (Thor) blocks outbound HTTP
-# (port 80) but allows HTTPS (443), so runtime `apt-get` over the default
-# http:// mirrors hangs; cargo/git/GitHub already use 443. The image is built
-# where port 80 works, so the build-time apt above is unaffected.
-RUN sed -i 's|http://|https://|g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true; \
-    sed -i 's|http://|https://|g' /etc/apt/sources.list 2>/dev/null || true
+# just (system-wide).
+RUN curl --proto '=https' --tlsv1.2 -sSfL https://just.systems/install.sh \
+        | bash -s -- --to /usr/local/bin
 
-# Thor's egress handles single connections fine but drops apt's parallel
-# download bursts. Serialize apt downloads (one connection per access method)
-# and retry, which makes package installs reliable on this network.
-RUN printf 'Acquire::Queue-Mode "access";\nAcquire::Retries "10";\n' \
+# Rust toolchain, installed under /opt (not /home/runner, which the runner's
+# registration volume mounts over) and owned by the runner user so cargo can
+# write its caches during builds.
+ENV RUSTUP_HOME=/opt/rustup \
+    CARGO_HOME=/opt/cargo \
+    PATH=/opt/cargo/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+        | sh -s -- -y --default-toolchain stable --profile minimal \
+    && chown -R runner:runner /opt/rustup /opt/cargo \
+    && /opt/cargo/bin/rustc --version
+
+# Thor's egress blocks outbound HTTP (port 80) and drops apt's parallel
+# download bursts. Point apt at HTTPS mirrors and serialize + retry, so any
+# runtime apt call (or use on a runner without baked deps) still works.
+RUN sed -i 's|http://|https://|g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true; \
+    sed -i 's|http://|https://|g' /etc/apt/sources.list 2>/dev/null || true; \
+    printf 'Acquire::Queue-Mode "access";\nAcquire::Retries "10";\n' \
         > /etc/apt/apt.conf.d/99-cosmic-order-runner.conf
 
 COPY --chown=runner:runner runner-entrypoint.sh /home/runner/entrypoint.sh

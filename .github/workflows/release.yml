@@ -22,32 +22,38 @@ jobs:
     # matching target. Setup: docs/development/RELEASE-RUNNER.md
     runs-on: [self-hosted, linux, X64]
 
+    # The toolchain is baked into the runner image, so the install steps below
+    # are near-no-ops on it; CARGO_NET_RETRY hardens cargo's downloads against
+    # Thor's intermittent egress.
+    env:
+      CARGO_NET_RETRY: "10"
+
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
       - name: Install build dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            cmake \
-            debhelper \
-            devscripts \
-            dpkg-dev \
-            fakeroot \
-            libexpat1-dev \
-            libfontconfig-dev \
-            libfreetype-dev \
-            libxkbcommon-dev \
-            pkg-config
+          if dpkg -s build-essential cmake debhelper dpkg-dev fakeroot \
+                   libfontconfig-dev libxkbcommon-dev pkg-config >/dev/null 2>&1; then
+            echo "Build deps already present (baked into the runner image)."
+          else
+            sudo apt-get update
+            sudo apt-get install -y \
+              build-essential cmake debhelper devscripts dpkg-dev fakeroot \
+              libexpat1-dev libfontconfig-dev libfreetype-dev libxkbcommon-dev pkg-config
+          fi
 
       - name: Install just
         run: |
-          mkdir -p "$HOME/.local/bin"
-          curl --proto '=https' --tlsv1.2 -sSfL https://just.systems/install.sh \
-            | bash -s -- --to "$HOME/.local/bin"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          if command -v just >/dev/null 2>&1; then
+            echo "just already present: $(command -v just)"
+          else
+            mkdir -p "$HOME/.local/bin"
+            curl --proto '=https' --tlsv1.2 -sSfL https://just.systems/install.sh \
+              | bash -s -- --to "$HOME/.local/bin"
+            echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          fi
 
       - name: Install Rust toolchain
         run: |
