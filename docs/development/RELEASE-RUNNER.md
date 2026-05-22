@@ -35,6 +35,35 @@ checksum. To bump the runner version, edit the `RUNNER_VERSION` /
 `RUNNER_SHA256` build args (current values from
 `gh api repos/actions/runner/releases/latest`).
 
+## Constrained builders (QNAP Container Station — the live Thor setup)
+
+Thor's Container Station **cannot build this image**: its BuildKit unpacks
+into a 64 MB `/tmp` tmpfs and the ~280 MB runner extraction overflows it
+(`tar` exits 2). Non-interactive `docker build`/`run` over SSH also fail on
+a per-user-home wrapper. So on Thor the image is **built elsewhere and
+loaded**, and the stack runs it as a prebuilt `image:` (no `build:`):
+
+1. Build on any normal amd64 docker host (e.g. the dev laptop):
+   ```bash
+   docker build -f scripts/Dockerfile.runner -t cosmic-order-runner:latest scripts/
+   ```
+2. Ship + load it (these work non-interactively; only `build`/`run` hit the
+   wrapper):
+   ```bash
+   docker save cosmic-order-runner:latest | gzip | ssh thor 'cat > ~/runner.tar.gz'
+   ssh thor '<container-station>/bin/docker load -i ~/runner.tar.gz'
+   ```
+3. Use an `image:`-only compose (drop `build:`, add `pull_policy: never` so
+   it never tries a registry for this local-only tag). On Thor this is a
+   **Dockge stack** at `/share/appdata/dockge/opt/stacks/cosmic-order-runner/`
+   (`compose.yaml` + `.env`); deploy from the Dockge UI.
+
+> **Network note:** Thor's Container Station egress to GitHub has a slow
+> *first* connect to each new host (~7 s of SYN retransmits, then fast once
+> warm). Registration takes a minute or two, and the runner can show
+> `offline` for ~30 s after start until its job-broker connection settles.
+> Cosmetic for builds, but expect a slower first job.
+
 ## 2. Register a runner for this repo
 
 Mint a short-lived registration token from any machine with `gh` + admin on
