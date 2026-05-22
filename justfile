@@ -198,6 +198,7 @@ release-check VERSION:
     @if [ "$(git rev-parse --abbrev-ref HEAD)" != "main" ]; then echo "release-check: not on main branch"; exit 1; fi
     @if ! grep -q '^version = "{{VERSION}}"' Cargo.toml; then echo "release-check: Cargo.toml version != {{VERSION}}"; exit 1; fi
     @if ! head -1 debian/changelog | grep -q "^cosmic-order ({{VERSION}})"; then echo "release-check: top of debian/changelog != {{VERSION}}"; exit 1; fi
+    @minor=$(echo {{VERSION}} | cut -d. -f1,2); if ! grep -qE "^\|[[:space:]]*${minor}\.x[[:space:]]" SECURITY.md; then echo "release-check: SECURITY.md Supported Versions table not bumped to ${minor}.x"; exit 1; fi
     @if git rev-parse "v{{VERSION}}" >/dev/null 2>&1; then echo "release-check: tag v{{VERSION}} already exists"; exit 1; fi
     just health-check-quick
 
