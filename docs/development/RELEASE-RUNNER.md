@@ -81,8 +81,10 @@ git tag -a v0.18.0 -m "v0.18.0" && git push origin v0.18.0
 
 The tag push triggers `release.yml`, which builds the amd64 `.deb` on the
 runner and publishes a GitHub Release with the package attached and notes
-pulled from `CHANGELOG.md`. Bump the version (`Cargo.toml`, `Cargo.lock`,
-`debian/changelog`) and promote the CHANGELOG `[Unreleased]` section first.
+pulled from `CHANGELOG.md`. Bump the version first (`Cargo.toml`, `Cargo.lock`,
+`debian/changelog`, the `SECURITY.md` Supported Versions table) and promote the
+CHANGELOG `[Unreleased]` section — see the full checklist in
+[WORKFLOW.md](WORKFLOW.md#release-checklist).
 Probe the runner anytime with `gh workflow run runner-smoke.yml`.
 
 ## 2. Register a runner for this repo

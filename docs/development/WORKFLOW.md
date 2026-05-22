@@ -66,14 +66,29 @@ git branch -d feat/my-feature
 
 ## Releases
 
-When ready to cut a release:
+Releases are **tag-triggered**: pushing a `v*` tag runs
+`.github/workflows/release.yml` on the self-hosted amd64 runner, which builds
+the `.deb` and publishes the GitHub Release (notes from `CHANGELOG.md`). See
+[RELEASE-RUNNER.md](RELEASE-RUNNER.md).
 
-```bash
-git tag -a v1.0.0 -m "Release v1.0.0"
-git push --tags
-```
+### Release checklist
 
-Create a GitHub release with a changelog from the tag.
+1. Bump the version everywhere it is pinned:
+   - `Cargo.toml` — `version = "X.Y.Z"`
+   - `Cargo.lock` — the `cosmic-order` package entry (or let a build update it)
+   - `debian/changelog` — add a new top entry
+   - `CHANGELOG.md` — promote `[Unreleased]` to `## [X.Y.Z] — DATE`
+   - `SECURITY.md` — bump the Supported Versions table to `X.Y.x`
+2. Commit (`chore(release): X.Y.Z`) and push `main`.
+3. Tag and push — this builds and publishes:
+   ```bash
+   git tag -a vX.Y.Z -m "vX.Y.Z" && git push origin vX.Y.Z
+   ```
+   If a build hits a transient runner-egress blip, re-run it (`gh run rerun <id>`).
+
+If the runner is unavailable, build locally instead: `just release VERSION`
+builds the `.deb` in the `ubuntu:noble` Docker image and creates the tag; then
+publish with `gh release create vX.Y.Z --notes-file <notes> dist/cosmic-order_*.deb`.
 
 ## Distribution Packaging
 
@@ -88,9 +103,8 @@ The Debian package targets Ubuntu noble / Pop!_OS. The `debian/`
 directory holds `control`, `rules`, `copyright`, `source/format`, and
 `changelog`. `just release-deb VERSION` runs `dpkg-buildpackage` inside
 a pinned `ubuntu:noble` builder image (`scripts/Dockerfile.deb-builder`)
-and lands artifacts in `dist/`. Tag-driven release with
-`just release-tag VERSION` once the changelog and Cargo.toml are
-aligned.
+and lands artifacts in `dist/`. This is the local-build fallback; the
+primary release flow is tag-triggered (see the release checklist above).
 
 ### Flatpak (deferred)
 
