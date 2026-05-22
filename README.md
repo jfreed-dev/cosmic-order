@@ -8,6 +8,11 @@ OMARCHY-inspired workflow and aesthetics for COSMIC Desktop.
 
 Built with [libcosmic](https://github.com/pop-os/libcosmic).
 
+![COSMIC ORDER screensaver demo](docs/screensaver.gif)
+
+> The terminal screensaver — the COSMIC mark revealed by one of
+> TerminalTextEffects' beam effects on a blue→purple gradient.
+
 ## Features
 
 - **Theme Management** — Browse, preview, and create COSMIC themes with a
