@@ -7,20 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0] — 2026-05-22
+
 ### Added
 
+- `cosmic-order --page <visuals|tool-sync|screensaver>` opens the GUI
+  directly to a page (overriding the saved page) — used for deterministic
+  multi-page screenshots.
+- Alacritty support in the screensaver launcher, with a generated minimal
+  `alacritty-screensaver.toml` (black background, no padding, hidden
+  cursor, `startup_mode = "Fullscreen"`).
+- `scripts/vm-test.sh` and the `just vm-test` recipe: build the amd64
+  `.deb`, deploy it to a COSMIC VM, launch the GUI, and screenshot each
+  page.
+- Runtime-dependency documentation (README) and `debian/control`
+  Recommends (alacritty, swayidle) / Suggests (figlet, ydotool).
+- `.github/workflows/release.yml` — on a `v*` tag, builds the amd64
+  `.deb` and publishes a GitHub Release with the package attached and
+  notes drawn from this changelog.
 - `.github/dependabot.yml` — weekly tracking of GitHub Actions versions
   in `.github/workflows/`. Cargo dependencies are intentionally left
   out (`just outdated` + the cargo-audit recipe already cover that
   surface).
-- `.github/workflows/ci.yml` — minimal GitHub Actions workflow that
-  installs system deps (cmake, just, libexpat, libfontconfig,
-  libfreetype, libxkbcommon, pkg-config), provisions Rust stable with
-  rustfmt+clippy via the runner's pre-installed rustup, caches via
-  github-owned `actions/cache@v5` (Node.js 24), and runs `just pre-commit`
-  (fmt-check + clippy --pedantic + tests). Triggers on push/PR to
-  `main`. Uses only github-owned actions to satisfy the repo's
-  Actions allow-list policy. Mirrors the gating pattern used by
+- `.github/workflows/ci.yml` — GitHub Actions workflow that installs
+  system deps, provisions Rust stable + `just`, caches cargo/target, and
+  runs `just pre-commit` (fmt-check + clippy --pedantic + tests) on
+  push/PR to `main`. Mirrors the gating pattern used by
   `jfreed-dev/niri-screensaver`.
 - README banner badges (License GPL-3.0, Latest release, CI) directly
   under the H1, mirroring the niri-screensaver layout.
@@ -34,6 +46,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Default screensaver terminal is now **Alacritty** (was Ghostty). It
+  self-fullscreens via `startup_mode = "Fullscreen"`, avoiding the
+  cosmic-term fullscreen freeze and Ghostty's ignored-at-startup
+  fullscreen.
+- Power-aware screensaver effect profiles are now **applied at runtime**:
+  the driver reads `EFFECT_PROFILE` and feeds the matching effect list to
+  `tte`. The slots were renamed to match the power tiers —
+  **Full / Standard / Simple / Minimal**.
 - `docs/LICENSING.md` § "ASCII Logo Status" now acknowledges that the
   surviving `cosmic-*` files render System76's COSMIC brand mark (the
   ASCII art content is GPL-3.0-only, but that license cannot grant
@@ -41,6 +61,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   identification of the desktop COSMIC ORDER extends). The Public
   Release Status table gains a Trademarks-disclaimer row and a
   per-file-attribution row.
+
+### Fixed
+
+- Window title now reads "COSMIC ORDER" instead of "COSMIC".
+- Screensaver no longer hangs on a `Password:` prompt during mouse
+  parking (the `sg input` call blocked when the user wasn't in the
+  `input` group).
+
+### Removed
+
+- Caffeine / idle-inhibitor feature. Use an external tool
+  (`systemd-inhibit` or a COSMIC applet) for keep-awake.
 
 ## [0.15.0] — 2026-05-10
 
