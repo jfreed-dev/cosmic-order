@@ -12,7 +12,11 @@ permissions:
 jobs:
   pre-commit:
     name: pre-commit (fmt + clippy + tests)
-    runs-on: [self-hosted, linux]
+    # Pinned to the arm64 spark runner. The amd64 thor runner shares the
+    # default self-hosted/linux labels, but its outbound network is currently
+    # unstable (see docs/development/RELEASE-RUNNER.md) and would cause false
+    # CI failures. The gate is arch-agnostic, so spark is sufficient.
+    runs-on: [self-hosted, linux, spark]
     steps:
       - uses: actions/checkout@v6
 

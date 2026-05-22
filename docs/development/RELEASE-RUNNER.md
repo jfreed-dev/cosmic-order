@@ -58,11 +58,19 @@ loaded**, and the stack runs it as a prebuilt `image:` (no `build:`):
    **Dockge stack** at `/share/appdata/dockge/opt/stacks/cosmic-order-runner/`
    (`compose.yaml` + `.env`); deploy from the Dockge UI.
 
-> **Network note:** Thor's Container Station egress to GitHub has a slow
-> *first* connect to each new host (~7 s of SYN retransmits, then fast once
-> warm). Registration takes a minute or two, and the runner can show
-> `offline` for ~30 s after start until its job-broker connection settles.
-> Cosmetic for builds, but expect a slower first job.
+> **Network note (important — not build-ready yet):** Thor's outbound network
+> is currently too unstable for builds. (1) Port 80 (HTTP) is **blocked**, so
+> the image uses HTTPS apt mirrors (the `sed` in `Dockerfile.runner`). (2) Even
+> on 443, **bulk parallel downloads fail intermittently** (`Unable to connect
+> …:443` on most packages of an `apt-get install`), so dependency installs and
+> `cargo` crate fetches fail — a single connection works (curl 200, ~6.5 s slow
+> first-connect) but many-connection workloads don't. (3) The Actions long-poll
+> drops every ~15–20 min, so the runner flaps `offline`; `docker restart
+> cosmic-order-runner` reconnects it and it picks up queued jobs. Net: the
+> runner registers and runs jobs, but **builds fail until Thor's WAN/outbound
+> is stabilized**. Until then, cut releases locally (`just release VERSION`),
+> and CI is pinned to the spark runner. Re-test with `gh workflow run
+> runner-smoke.yml` after fixing the network.
 
 ## 2. Register a runner for this repo
 
