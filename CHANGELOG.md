@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.0] — 2026-05-22
+
+### Changed
+
+- Releases are now built and published automatically by a tag-triggered
+  GitHub Actions workflow (`release.yml`) on a self-hosted amd64 runner,
+  replacing the manual local build. No application changes since 0.17.0.
+
 ## [0.17.0] — 2026-05-22
 
 ### Added

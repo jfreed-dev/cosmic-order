@@ -1,3 +1,11 @@
+cosmic-order (0.18.0) noble; urgency=medium
+
+  * Release tooling: releases are now built and published by a tag-triggered
+    GitHub Actions workflow on a self-hosted amd64 runner. No application
+    changes since 0.17.0.
+
+ -- Jonathan Freed <jon@freed-dev.com>  Fri, 22 May 2026 16:45:00 -0400
+
 cosmic-order (0.17.0) noble; urgency=medium
 
   * Panel applet: new cosmic-order-applet, a COSMIC panel button whose popup
