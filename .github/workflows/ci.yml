@@ -34,7 +34,11 @@ jobs:
       - name: Install just
         run: |
           mkdir -p "$HOME/.local/bin"
-          curl --proto '=https' --tlsv1.2 -sSfL https://just.systems/install.sh | bash -s -- --to "$HOME/.local/bin"
+          # The spark runner is persistent, so just may already be installed —
+          # and the installer errors on an existing binary. Install only if absent.
+          if [ ! -x "$HOME/.local/bin/just" ]; then
+            curl --proto '=https' --tlsv1.2 -sSfL https://just.systems/install.sh | bash -s -- --to "$HOME/.local/bin"
+          fi
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Install Rust toolchain (rustfmt + clippy)
