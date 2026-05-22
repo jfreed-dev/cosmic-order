@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- COSMIC panel applet (`cosmic-order-applet`): a panel button whose popup
+  offers quick screensaver control — lock now, start the screensaver, an
+  enable/disable toggle that reflects the idle-service state, and open
+  settings. Actions reuse the existing surface (`loginctl`, the bundled
+  screensaver scripts, `cosmic-order --page`). Ships an `X-CosmicApplet`
+  desktop entry; add it from the panel's applet settings.
+
 ## [0.16.0] — 2026-05-22
 
 ### Added

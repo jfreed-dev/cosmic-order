@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=COSMIC ORDER Applet
+Comment=Quick screensaver controls for COSMIC ORDER
+Type=Application
+Exec=cosmic-order-applet
+Icon=com.github.jfreed-dev.CosmicOrder
+Terminal=false
+NoDisplay=true
+X-CosmicApplet=true
+Categories=COSMIC;
+Keywords=screensaver;lock;cosmic-order;

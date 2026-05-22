@@ -19,6 +19,7 @@ categories = ["gui"]
 # source URLs for the same crate. The exact commit is pinned via the
 # tracked Cargo.lock.
 libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = false, features = [
+    "applet",
     "dbus-config",
     "desktop",
     "multi-window",

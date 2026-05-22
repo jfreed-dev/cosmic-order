@@ -19,6 +19,11 @@ desktop := appid + '.desktop'
 icon-svg := appid + '.svg'
 metainfo := appid + '.metainfo.xml'
 
+# Panel applet (separate binary + desktop entry)
+applet-name := name + '-applet'
+applet-appid := 'com.github.jfreed-dev.CosmicOrderApplet'
+applet-desktop := applet-appid + '.desktop'
+
 # Install destinations
 base-dir := absolute_path(clean(rootdir / prefix))
 bin-dst := base-dir / 'bin' / name
@@ -27,6 +32,8 @@ icons-dst := base-dir / 'share' / 'icons' / 'hicolor'
 icon-svg-dst := icons-dst / 'scalable' / 'apps' / icon-svg
 metainfo-dst := base-dir / 'share' / 'metainfo' / metainfo
 screensaver-dst := base-dir / 'share' / name / 'screensaver'
+applet-bin-dst := base-dir / 'bin' / applet-name
+applet-desktop-dst := base-dir / 'share' / 'applications' / applet-desktop
 
 # Default recipe
 default: build-release
@@ -100,7 +107,9 @@ clean-dist: clean clean-vendor
 # Install binary, desktop file, icon, metainfo, and screensaver scripts
 install:
     install -Dm0755 {{cargo-target-dir / 'release' / name}} {{bin-dst}}
+    install -Dm0755 {{cargo-target-dir / 'release' / applet-name}} {{applet-bin-dst}}
     install -Dm0644 {{'resources' / desktop}} {{desktop-dst}}
+    install -Dm0644 {{'resources' / applet-desktop}} {{applet-desktop-dst}}
     install -Dm0644 {{'resources' / 'icons' / icon-svg}} {{icon-svg-dst}}
     install -Dm0644 {{'resources' / metainfo}} {{metainfo-dst}}
     install -Dm0755 resources/screensaver/screensaver-ctl.sh {{screensaver-dst}}/screensaver-ctl.sh
@@ -112,7 +121,9 @@ install:
 # Uninstall installed files
 uninstall:
     rm -f {{bin-dst}}
+    rm -f {{applet-bin-dst}}
     rm -f {{desktop-dst}}
+    rm -f {{applet-desktop-dst}}
     rm -f {{icon-svg-dst}}
     rm -f {{metainfo-dst}}
     rm -rf {{screensaver-dst}}

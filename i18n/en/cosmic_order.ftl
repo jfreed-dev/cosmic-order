@@ -3,6 +3,12 @@
 # Application
 app-title = COSMIC ORDER
 
+# Panel Applet
+applet-lock-now = Lock now
+applet-start-screensaver = Start screensaver
+applet-screensaver-enabled = Screensaver
+applet-open-settings = Open settings…
+
 # Navigation
 visuals = Visuals
 screensaver = Screensaver
