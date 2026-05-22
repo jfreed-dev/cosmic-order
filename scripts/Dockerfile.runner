@@ -1,0 +1,58 @@
+# SPDX-License-Identifier: GPL-3.0-only
+#
+# Self-hosted GitHub Actions runner for building the amd64 .deb
+# (see .github/workflows/release.yml). A headless x86_64 build host meant
+# to run as a long-lived container on an amd64 docker host (e.g. Thor).
+#
+# Build:
+#   docker build -f scripts/Dockerfile.runner -t cosmic-order-runner scripts/
+#
+# Run / register: see docs/development/RELEASE-RUNNER.md
+#
+# Uses the official GitHub Actions runner release, checksum-verified — no
+# third-party prebuilt runner image is trusted.
+FROM ubuntu:noble
+
+# Pin the runner version and its linux-x64 checksum. Refresh from:
+#   gh api repos/actions/runner/releases/latest --jq .tag_name
+#   (sha256 lives in the release body as "<!-- BEGIN SHA linux-x64 -->")
+ARG RUNNER_VERSION=2.334.0
+ARG RUNNER_SHA256=048024cd2c848eb6f14d5646d56c13a4def2ae7ee3ad12122bee960c56f3d271
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Agent prerequisites only. release.yml installs the full build toolchain
+# (rust, just, build deps) itself at job time via sudo apt-get, so it is
+# deliberately not baked here — keeping this image generic.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        git \
+        gpg \
+        jq \
+        sudo \
+        tar \
+    && rm -rf /var/lib/apt/lists/*
+
+# Non-root runner user with passwordless sudo (release.yml uses sudo).
+RUN useradd --create-home --shell /bin/bash runner \
+    && echo 'runner ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/runner \
+    && chmod 0440 /etc/sudoers.d/runner
+
+# Fetch + verify the official runner, then install its native deps (libicu
+# etc.) as root before dropping privileges.
+RUN curl -fsSL -o /tmp/runner.tar.gz \
+        "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz" \
+    && echo "${RUNNER_SHA256}  /tmp/runner.tar.gz" | sha256sum -c - \
+    && mkdir -p /home/runner/actions-runner \
+    && tar xzf /tmp/runner.tar.gz -C /home/runner/actions-runner \
+    && rm /tmp/runner.tar.gz \
+    && /home/runner/actions-runner/bin/installdependencies.sh \
+    && chown -R runner:runner /home/runner
+
+COPY --chown=runner:runner runner-entrypoint.sh /home/runner/entrypoint.sh
+
+USER runner
+WORKDIR /home/runner/actions-runner
+
+ENTRYPOINT ["/home/runner/entrypoint.sh"]

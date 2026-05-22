@@ -19,7 +19,7 @@ jobs:
     # An amd64 (X64) runner is required — the .deb is architecture-specific
     # and the homelab's default self-hosted runner is arm64. Register an
     # x86_64 self-hosted runner (e.g. hosted on Thor) so this job has a
-    # matching target.
+    # matching target. Setup: docs/development/RELEASE-RUNNER.md
     runs-on: [self-hosted, linux, X64]
 
     steps:
