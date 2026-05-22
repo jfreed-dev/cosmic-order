@@ -57,6 +57,12 @@ RUN curl -fsSL -o /tmp/runner.tar.gz \
 RUN sed -i 's|http://|https://|g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true; \
     sed -i 's|http://|https://|g' /etc/apt/sources.list 2>/dev/null || true
 
+# Thor's egress handles single connections fine but drops apt's parallel
+# download bursts. Serialize apt downloads (one connection per access method)
+# and retry, which makes package installs reliable on this network.
+RUN printf 'Acquire::Queue-Mode "access";\nAcquire::Retries "10";\n' \
+        > /etc/apt/apt.conf.d/99-cosmic-order-runner.conf
+
 COPY --chown=runner:runner runner-entrypoint.sh /home/runner/entrypoint.sh
 
 USER runner
