@@ -234,6 +234,24 @@ display_clock() {
     sleep "$duration"
 }
 
+# Inject input via ydotool (fullscreen toggle / mouse parking).
+# ydotool needs /dev/uinput access (input group or root). Never prompt
+# interactively — a bare `sg`/`sudo` password prompt would freeze the
+# screensaver — so only take a path that won't ask for a password.
+inject_input() {
+    local user
+    user="$(id -un)"
+    if id -nG 2>/dev/null | grep -qw input; then
+        ydotool "$@"
+    elif getent group input 2>/dev/null | awk -F: '{print $4}' | grep -qw "$user"; then
+        sg input -c "ydotool $*"
+    elif sudo -n true 2>/dev/null; then
+        sudo -n ydotool "$@"
+    else
+        return 1
+    fi
+}
+
 # Run the screensaver
 run_screensaver() {
     local logo_file="${1:-$LOGO_FILE}"
@@ -260,18 +278,14 @@ run_screensaver() {
         # toggle would otherwise un-fullscreen the window.
         if [[ "${NO_FULLSCREEN_TOGGLE:-}" != "1" ]]; then
             # Use modifier+key syntax (ydotool 0.1.x)
-            sg input -c "ydotool key --delay 0 super+f" 2>/dev/null \
-                || sudo ydotool key --delay 0 super+f 2>/dev/null \
-                || true
+            inject_input key --delay 0 super+f 2>/dev/null || true
         fi
         sleep 0.5
         # Park mouse pointer in bottom-right corner (invisible on black background)
         # Must happen BEFORE mouse tracking is enabled, or the movement triggers dismiss
         # ydotool 0.1.x uses relative movement: mousemove <dx> <dy>
         if [[ "$HIDE_MOUSE" != "false" ]]; then
-            sg input -c "ydotool mousemove 19999 19999" 2>/dev/null \
-                || sudo ydotool mousemove 19999 19999 2>/dev/null \
-                || true
+            inject_input mousemove 19999 19999 2>/dev/null || true
             sleep 0.2
             # Drain any mouse tracking events that leaked from the move
             while read -r -s -n1 -t 0.05 2>/dev/null; do :; done
