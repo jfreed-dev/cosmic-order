@@ -158,6 +158,10 @@ health-check:
 health-check-quick:
     ./scripts/health-check.sh --quick
 
+# Build, deploy, run, and screenshot COSMIC ORDER on the COSMIC test VM
+vm-test *args:
+    ./scripts/vm-test.sh {{args}}
+
 # Run with memory profiler (requires heaptrack)
 heaptrack:
     heaptrack cargo run --release
