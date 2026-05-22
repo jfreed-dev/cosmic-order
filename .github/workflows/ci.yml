@@ -21,12 +21,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             cmake \
-            just \
             libexpat1-dev \
             libfontconfig-dev \
             libfreetype-dev \
             libxkbcommon-dev \
             pkg-config
+
+      - name: Install just
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl --proto '=https' --tlsv1.2 -sSfL https://just.systems/install.sh | bash -s -- --to "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Install Rust toolchain (rustfmt + clippy)
         run: |
