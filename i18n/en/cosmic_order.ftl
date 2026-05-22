@@ -118,6 +118,7 @@ screensaver-clock-10sec = 10 seconds
 screensaver-clock-15sec = 15 seconds
 
 # Screensaver Terminal Options
+screensaver-terminal-alacritty = Alacritty
 screensaver-terminal-ghostty = Ghostty
 screensaver-terminal-cosmic-term = COSMIC Terminal
 

@@ -133,7 +133,7 @@ impl ScreensaverConfig {
             terminal: values
                 .get("TERMINAL")
                 .cloned()
-                .unwrap_or_else(|| "ghostty".to_string()),
+                .unwrap_or_else(|| "alacritty".to_string()),
             effects_performance: values
                 .get("EFFECTS_PERFORMANCE")
                 .cloned()
@@ -182,7 +182,7 @@ impl ScreensaverConfig {
             logo_file: String::new(),
             disable_on_battery: false,
             battery_idle_timeout: 600,
-            terminal: "ghostty".to_string(),
+            terminal: "alacritty".to_string(),
             effects_performance: String::new(),
             effects_balanced: String::new(),
             effects_battery: String::new(),

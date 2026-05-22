@@ -99,7 +99,7 @@ impl App {
                 Task::none()
             }
             pages::ScreensaverMessage::SetTerminal(index) => {
-                let terminals = ["ghostty", "cosmic-term"];
+                let terminals = ["alacritty", "ghostty", "cosmic-term"];
                 if let Some(&term) = terminals.get(index) {
                     self.screensaver_config.terminal = term.to_string();
                 }
@@ -908,10 +908,11 @@ impl App {
 
         // --- Terminal dropdown ---
         let terminal_options: Vec<String> = vec![
+            fl!("screensaver-terminal-alacritty"),
             fl!("screensaver-terminal-ghostty"),
             fl!("screensaver-terminal-cosmic-term"),
         ];
-        let terminal_values = ["ghostty", "cosmic-term"];
+        let terminal_values = ["alacritty", "ghostty", "cosmic-term"];
         let terminal_selected = terminal_values.iter().position(|&v| v == cfg.terminal);
         let terminal_dropdown = widget::dropdown(terminal_options, terminal_selected, |index| {
             Message::Page(pages::Message::Screensaver(
