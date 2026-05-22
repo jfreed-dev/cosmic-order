@@ -45,6 +45,30 @@ load_config() {
     fi
 }
 
+# Apply the power-aware effect profile.
+# The cosmic-order app writes power-state.env with EFFECT_PROFILE
+# (full|standard|simple|minimal|skip), derived from battery level and the
+# system power profile. Pick the matching per-profile effect list (set in the
+# main config) as INCLUDE_EFFECTS; an empty list falls back to the normal
+# include/exclude behaviour. If the app hasn't written power-state.env, leave
+# effects unchanged.
+apply_power_profile() {
+    local power_env="${SCREENSAVER_DIR}/power-state.env"
+    [[ -f "$power_env" ]] || return 0
+    # shellcheck source=/dev/null
+    source "$power_env"
+    case "${EFFECT_PROFILE:-}" in
+        skip)
+            log_info "Critical battery (EFFECT_PROFILE=skip) — not starting screensaver"
+            exit 0
+            ;;
+        full) [[ -n "${EFFECTS_FULL:-}" ]] && INCLUDE_EFFECTS="$EFFECTS_FULL" ;;
+        standard) [[ -n "${EFFECTS_STANDARD:-}" ]] && INCLUDE_EFFECTS="$EFFECTS_STANDARD" ;;
+        simple) [[ -n "${EFFECTS_SIMPLE:-}" ]] && INCLUDE_EFFECTS="$EFFECTS_SIMPLE" ;;
+        minimal) [[ -n "${EFFECTS_MINIMAL:-}" ]] && INCLUDE_EFFECTS="$EFFECTS_MINIMAL" ;;
+    esac
+}
+
 # Ensure config directory exists
 ensure_config_dir() {
     if [[ ! -d "$SCREENSAVER_DIR" ]]; then
@@ -490,6 +514,7 @@ main() {
         run)
             check_dependencies
             ensure_config_dir
+            apply_power_profile
             run_screensaver "$LOGO_FILE"
             ;;
         test)

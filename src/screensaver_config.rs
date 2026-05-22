@@ -49,13 +49,13 @@ pub struct ScreensaverConfig {
     pub battery_idle_timeout: u32,
     /// Terminal emulator to use
     pub terminal: String,
-    /// Effect profile override for Performance power mode (empty = use default)
-    pub effects_performance: String,
-    /// Effect profile override for Balanced power mode (empty = use default)
-    pub effects_balanced: String,
-    /// Effect profile override for Battery power mode (empty = use default)
-    pub effects_battery: String,
-    /// Effect profile override for Minimal power mode (empty = use default)
+    /// Effect list for the Full profile — AC + Performance power (empty = default)
+    pub effects_full: String,
+    /// Effect list for the Standard profile — AC / battery > 50% (empty = default)
+    pub effects_standard: String,
+    /// Effect list for the Simple profile — battery < 50% (empty = default)
+    pub effects_simple: String,
+    /// Effect list for the Minimal profile — battery < 20% (empty = default)
     pub effects_minimal: String,
     /// Hide text cursor during screensaver
     pub cursor_hide: bool,
@@ -134,12 +134,9 @@ impl ScreensaverConfig {
                 .get("TERMINAL")
                 .cloned()
                 .unwrap_or_else(|| "alacritty".to_string()),
-            effects_performance: values
-                .get("EFFECTS_PERFORMANCE")
-                .cloned()
-                .unwrap_or_default(),
-            effects_balanced: values.get("EFFECTS_BALANCED").cloned().unwrap_or_default(),
-            effects_battery: values.get("EFFECTS_BATTERY").cloned().unwrap_or_default(),
+            effects_full: values.get("EFFECTS_FULL").cloned().unwrap_or_default(),
+            effects_standard: values.get("EFFECTS_STANDARD").cloned().unwrap_or_default(),
+            effects_simple: values.get("EFFECTS_SIMPLE").cloned().unwrap_or_default(),
             effects_minimal: values.get("EFFECTS_MINIMAL").cloned().unwrap_or_default(),
             cursor_hide: Self::parse_bool(&values, "CURSOR_HIDE", true),
             hide_mouse: Self::parse_bool(&values, "HIDE_MOUSE", true),
@@ -183,9 +180,9 @@ impl ScreensaverConfig {
             disable_on_battery: false,
             battery_idle_timeout: 600,
             terminal: "alacritty".to_string(),
-            effects_performance: String::new(),
-            effects_balanced: String::new(),
-            effects_battery: String::new(),
+            effects_full: String::new(),
+            effects_standard: String::new(),
+            effects_simple: String::new(),
             effects_minimal: String::new(),
             cursor_hide: true,
             hide_mouse: true,
@@ -215,9 +212,9 @@ LOGO_FILE="{}"
 DISABLE_ON_BATTERY="{}"
 BATTERY_IDLE_TIMEOUT="{}"
 TERMINAL="{}"
-EFFECTS_PERFORMANCE="{}"
-EFFECTS_BALANCED="{}"
-EFFECTS_BATTERY="{}"
+EFFECTS_FULL="{}"
+EFFECTS_STANDARD="{}"
+EFFECTS_SIMPLE="{}"
 EFFECTS_MINIMAL="{}"
 CURSOR_HIDE="{}"
 HIDE_MOUSE="{}"
@@ -241,9 +238,9 @@ SESSION_LOCK="{}"
             bool_str(self.disable_on_battery),
             self.battery_idle_timeout,
             self.terminal,
-            self.effects_performance,
-            self.effects_balanced,
-            self.effects_battery,
+            self.effects_full,
+            self.effects_standard,
+            self.effects_simple,
             self.effects_minimal,
             bool_str(self.cursor_hide),
             bool_str(self.hide_mouse),
@@ -558,9 +555,9 @@ IDLE_TIMEOUT="300"
             disable_on_battery: true,
             battery_idle_timeout: 120,
             terminal: "cosmic-term".to_string(),
-            effects_performance: "matrix,rain,fire".to_string(),
-            effects_balanced: "matrix,rain".to_string(),
-            effects_battery: "clock".to_string(),
+            effects_full: "matrix,rain,fire".to_string(),
+            effects_standard: "matrix,rain".to_string(),
+            effects_simple: "clock".to_string(),
             effects_minimal: "blank".to_string(),
             cursor_hide: false,
             hide_mouse: true,
@@ -588,9 +585,9 @@ IDLE_TIMEOUT="300"
         assert_eq!(parsed.disable_on_battery, config.disable_on_battery);
         assert_eq!(parsed.battery_idle_timeout, config.battery_idle_timeout);
         assert_eq!(parsed.terminal, config.terminal);
-        assert_eq!(parsed.effects_performance, config.effects_performance);
-        assert_eq!(parsed.effects_balanced, config.effects_balanced);
-        assert_eq!(parsed.effects_battery, config.effects_battery);
+        assert_eq!(parsed.effects_full, config.effects_full);
+        assert_eq!(parsed.effects_standard, config.effects_standard);
+        assert_eq!(parsed.effects_simple, config.effects_simple);
         assert_eq!(parsed.effects_minimal, config.effects_minimal);
         assert_eq!(parsed.cursor_hide, config.cursor_hide);
         assert_eq!(parsed.hide_mouse, config.hide_mouse);
