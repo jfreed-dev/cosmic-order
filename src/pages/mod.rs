@@ -10,7 +10,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Page identifiers
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, clap::ValueEnum)]
 pub enum PageId {
     /// Visuals page (themes)
     #[default]

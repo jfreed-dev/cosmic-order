@@ -200,7 +200,7 @@ pub enum Message {
 impl Application for App {
     type Message = Message;
     type Executor = cosmic::executor::Default;
-    type Flags = ();
+    type Flags = Option<PageId>;
 
     const APP_ID: &'static str = crate::APP_ID;
 
@@ -239,7 +239,7 @@ impl Application for App {
     }
 
     #[allow(clippy::cognitive_complexity)]
-    fn init(mut core: Core, _flags: Self::Flags) -> (Self, Task<Message>) {
+    fn init(mut core: Core, start_page: Self::Flags) -> (Self, Task<Message>) {
         // Title shown in the COSMIC headerbar
         core.set_header_title(fl!("app-title"));
 
@@ -293,8 +293,8 @@ impl Application for App {
             ))
             .data(PageId::Screensaver);
 
-        // Activate the saved page from config
-        let active_page = config.active_page;
+        // Activate the requested page (`--page`), else the saved page from config
+        let active_page = start_page.unwrap_or(config.active_page);
         let position = match active_page {
             PageId::Visuals => 0,
             PageId::ToolSync => 1,
