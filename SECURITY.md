@@ -7,8 +7,8 @@ latest minor release on `main`. Older versions are not supported.
 
 | Version  | Supported |
 |----------|-----------|
-| 0.14.x   | ✅        |
-| < 0.14   | ❌        |
+| 0.18.x   | ✅        |
+| < 0.18   | ❌        |
 
 ## Reporting a Vulnerability
 

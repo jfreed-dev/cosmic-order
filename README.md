@@ -16,6 +16,9 @@ Built with [libcosmic](https://github.com/pop-os/libcosmic).
   Zellij, fzf, lazygit, and custom hooks. Auto-sync on theme change.
 - **Screensaver** — Terminal-based screensaver with ASCII art effects,
   session lock, idle/DPMS timeout integration, and power-aware profiles.
+- **Panel Applet** — A COSMIC panel button with a popup for quick screensaver
+  control: lock now, start the screensaver, an enable/disable toggle, and open
+  settings.
 - **CLI** — Scriptable commands for theme switching, color extraction,
   tool sync, hooks, and wallpaper management.
 - **Power Management** — Battery-aware screensaver effect profiles via UPower
@@ -89,6 +92,16 @@ cosmic-order wallpaper add <url>     # Download a wallpaper
 
 ## Install (.deb)
 
+Download the latest `.deb` from the
+[Releases page](https://github.com/jfreed-dev/cosmic-order/releases) and install
+it:
+
+```bash
+sudo dpkg -i cosmic-order_*_amd64.deb
+```
+
+Or build it from source:
+
 ```bash
 # Build the .deb package
 dpkg-buildpackage -us -uc -b
@@ -97,7 +110,7 @@ dpkg-buildpackage -us -uc -b
 sudo dpkg -i ../cosmic-order_*.deb
 ```
 
-Requires `debhelper`, `just (>= 1.13.0)`, and `rust-all` to build.
+Building requires `debhelper`, `just (>= 1.13.0)`, and `rust-all`.
 
 ## Known Upstream Bugs
 
