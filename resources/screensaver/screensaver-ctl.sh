@@ -26,7 +26,7 @@ DEFAULT_SHOW_CLOCK="false"    # Show time between effects
 DEFAULT_CLOCK_DURATION=3      # Seconds to display clock
 DEFAULT_CLOCK_FORMAT="%H:%M"  # Time format
 DEFAULT_CLOCK_FONT=""         # figlet/toilet font
-DEFAULT_TERMINAL="ghostty"    # ghostty or cosmic-term
+DEFAULT_TERMINAL="alacritty"  # alacritty, ghostty, or cosmic-term
 DEFAULT_LOCK_COMMAND="cosmic-greeter --lock"  # Lock screen command
 DEFAULT_CURSOR_HIDE="true"    # Hide text cursor during screensaver
 DEFAULT_HIDE_MOUSE="true"     # Hide mouse pointer via terminal config
@@ -363,29 +363,22 @@ show_status() {
 
     # Dependency check
     echo -e "${BOLD}Dependencies${NC}"
-    if [[ "$TERMINAL" == "ghostty" ]]; then
-        if command -v ghostty &>/dev/null; then
-            echo -e "ghostty:          ${GREEN}installed${NC} (selected)"
+    local term
+    for term in alacritty ghostty cosmic-term; do
+        local label
+        label=$(printf '%-16s' "${term}:")
+        if command -v "$term" &>/dev/null; then
+            if [[ "$term" == "$TERMINAL" ]]; then
+                echo -e "${label}${GREEN}installed${NC} (selected)"
+            else
+                echo -e "${label}${GREEN}installed${NC} (available)"
+            fi
+        elif [[ "$term" == "$TERMINAL" ]]; then
+            echo -e "${label}${RED}not installed${NC} (selected but missing!)"
         else
-            echo -e "ghostty:          ${RED}not installed${NC} (selected but missing!)"
+            echo -e "${label}${YELLOW}not installed${NC} (optional)"
         fi
-        if command -v cosmic-term &>/dev/null; then
-            echo -e "cosmic-term:      ${GREEN}installed${NC} (available)"
-        else
-            echo -e "cosmic-term:      ${YELLOW}not installed${NC} (optional)"
-        fi
-    else
-        if command -v cosmic-term &>/dev/null; then
-            echo -e "cosmic-term:      ${GREEN}installed${NC} (selected)"
-        else
-            echo -e "cosmic-term:      ${RED}not installed${NC} (selected but missing!)"
-        fi
-        if command -v ghostty &>/dev/null; then
-            echo -e "ghostty:          ${GREEN}installed${NC} (available)"
-        else
-            echo -e "ghostty:          ${YELLOW}not installed${NC} (optional)"
-        fi
-    fi
+    done
     if command -v tte &>/dev/null; then
         echo -e "tte:              ${GREEN}installed${NC} (required)"
     else
@@ -486,6 +479,14 @@ set_terminal() {
     load_config
 
     case "$terminal" in
+        alacritty)
+            if ! command -v alacritty &>/dev/null; then
+                log_warn "Alacritty is not installed"
+                log_info "Install with: sudo apt install alacritty"
+            fi
+            TERMINAL="alacritty"
+            log_info "Terminal set to: alacritty"
+            ;;
         ghostty)
             if ! command -v ghostty &>/dev/null; then
                 log_warn "Ghostty is not installed"
@@ -504,7 +505,7 @@ set_terminal() {
             ;;
         *)
             log_error "Unknown terminal: $terminal"
-            log_info "Valid terminals: ghostty, cosmic-term"
+            log_info "Valid terminals: alacritty, ghostty, cosmic-term"
             return 1
             ;;
     esac
@@ -1053,15 +1054,18 @@ install_dependencies() {
     echo
     log_info "Installing dependencies..."
 
-    # Check for Ghostty (required)
-    if ! command -v ghostty &>/dev/null; then
-        log_error "Ghostty is required but not installed"
-        log_info "Install Ghostty from: https://ghostty.org"
-        log_info "  - Flatpak: flatpak install flathub com.mitchellh.ghostty"
-        log_info "  - Or build from source: https://github.com/ghostty-org/ghostty"
-        return 1
+    # Install Alacritty (default terminal)
+    if ! command -v alacritty &>/dev/null; then
+        log_info "Installing Alacritty..."
+        if command -v apt &>/dev/null; then
+            sudo apt install -y alacritty
+        else
+            log_warn "Please install Alacritty manually for your distribution"
+        fi
     fi
-    log_success "Ghostty is installed"
+    if command -v alacritty &>/dev/null; then
+        log_success "Alacritty is installed"
+    fi
 
     # Check for pipx/pip
     if command -v pipx &>/dev/null; then

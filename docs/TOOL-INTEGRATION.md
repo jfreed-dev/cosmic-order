@@ -20,7 +20,9 @@ using the libcosmic framework.
 
 ### Current Capabilities
 
-Ghostty is the primary terminal for screensaver display and daily use.
+Ghostty is a supported terminal and tool-sync target. (The screensaver defaults
+to Alacritty, which self-fullscreens — see
+[SCREENSAVER-INTEGRATION.md](SCREENSAVER-INTEGRATION.md).)
 
 **What's Available:**
 

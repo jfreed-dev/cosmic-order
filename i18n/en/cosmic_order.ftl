@@ -66,10 +66,10 @@ screensaver-power-status-unknown = Power state unknown
 screensaver-power-profile = Power profile: {$profile}
 screensaver-power-system76-yes = system76-power available
 screensaver-power-system76-no = system76-power not detected
-screensaver-effect-profile-performance = Performance effects
-screensaver-effect-profile-balanced = Balanced effects
-screensaver-effect-profile-battery = Battery effects
-screensaver-effect-profile-minimal = Minimal effects
+screensaver-effect-profile-full = Full effects (AC, Performance)
+screensaver-effect-profile-standard = Standard effects (AC / battery > 50%)
+screensaver-effect-profile-simple = Simple effects (battery < 50%)
+screensaver-effect-profile-minimal = Minimal effects (battery < 20%)
 screensaver-effect-profile-placeholder = comma-separated effect names; empty = use default
 screensaver-battery-timeout-5m = 5 min
 screensaver-battery-timeout-10m = 10 min
@@ -118,17 +118,13 @@ screensaver-clock-10sec = 10 seconds
 screensaver-clock-15sec = 15 seconds
 
 # Screensaver Terminal Options
+screensaver-terminal-alacritty = Alacritty
 screensaver-terminal-ghostty = Ghostty
 screensaver-terminal-cosmic-term = COSMIC Terminal
 
 # Session Lock
 screensaver-session-lock = Session Lock
 screensaver-session-lock-native = Native session lock
-
-# Caffeine Mode
-caffeine-toggle = Prevent Sleep
-caffeine-enabled = Caffeine mode active — idle inhibited
-caffeine-disabled-battery = Caffeine auto-disabled (low battery)
 
 # Screensaver Cursor & Dismiss
 screensaver-cursor-section = Cursor & Dismiss

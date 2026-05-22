@@ -44,7 +44,6 @@ cosmic-order/
 │   ├── cosmic_idle.rs        # DPMS timeout sync with cosmic-idle
 │   ├── wayland_idle.rs       # Native Wayland idle detection
 │   ├── sleep_lock.rs         # Sleep lock via logind D-Bus
-│   ├── inhibit.rs            # Idle inhibitor (caffeine mode via logind D-Bus)
 │   ├── power.rs              # Power monitoring (UPower D-Bus subscription)
 │   └── systemd.rs            # Systemd D-Bus unit restart
 ├── i18n/
@@ -87,7 +86,7 @@ cosmic-order/
 │                    Tool Sync Layer                               │
 │  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌──────────┐ │
 │  │ colors     │  │ generators │  │ D-Bus      │  │ logind   │ │
-│  │ .toml      │  │ (6 tools)  │  │ (UPower)   │  │ inhibit  │ │
+│  │ .toml      │  │ (6 tools)  │  │ (UPower)   │  │ lock     │ │
 │  └────────────┘  └────────────┘  └────────────┘  └──────────┘ │
 └─────────────────────────────────────────────────────────────────┘
 ```

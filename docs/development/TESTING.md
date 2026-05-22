@@ -48,7 +48,7 @@ cargo test -- --nocapture           # Show println output
 | `config` | 6 | Defaults, clone, equality, serialization, errors |
 | `pages` | 7 | PageId enum, serialization, message construction |
 
-**Total: 89 tests**
+**Total: 91 tests**
 
 ### Modules Without Unit Tests
 
@@ -57,7 +57,6 @@ the health check script and UAT procedures instead:
 
 - `compositor.rs` - COSMIC compositor config (requires cosmic-config)
 - `cosmic_idle.rs` - DPMS timeout sync (requires cosmic-config)
-- `inhibit.rs` - Idle inhibitor (requires logind D-Bus)
 - `systemd.rs` - Systemd D-Bus calls (requires session bus)
 - `sleep_lock.rs` - Session lock monitoring (requires logind D-Bus)
 - `wayland_idle.rs` - Wayland idle protocol (requires Wayland session)
@@ -207,16 +206,7 @@ cosmic-order hooks run --json
 | 3 | Plug in AC | Status updates to AC power |
 | 4 | Verify no excessive CPU | `htop` shows low idle CPU usage |
 
-### UAT-08: Caffeine Mode (Idle Inhibitor)
-
-| Step | Action | Expected |
-|---|---|---|
-| 1 | Enable caffeine mode (if UI toggle exists) | Idle inhibitor acquired |
-| 2 | Wait past idle timeout | Screen does NOT lock/blank |
-| 3 | Disable caffeine mode | Normal idle behavior resumes |
-| 4 | Verify via `systemd-inhibit --list` | Shows COSMIC ORDER inhibitor when active |
-
-### UAT-09: Custom Hooks
+### UAT-08: Custom Hooks
 
 ```bash
 # Create a test hook
@@ -238,7 +228,7 @@ chmod +x ~/.config/cosmic-order/hooks.d/test-hook.sh
 | 5 | Click Sync Now | Hook runs as part of sync |
 | 6 | Remove test hook | `rm ~/.config/cosmic-order/hooks.d/test-hook.sh` |
 
-### UAT-10: Wallpaper Download
+### UAT-09: Wallpaper Download
 
 | Step | Action | Expected |
 |---|---|---|

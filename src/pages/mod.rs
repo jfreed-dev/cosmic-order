@@ -10,7 +10,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Page identifiers
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, clap::ValueEnum)]
 pub enum PageId {
     /// Visuals page (themes)
     #[default]
@@ -121,9 +121,9 @@ pub enum WizardMessage {
 /// Which screensaver effect profile slot a `SetEffectsForProfile` message targets
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EffectProfileSlot {
-    Performance,
-    Balanced,
-    Battery,
+    Full,
+    Standard,
+    Simple,
     Minimal,
 }
 

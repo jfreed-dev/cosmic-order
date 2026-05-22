@@ -18,6 +18,10 @@ use crate::tool_sync::{self, ToolSyncConfig};
 #[derive(Parser)]
 #[command(name = "cosmic-order", version, about)]
 pub struct Cli {
+    /// Open the GUI directly to a page instead of the last-used one
+    #[arg(long, value_enum)]
+    pub page: Option<crate::pages::PageId>,
+
     #[command(subcommand)]
     pub command: Option<Commands>,
 }

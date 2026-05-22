@@ -14,7 +14,6 @@ mod config;
 mod cosmic_idle;
 mod generators;
 mod hooks;
-mod inhibit;
 mod localize;
 mod pages;
 mod paths;
@@ -55,7 +54,7 @@ fn main() -> ExitCode {
         cli::run(cmd)
     } else {
         tracing::info!("Starting COSMIC ORDER");
-        match cosmic::app::run::<app::App>(cosmic::app::Settings::default(), ()) {
+        match cosmic::app::run::<app::App>(cosmic::app::Settings::default(), args.page) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 tracing::error!("Application error: {e}");

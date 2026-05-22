@@ -1,3 +1,19 @@
+cosmic-order (0.16.0) noble; urgency=medium
+
+  * Screensaver: default terminal switched to Alacritty, which self-fullscreens
+    via startup_mode=Fullscreen (avoids the cosmic-term fullscreen freeze).
+  * Screensaver: power-aware effect profiles are now applied at runtime
+    (Full/Standard/Simple/Minimal tiers, selected from EFFECT_PROFILE).
+  * Screensaver: fixed a password-prompt hang during mouse parking.
+  * App: --page <visuals|tool-sync|screensaver> opens the GUI to a page.
+  * App: window title now reads "COSMIC ORDER".
+  * Packaging: declare runtime deps — Recommends alacritty, swayidle; Suggests
+    figlet, ydotool.
+  * Removed: caffeine / idle-inhibitor feature (use systemd-inhibit instead).
+  * Tooling: scripts/vm-test.sh + `just vm-test` (build/deploy/screenshot on a VM).
+
+ -- Jonathan Freed <jon@freed-dev.com>  Fri, 22 May 2026 12:00:00 -0400
+
 cosmic-order (0.15.0) noble; urgency=medium
 
   * Visuals: COSMIC built-in themes selector (Dark/Light/HC variants).

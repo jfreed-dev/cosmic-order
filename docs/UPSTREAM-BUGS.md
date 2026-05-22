@@ -20,14 +20,10 @@ before the WM processes the async `fullscreen()` request.
 
 Confirmed across COSMIC, GNOME, KDE Plasma, Openbox, and Linux Mint.
 
-**Impact on COSMIC ORDER:** The screensaver launch script cannot use
-`ghostty --fullscreen=true` directly. Current workaround uses `wtype` to send
-the fullscreen keybind after a short delay:
-
-```bash
-sleep 0.3
-wtype -M ctrl -k Return -m ctrl
-```
+**Impact on COSMIC ORDER:** Affects Ghostty only as a *selectable* screensaver
+terminal — the default is now Alacritty, which self-fullscreens via
+`startup_mode = "Fullscreen"` and avoids this bug entirely. When Ghostty is
+chosen, the screensaver toggles fullscreen via the compositor keybind after launch.
 
 ### cosmic-comp: Native COSMIC apps freeze on fullscreen
 
@@ -43,6 +39,6 @@ completely unresponsive. Third-party GTK apps like Ghostty are not affected.
 
 Confirmed on Pop!_OS 24.04 and CachyOS, across Intel and NVIDIA GPUs.
 
-**Impact on COSMIC ORDER:** This is why COSMIC ORDER uses Ghostty instead of
-cosmic-term as the terminal for screensaver rendering. If this is fixed, cosmic-term
-could be reconsidered as a native alternative.
+**Impact on COSMIC ORDER:** This is why the screensaver defaults to Alacritty
+rather than cosmic-term. If this is fixed, cosmic-term could be reconsidered as a
+native alternative.

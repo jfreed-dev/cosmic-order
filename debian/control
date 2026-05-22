@@ -20,8 +20,17 @@ Architecture: amd64 arm64
 Depends:
  ${misc:Depends},
  ${shlibs:Depends},
+Recommends:
+ alacritty,
+ swayidle,
+Suggests:
+ figlet,
+ ydotool,
 Description: OMARCHY-inspired workflow and aesthetics for COSMIC Desktop
  COSMIC ORDER brings OMARCHY-style workflow to COSMIC Desktop with theme
  management, tool theme sync (Ghostty, btop, Neovim, Zellij, fzf, lazygit),
  terminal screensaver with session lock, power-aware profiles, and a
  scriptable CLI interface.
+ .
+ The terminal screensaver renders with TerminalTextEffects, which is not in the
+ Debian/Ubuntu archive; install it with: pipx install terminaltexteffects

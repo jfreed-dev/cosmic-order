@@ -99,7 +99,7 @@ impl App {
                 Task::none()
             }
             pages::ScreensaverMessage::SetTerminal(index) => {
-                let terminals = ["ghostty", "cosmic-term"];
+                let terminals = ["alacritty", "ghostty", "cosmic-term"];
                 if let Some(&term) = terminals.get(index) {
                     self.screensaver_config.terminal = term.to_string();
                 }
@@ -136,9 +136,9 @@ impl App {
             pages::ScreensaverMessage::SetEffectsForProfile(slot, text) => {
                 let cfg = &mut self.screensaver_config;
                 match slot {
-                    pages::EffectProfileSlot::Performance => cfg.effects_performance = text,
-                    pages::EffectProfileSlot::Balanced => cfg.effects_balanced = text,
-                    pages::EffectProfileSlot::Battery => cfg.effects_battery = text,
+                    pages::EffectProfileSlot::Full => cfg.effects_full = text,
+                    pages::EffectProfileSlot::Standard => cfg.effects_standard = text,
+                    pages::EffectProfileSlot::Simple => cfg.effects_simple = text,
                     pages::EffectProfileSlot::Minimal => cfg.effects_minimal = text,
                 }
                 Task::none()
@@ -806,43 +806,43 @@ impl App {
                 ))
             });
 
-        let perf_input = widget::text_input(
+        let full_input = widget::text_input(
             fl!("screensaver-effect-profile-placeholder"),
-            &cfg.effects_performance,
+            &cfg.effects_full,
         )
         .on_input(|text| {
             Message::Page(pages::Message::Screensaver(
                 pages::ScreensaverMessage::SetEffectsForProfile(
-                    pages::EffectProfileSlot::Performance,
+                    pages::EffectProfileSlot::Full,
                     text,
                 ),
             ))
         });
-        let bal_input = widget::text_input(
+        let standard_input = widget::text_input(
             fl!("screensaver-effect-profile-placeholder"),
-            &cfg.effects_balanced,
+            &cfg.effects_standard,
         )
         .on_input(|text| {
             Message::Page(pages::Message::Screensaver(
                 pages::ScreensaverMessage::SetEffectsForProfile(
-                    pages::EffectProfileSlot::Balanced,
+                    pages::EffectProfileSlot::Standard,
                     text,
                 ),
             ))
         });
-        let bat_input = widget::text_input(
+        let simple_input = widget::text_input(
             fl!("screensaver-effect-profile-placeholder"),
-            &cfg.effects_battery,
+            &cfg.effects_simple,
         )
         .on_input(|text| {
             Message::Page(pages::Message::Screensaver(
                 pages::ScreensaverMessage::SetEffectsForProfile(
-                    pages::EffectProfileSlot::Battery,
+                    pages::EffectProfileSlot::Simple,
                     text,
                 ),
             ))
         });
-        let min_input = widget::text_input(
+        let minimal_input = widget::text_input(
             fl!("screensaver-effect-profile-placeholder"),
             &cfg.effects_minimal,
         )
@@ -881,20 +881,20 @@ impl App {
                 battery_timeout_dropdown,
             ))
             .add(widget::settings::item(
-                fl!("screensaver-effect-profile-performance"),
-                perf_input,
+                fl!("screensaver-effect-profile-full"),
+                full_input,
             ))
             .add(widget::settings::item(
-                fl!("screensaver-effect-profile-balanced"),
-                bal_input,
+                fl!("screensaver-effect-profile-standard"),
+                standard_input,
             ))
             .add(widget::settings::item(
-                fl!("screensaver-effect-profile-battery"),
-                bat_input,
+                fl!("screensaver-effect-profile-simple"),
+                simple_input,
             ))
             .add(widget::settings::item(
                 fl!("screensaver-effect-profile-minimal"),
-                min_input,
+                minimal_input,
             ));
 
         section.into()
@@ -908,10 +908,11 @@ impl App {
 
         // --- Terminal dropdown ---
         let terminal_options: Vec<String> = vec![
+            fl!("screensaver-terminal-alacritty"),
             fl!("screensaver-terminal-ghostty"),
             fl!("screensaver-terminal-cosmic-term"),
         ];
-        let terminal_values = ["ghostty", "cosmic-term"];
+        let terminal_values = ["alacritty", "ghostty", "cosmic-term"];
         let terminal_selected = terminal_values.iter().position(|&v| v == cfg.terminal);
         let terminal_dropdown = widget::dropdown(terminal_options, terminal_selected, |index| {
             Message::Page(pages::Message::Screensaver(

@@ -213,7 +213,10 @@ See [NATIVE-MIGRATION.md](development/NATIVE-MIGRATION.md) for details.
 
 ---
 
-## Phase 4C: Caffeine Mode (Idle Inhibitor) ✓
+## Phase 4C: Caffeine Mode (Idle Inhibitor) ✓ — later removed
+
+> **Removed:** the caffeine / idle-inhibitor feature was dropped in favor of
+> external tools (`systemd-inhibit`, applets). See "Out of Scope / Future Addons".
 
 **Goal**: Allow users to temporarily prevent screen blanking and screensaver activation.
 
@@ -353,7 +356,7 @@ See [NATIVE-MIGRATION.md](development/NATIVE-MIGRATION.md) for details.
 - [x] Lock-before-suspend via logind PrepareForSleep D-Bus signal
 - [x] Automatic swayidle fallback (stop on connect, restart on exit/error)
 - [x] Config-driven subscription restart (timeout changes take effect immediately)
-- [x] Caffeine mode respected for native idle events
+- [x] ~~Caffeine mode respected for native idle events~~ (caffeine feature later removed)
 - [x] `on_app_exit()` + `Drop` safety net for swayidle restart
 
 ## Phase 7B: Session Lock ✅ (v0.12.0)
@@ -434,6 +437,35 @@ See [SCREENSAVER-INTEGRATION.md](SCREENSAVER-INTEGRATION.md) for detailed resear
 - [x] Remove wallpaper UI (wallpaper download moved to CLI)
 - [x] Responsive layout — selectors left, preview right
 - [x] Restore "COSMIC ORDER" display name
+
+---
+
+## Out of Scope / Future Addons
+
+To keep the core app focused, the following are intentionally **not** built in —
+they're better served by external tools or optional future addons.
+
+### Intentionally external (out of scope)
+
+- **Tool install/remove** — users install the tools they want; the
+  required/recommended tools are documented in the README and declared in
+  `debian/control` (Recommends/Suggests).
+- **Idle inhibition ("caffeine")** — removed; use `systemd-inhibit` or a
+  dedicated COSMIC applet.
+
+### Future addons (opt-in, separate)
+
+- **OMARCHY keybindings** — a `backup` / `apply` / `restore` helper for COSMIC
+  shortcuts (`~/.config/cosmic/com.system76.CosmicSettings.Shortcuts/v1/custom`;
+  RON actions `Spawn(...)` / `System(...)` / `Disabled`). Needs the
+  OMARCHY→COSMIC keymap defined.
+- **Per-toolset helpers** — opinionated extras like terminal theme presets and
+  fzf shell integration, packaged as optional addons rather than core features.
+
+### Deferred refactor
+
+- **Split the Screensaver page** into *Screensaver* (appearance/behavior) and
+  *Power & Idle* (timeouts, DPMS, lock) — the current page mixes both.
 
 ---
 
