@@ -239,7 +239,10 @@ impl Application for App {
     }
 
     #[allow(clippy::cognitive_complexity)]
-    fn init(core: Core, _flags: Self::Flags) -> (Self, Task<Message>) {
+    fn init(mut core: Core, _flags: Self::Flags) -> (Self, Task<Message>) {
+        // Title shown in the COSMIC headerbar
+        core.set_header_title(fl!("app-title"));
+
         // Load configuration
         let config = Config::load().unwrap_or_default();
 
@@ -529,7 +532,9 @@ impl Application for App {
     }
 
     fn header_center(&self) -> Vec<Element<'_, Self::Message>> {
-        vec![widget::text::title3(fl!("app-title")).into()]
+        // Title is rendered by the headerbar itself via `set_header_title`
+        // (set in `init`); avoid a second, oversized title widget here.
+        vec![]
     }
 
     fn header_end(&self) -> Vec<Element<'_, Self::Message>> {
