@@ -437,6 +437,35 @@ See [SCREENSAVER-INTEGRATION.md](SCREENSAVER-INTEGRATION.md) for detailed resear
 
 ---
 
+## Out of Scope / Future Addons
+
+To keep the core app focused, the following are intentionally **not** built in —
+they're better served by external tools or optional future addons.
+
+### Intentionally external (out of scope)
+
+- **Tool install/remove** — users install the tools they want; the
+  required/recommended tools are documented in the README and declared in
+  `debian/control` (Recommends/Suggests).
+- **Idle inhibition ("caffeine")** — removed; use `systemd-inhibit` or a
+  dedicated COSMIC applet.
+
+### Future addons (opt-in, separate)
+
+- **OMARCHY keybindings** — a `backup` / `apply` / `restore` helper for COSMIC
+  shortcuts (`~/.config/cosmic/com.system76.CosmicSettings.Shortcuts/v1/custom`;
+  RON actions `Spawn(...)` / `System(...)` / `Disabled`). Needs the
+  OMARCHY→COSMIC keymap defined.
+- **Per-toolset helpers** — opinionated extras like terminal theme presets and
+  fzf shell integration, packaged as optional addons rather than core features.
+
+### Deferred refactor
+
+- **Split the Screensaver page** into *Screensaver* (appearance/behavior) and
+  *Power & Idle* (timeouts, DPMS, lock) — the current page mixes both.
+
+---
+
 ## Version Milestones
 
 | Version | Phase | Description |

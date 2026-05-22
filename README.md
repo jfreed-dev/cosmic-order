@@ -18,10 +18,13 @@ Built with [libcosmic](https://github.com/pop-os/libcosmic).
   session lock, idle/DPMS timeout integration, and power-aware profiles.
 - **CLI** — Scriptable commands for theme switching, color extraction,
   tool sync, hooks, and wallpaper management.
-- **Power Management** — Battery-aware effect profiles via UPower D-Bus,
-  caffeine mode (idle inhibitor) via logind.
+- **Power Management** — Battery-aware screensaver effect profiles via UPower
+  D-Bus / system76-power (Full/Standard/Simple/Minimal/Skip tiers). Idle
+  inhibition ("caffeine") isn't bundled — use `systemd-inhibit` or an applet.
 
 ## Dependencies
+
+### Build
 
 ```bash
 # Pop!_OS / Ubuntu
@@ -30,6 +33,37 @@ sudo apt install cargo cmake just libexpat1-dev libfontconfig-dev \
 ```
 
 Rust 1.90+ required.
+
+### Runtime
+
+The app itself only needs its shared libraries (pulled in automatically by the
+`.deb`). The **terminal screensaver** additionally uses:
+
+| Tool | Purpose | Install |
+|---|---|---|
+| `alacritty` | default screensaver terminal (renders fullscreen) | `sudo apt install alacritty` |
+| `terminaltexteffects` (`tte`) | the text-effect animations | `pipx install terminaltexteffects` (not packaged) |
+| `swayidle` | idle detection that starts the screensaver | `sudo apt install swayidle` |
+| `figlet` | *optional* — clock between effects | `sudo apt install figlet` |
+| `ydotool` | *optional* — hides the mouse pointer | `sudo apt install ydotool` |
+
+The `.deb` lists `alacritty`/`swayidle` under **Recommends** and
+`figlet`/`ydotool` under **Suggests**; `tte` must be installed manually since it
+isn't in the Debian/Ubuntu archive.
+
+### Tool-sync targets (optional)
+
+COSMIC ORDER writes your COSMIC theme into these tools' configs **when they are
+installed** — install only the ones you use:
+
+| Tool | Where to get it |
+|---|---|
+| Ghostty | <https://ghostty.org> |
+| btop | `sudo apt install btop` |
+| Neovim | `sudo apt install neovim` |
+| fzf | `sudo apt install fzf` |
+| Zellij | <https://zellij.dev> (release binary) |
+| lazygit | <https://github.com/jesseduffield/lazygit/releases> (release binary) |
 
 ## Build
 
