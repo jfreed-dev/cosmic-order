@@ -107,7 +107,7 @@ impl cosmic::Application for Applet {
         let button = self
             .core
             .applet
-            .icon_button("com.github.jfreed-dev.CosmicOrder")
+            .icon_button("preferences-desktop-screensaver-symbolic")
             .on_press_with_rectangle(move |offset, bounds| {
                 if let Some(id) = have_popup {
                     Message::Surface(destroy_popup(id))
