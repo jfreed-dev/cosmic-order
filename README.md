@@ -95,6 +95,8 @@ cosmic-order hooks run               # Run custom hooks
 cosmic-order wallpaper add <url>     # Download a wallpaper
 ```
 
+![COSMIC Screenshot](docs/COSMIC-screenshot.png)
+
 ## Install (.deb)
 
 Download the latest `.deb` from the
