@@ -21,12 +21,6 @@ impl App {
                 })
             }
             wayland_idle::IdleEvent::ScreensaverIdle => {
-                // Respect caffeine mode
-                if self.caffeine_active {
-                    tracing::debug!("Screensaver idle ignored — caffeine mode active");
-                    return Task::none();
-                }
-
                 tracing::info!("Screensaver idle — launching screensaver");
                 let launcher = ScreensaverConfig::fullscreen_launcher_path();
                 if !launcher.exists() {

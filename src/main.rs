@@ -14,7 +14,6 @@ mod config;
 mod cosmic_idle;
 mod generators;
 mod hooks;
-mod inhibit;
 mod localize;
 mod pages;
 mod paths;

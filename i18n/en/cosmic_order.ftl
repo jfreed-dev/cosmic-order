@@ -126,11 +126,6 @@ screensaver-terminal-cosmic-term = COSMIC Terminal
 screensaver-session-lock = Session Lock
 screensaver-session-lock-native = Native session lock
 
-# Caffeine Mode
-caffeine-toggle = Prevent Sleep
-caffeine-enabled = Caffeine mode active — idle inhibited
-caffeine-disabled-battery = Caffeine auto-disabled (low battery)
-
 # Screensaver Cursor & Dismiss
 screensaver-cursor-section = Cursor & Dismiss
 screensaver-cursor-hide = Hide text cursor
