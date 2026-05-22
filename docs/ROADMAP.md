@@ -213,7 +213,10 @@ See [NATIVE-MIGRATION.md](development/NATIVE-MIGRATION.md) for details.
 
 ---
 
-## Phase 4C: Caffeine Mode (Idle Inhibitor) ✓
+## Phase 4C: Caffeine Mode (Idle Inhibitor) ✓ — later removed
+
+> **Removed:** the caffeine / idle-inhibitor feature was dropped in favor of
+> external tools (`systemd-inhibit`, applets). See "Out of Scope / Future Addons".
 
 **Goal**: Allow users to temporarily prevent screen blanking and screensaver activation.
 
@@ -353,7 +356,7 @@ See [NATIVE-MIGRATION.md](development/NATIVE-MIGRATION.md) for details.
 - [x] Lock-before-suspend via logind PrepareForSleep D-Bus signal
 - [x] Automatic swayidle fallback (stop on connect, restart on exit/error)
 - [x] Config-driven subscription restart (timeout changes take effect immediately)
-- [x] Caffeine mode respected for native idle events
+- [x] ~~Caffeine mode respected for native idle events~~ (caffeine feature later removed)
 - [x] `on_app_exit()` + `Drop` safety net for swayidle restart
 
 ## Phase 7B: Session Lock ✅ (v0.12.0)

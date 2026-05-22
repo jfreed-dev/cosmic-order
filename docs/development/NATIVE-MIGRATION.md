@@ -130,9 +130,9 @@ script reliance significantly.
 
 Replace terminal-based screensaver with a native layer-shell overlay surface.
 
-**Current**: Ghostty terminal runs `cosmic-screensaver.sh` which uses
-TerminalTextEffects (Python CLI) for animations. Requires ydotool for
-fullscreen, compositor setting manipulation, mouse parking, etc.
+**Current**: Alacritty (default) runs `cosmic-screensaver.sh` which uses
+TerminalTextEffects (Python CLI) for animations. Alacritty self-fullscreens via
+`startup_mode = "Fullscreen"`; ydotool is only used for optional mouse parking.
 
 **Native approach**: Use `zwlr-layer-shell-v1` to create an overlay
 surface covering all outputs. Render effects directly via iced/wgpu.
@@ -153,14 +153,11 @@ integration.
 
 ### NM-08: Idle Inhibitor via Wayland Protocol
 
-**Priority**: Medium | **Effort**: Low | **Status**: Not started
-**Phase**: 4C (Caffeine Mode)
+**Status**: Obsolete — won't do
 
-Use `zwp-idle-inhibit-unstable-v1` or `ext-idle-notify-v1` Wayland
-protocol for idle inhibition instead of shell-based approaches.
-
-**Also available**: `org.freedesktop.login1.Manager.Inhibit()` D-Bus call
-returns a file descriptor — holding it open prevents idle actions.
+The caffeine / idle-inhibitor feature was removed; idle inhibition is left to
+external tools (`systemd-inhibit` or a COSMIC applet), so no native migration is
+needed.
 
 ---
 

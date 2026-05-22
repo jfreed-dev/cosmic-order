@@ -76,17 +76,13 @@ cosmic-term has **limited CLI support** compared to Ghostty:
 
 ### Recommendation
 
-**Keep Ghostty as primary** for screensaver display due to better CLI control.
+**Use Alacritty as primary** for screensaver display: it self-fullscreens via
+`startup_mode = "Fullscreen"`, sidestepping both the cosmic-term fullscreen
+freeze and Ghostty's ignored-at-startup `fullscreen` (see
+[UPSTREAM-BUGS.md](UPSTREAM-BUGS.md)). Ghostty and cosmic-term remain selectable.
 
-**cosmic-term workarounds** (if Ghostty unavailable):
-
-```bash
-# Launch cosmic-term
-cosmic-term -e "$SCREENSAVER_SCRIPT" &
-
-# Wait for window, then maximize via compositor
-# (Requires compositor-level integration)
-```
+**cosmic-term limitation:** no `--fullscreen`/`--class` flags, and it freezes
+when fullscreened on COSMIC — so it can only run windowed.
 
 ### Future Possibilities
 
