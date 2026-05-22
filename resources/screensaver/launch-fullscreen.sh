@@ -13,11 +13,12 @@ CONFIG_DIR="${HOME}/.config/cosmic-screensaver"
 CONFIG_FILE="${CONFIG_DIR}/config"
 SCREENSAVER_SCRIPT="${SCRIPT_DIR}/cosmic-screensaver.sh"
 GHOSTTY_SCREENSAVER_CONFIG="${CONFIG_DIR}/ghostty-screensaver.conf"
+ALACRITTY_SCREENSAVER_CONFIG="${CONFIG_DIR}/alacritty-screensaver.toml"
 PID_FILE="${CONFIG_DIR}/screensaver.pid"
 TOGGLE_FILE="${CONFIG_DIR}/screensaver-disabled"
 
 # Default terminal
-DEFAULT_TERMINAL="ghostty"
+DEFAULT_TERMINAL="alacritty"
 
 # Default cursor/mouse hiding
 CURSOR_HIDE="${CURSOR_HIDE:-true}"
@@ -108,7 +109,8 @@ is_running() {
         # Stale PID file
         rm -f "$PID_FILE"
     fi
-    # Check for any running screensaver instances (either terminal)
+    # Check for any running screensaver instances (any supported terminal)
+    pgrep -f "alacritty.*cosmic-screensaver" &>/dev/null && return 0
     pgrep -f "ghostty.*cosmic-screensaver" &>/dev/null && return 0
     pgrep -f "cosmic-term.*cosmic-screensaver" &>/dev/null && return 0
     return 1
@@ -195,6 +197,51 @@ gtk-single-instance = false
 EOF
 }
 
+# Create Alacritty config for screensaver
+# Minimal config (black bg, no padding, hidden cursor) that starts fullscreen.
+# startup_mode = "Fullscreen" handles fullscreen at the terminal level, avoiding
+# both the cosmic-term fullscreen bug and the fragile ydotool Super+F toggle.
+create_alacritty_config() {
+    mkdir -p "$CONFIG_DIR"
+
+    # Hidden text cursor: black on black background
+    local cursor_block=""
+    if [[ "$CURSOR_HIDE" != "false" ]]; then
+        cursor_block='
+[colors.cursor]
+cursor = "#000000"
+text = "#000000"'
+    fi
+
+    cat > "$ALACRITTY_SCREENSAVER_CONFIG" << EOF
+# Alacritty Screensaver Configuration
+# Minimal config for fullscreen screensaver display.
+
+[window]
+startup_mode = "Fullscreen"
+decorations = "None"
+dynamic_padding = false
+
+[window.padding]
+x = 0
+y = 0
+
+[font]
+size = 16.0
+
+[colors.primary]
+background = "#000000"
+foreground = "#ffffff"
+${cursor_block}
+
+[mouse]
+hide_when_typing = ${HIDE_MOUSE}
+
+[scrolling]
+history = 0
+EOF
+}
+
 # Kill all screensaver instances and restore compositor settings
 kill_screensaver() {
     restore_compositor_settings
@@ -208,7 +255,8 @@ kill_screensaver() {
         rm -f "$PID_FILE"
     fi
 
-    # Kill any terminal screensaver processes (both ghostty and cosmic-term)
+    # Kill any terminal screensaver processes (any supported terminal)
+    pkill -f "alacritty.*cosmic-screensaver" 2>/dev/null
     pkill -f "ghostty.*cosmic-screensaver" 2>/dev/null
     pkill -f "cosmic-term.*cosmic-screensaver" 2>/dev/null
     pkill -f "cosmic-screensaver.sh" 2>/dev/null
@@ -299,6 +347,54 @@ launch_with_cosmic_term() {
     wait "$main_pid" 2>/dev/null
 }
 
+# Launch screensaver using Alacritty (default)
+# Alacritty self-fullscreens via its config (startup_mode=Fullscreen), so the
+# driver is told to SKIP the ydotool Super+F toggle (NO_FULLSCREEN_TOGGLE=1) —
+# otherwise the toggle would un-fullscreen the already-fullscreen window.
+launch_with_alacritty() {
+    local monitor_count="$1"
+
+    # Ensure config exists (regenerated each launch to pick up HIDE_MOUSE/CURSOR_HIDE)
+    create_alacritty_config
+
+    # Check for alacritty
+    if ! command -v alacritty &>/dev/null; then
+        log_error "Alacritty is required but not installed"
+        log_info "Install with: sudo apt install alacritty"
+        log_info "Or switch terminal: screensaver-ctl set terminal cosmic-term"
+        return 1
+    fi
+
+    log_info "Launching screensaver with alacritty on $monitor_count monitor(s)..."
+
+    # --class sets the app id so is_running/kill can find it.
+    # NO_FULLSCREEN_TOGGLE propagates to the driver via Alacritty's child env.
+    NO_FULLSCREEN_TOGGLE=1 alacritty \
+        --config-file "$ALACRITTY_SCREENSAVER_CONFIG" \
+        --class cosmic-screensaver,cosmic-screensaver \
+        -e "$SCREENSAVER_SCRIPT" run &
+
+    local main_pid=$!
+
+    # If multiple monitors, launch additional instances
+    if [[ "$monitor_count" -gt 1 ]]; then
+        sleep 0.5  # Brief delay to let first window establish
+
+        local i=1
+        while [[ $i -lt $monitor_count ]]; do
+            NO_FULLSCREEN_TOGGLE=1 alacritty \
+                --config-file "$ALACRITTY_SCREENSAVER_CONFIG" \
+                --class cosmic-screensaver,cosmic-screensaver \
+                -e "$SCREENSAVER_SCRIPT" run &
+            ((i++))
+            sleep 0.5
+        done
+    fi
+
+    # Wait for the main process
+    wait "$main_pid" 2>/dev/null
+}
+
 # Launch screensaver on all monitors
 launch_screensaver() {
     local force=""
@@ -339,8 +435,12 @@ launch_screensaver() {
     # Store our PID
     echo $$ > "$PID_FILE"
 
-    # Regenerate Ghostty config (picks up HIDE_MOUSE changes)
-    create_ghostty_config
+    # Regenerate terminal config (picks up HIDE_MOUSE changes)
+    case "$TERMINAL" in
+        cosmic-term) ;;  # cosmic-term has no config file
+        ghostty) create_ghostty_config ;;
+        alacritty|*) create_alacritty_config ;;
+    esac
 
     # Temporarily disable compositor settings that interfere with fullscreen
     # (skipped when cosmic-order handles this via cosmic-config API)
@@ -354,8 +454,11 @@ launch_screensaver() {
         cosmic-term)
             launch_with_cosmic_term "$monitor_count"
             ;;
-        ghostty|*)
+        ghostty)
             launch_with_ghostty "$monitor_count"
+            ;;
+        alacritty|*)
+            launch_with_alacritty "$monitor_count"
             ;;
     esac
 

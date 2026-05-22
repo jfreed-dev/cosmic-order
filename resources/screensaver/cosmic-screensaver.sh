@@ -255,10 +255,15 @@ run_screensaver() {
     # wtype sends to Wayland surface directly, bypassing compositor keybinds
     if command -v ydotool &>/dev/null; then
         sleep 2.0
-        # Use modifier+key syntax (ydotool 0.1.x)
-        sg input -c "ydotool key --delay 0 super+f" 2>/dev/null \
-            || sudo ydotool key --delay 0 super+f 2>/dev/null \
-            || true
+        # Toggle fullscreen via Super+F — skipped when the terminal already
+        # self-fullscreens (Alacritty sets NO_FULLSCREEN_TOGGLE=1), since the
+        # toggle would otherwise un-fullscreen the window.
+        if [[ "${NO_FULLSCREEN_TOGGLE:-}" != "1" ]]; then
+            # Use modifier+key syntax (ydotool 0.1.x)
+            sg input -c "ydotool key --delay 0 super+f" 2>/dev/null \
+                || sudo ydotool key --delay 0 super+f 2>/dev/null \
+                || true
+        fi
         sleep 0.5
         # Park mouse pointer in bottom-right corner (invisible on black background)
         # Must happen BEFORE mouse tracking is enabled, or the movement triggers dismiss
