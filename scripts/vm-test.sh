@@ -65,25 +65,28 @@ log "Deploying to $VM"
 "${SCP[@]}" "$DEB" "$VM:/tmp/"
 "${SSH[@]}" "$VM" "sudo dpkg -i /tmp/$(basename "$DEB") >/dev/null 2>&1 || sudo apt-get -f install -y >/dev/null 2>&1; printf 'installed: '; cosmic-order --version"
 
-log "Launching GUI + capturing screenshot"
+log "Launching GUI on each page + capturing screenshots"
 mkdir -p "$OUT_DIR"
-# Derive the live session's Wayland/DBus env from the runtime dir, launch the
-# GUI detached, give it a moment to render, then screenshot via the COSMIC
-# portal. LIBGL_ALWAYS_SOFTWARE/llvmpipe keeps GL happy on the GPU-less VM.
-SHOT="$("${SSH[@]}" "$VM" '
-    pkill -x cosmic-order 2>/dev/null || true
-    sleep 1
-    RT="/run/user/$(id -u)"
-    WL="$(ls "$RT" 2>/dev/null | grep -m1 -E "^wayland-[0-9]+$")"
-    export XDG_RUNTIME_DIR="$RT" XDG_CURRENT_DESKTOP=COSMIC
-    export DBUS_SESSION_BUS_ADDRESS="unix:path=$RT/bus"
-    export WAYLAND_DISPLAY="$WL"
-    export LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe
-    nohup cosmic-order >/tmp/cosmic-order.log 2>&1 & disown
-    sleep 8
-    timeout 20 cosmic-screenshot --interactive=false --notify=false -s /tmp 2>/dev/null | tail -1
-')"
-[ -n "$SHOT" ] || die "no screenshot produced — is the VM display awake and unlocked?"
-log "Captured on VM: $SHOT"
-"${SCP[@]}" "$VM:$SHOT" "$OUT_DIR/"
-log "Pulled -> $OUT_DIR/$(basename "$SHOT")"
+# For each page, relaunch cosmic-order pinned to it (--page) and screenshot.
+# Session env is derived from the runtime dir; LIBGL/llvmpipe keeps GL happy on
+# the GPU-less VM. ($page is spliced in by the local shell; the rest is the
+# remote shell's, hence the quote dance around --page.)
+for page in visuals tool-sync screensaver; do
+    SHOT="$("${SSH[@]}" "$VM" '
+        pkill -x cosmic-order 2>/dev/null || true
+        sleep 1
+        RT="/run/user/$(id -u)"
+        WL="$(ls "$RT" 2>/dev/null | grep -m1 -E "^wayland-[0-9]+$")"
+        export XDG_RUNTIME_DIR="$RT" XDG_CURRENT_DESKTOP=COSMIC
+        export DBUS_SESSION_BUS_ADDRESS="unix:path=$RT/bus"
+        export WAYLAND_DISPLAY="$WL"
+        export LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe
+        nohup cosmic-order --page '"$page"' >/tmp/cosmic-order.log 2>&1 & disown
+        sleep 8
+        timeout 20 cosmic-screenshot --interactive=false --notify=false -s /tmp 2>/dev/null | tail -1
+    ')"
+    [ -n "$SHOT" ] || die "no screenshot for page '$page' — is the VM display awake?"
+    "${SCP[@]}" "$VM:$SHOT" "$OUT_DIR/cosmic-order-$page.png"
+    log "  $page -> $OUT_DIR/cosmic-order-$page.png"
+done
+log "All pages captured into $OUT_DIR/"
