@@ -50,6 +50,13 @@ RUN curl -fsSL -o /tmp/runner.tar.gz \
     && /home/runner/actions-runner/bin/installdependencies.sh \
     && chown -R runner:runner /home/runner
 
+# Point apt at HTTPS mirrors. The intended host (Thor) blocks outbound HTTP
+# (port 80) but allows HTTPS (443), so runtime `apt-get` over the default
+# http:// mirrors hangs; cargo/git/GitHub already use 443. The image is built
+# where port 80 works, so the build-time apt above is unaffected.
+RUN sed -i 's|http://|https://|g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true; \
+    sed -i 's|http://|https://|g' /etc/apt/sources.list 2>/dev/null || true
+
 COPY --chown=runner:runner runner-entrypoint.sh /home/runner/entrypoint.sh
 
 USER runner
