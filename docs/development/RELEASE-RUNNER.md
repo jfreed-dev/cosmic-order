@@ -44,8 +44,18 @@ the repo (e.g. your laptop):
 gh api -X POST repos/jfreed-dev/cosmic-order/actions/runners/registration-token --jq .token
 ```
 
-Start the container on Thor (named volume persists the registration so
-restarts don't re-register; `--restart unless-stopped` survives reboots):
+Then deploy with Compose (recommended — reboot-surviving, and the token
+stays out of the config). With the three build files staged in one
+directory on Thor:
+
+```bash
+echo 'RUNNER_TOKEN=<token-from-above>' > .env
+docker compose -f compose.runner.yaml up -d --build
+```
+
+The named volume persists the registration, so later `up`s (and reboots)
+reconnect without a token — leaving the now-expired token in `.env` is
+harmless. Equivalent plain `docker run`, if you'd rather not use Compose:
 
 ```bash
 docker run -d --name cosmic-order-runner \

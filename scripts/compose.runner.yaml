@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: GPL-3.0-only
+#
+# Compose deployment of the amd64 release runner (see
+# docs/development/RELEASE-RUNNER.md). Lives alongside Dockerfile.runner +
+# runner-entrypoint.sh, which form the build context.
+#
+# First run (registers the runner with the repo):
+#   1. Mint a registration token on a machine with gh + repo admin:
+#        gh api -X POST repos/jfreed-dev/cosmic-order/actions/runners/registration-token --jq .token
+#   2. Drop it in a .env file beside this one (do NOT commit it):
+#        echo 'RUNNER_TOKEN=<token>' > .env
+#   3. docker compose -f compose.runner.yaml up -d --build
+#
+# Restarts and reboots reconnect on their own — the named volume persists
+# the registration, and the token is only consumed at first registration
+# (an expired/blank token is ignored once registered).
+name: cosmic-order-runner
+
+services:
+  runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.runner
+    image: cosmic-order-runner
+    container_name: cosmic-order-runner
+    restart: unless-stopped
+    environment:
+      RUNNER_URL: https://github.com/jfreed-dev/cosmic-order
+      RUNNER_TOKEN: ${RUNNER_TOKEN:-}
+      RUNNER_NAME: thor-cosmic-order
+      # Default labels (self-hosted, Linux, X64) are always added; "thor" is
+      # a host tag by convention, mirroring spark's label.
+      RUNNER_LABELS: thor
+    volumes:
+      - runner-data:/home/runner
+
+volumes:
+  runner-data:
