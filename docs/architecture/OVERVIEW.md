@@ -303,3 +303,7 @@ fn test_theme_page_update() {
 2. **Caching** - Cache expensive computations (thumbnails, theme previews)
 3. **Async I/O** - Never block the UI thread
 4. **Efficient rendering** - Use `Lazy` widget for large lists
+
+See [`development/PATTERNS.md`](../development/PATTERNS.md) for the rationale
+behind these rules (why `view()` must stay cheap, caching failures, GPU image
+cost) and concrete libcosmic idioms.
