@@ -18,7 +18,7 @@ jobs:
     # CI failures. The gate is arch-agnostic, so spark is sufficient.
     runs-on: [self-hosted, linux, spark]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install system deps
         run: |
