@@ -1,8 +1,9 @@
 name: Runner smoke test
 
 # On-demand health check for the amd64 self-hosted runner: confirms it can
-# check out, install the toolchain, and compile the project over its network
-# (the part that has been flaky on Thor). Does not publish anything.
+# check out, install the toolchain, and compile the project over its network.
+# (Historically written for Thor's flaky egress; the X64 fleet now runs on
+# mesh.) Does not publish anything.
 #   gh workflow run runner-smoke.yml
 on:
   workflow_dispatch:

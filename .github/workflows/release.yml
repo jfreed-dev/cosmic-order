@@ -17,14 +17,13 @@ jobs:
   release:
     name: Build .deb and publish release
     # An amd64 (X64) runner is required — the .deb is architecture-specific
-    # and the homelab's default self-hosted runner is arm64. Register an
-    # x86_64 self-hosted runner (e.g. hosted on Thor) so this job has a
-    # matching target. Setup: docs/development/RELEASE-RUNNER.md
+    # and the default self-hosted fleet is arm64. The mesh VPS hosts the
+    # x86_64 runners (fleet moved off Thor 2026-09-27).
+    # Setup: docs/development/RELEASE-RUNNER.md
     runs-on: [self-hosted, linux, X64]
 
     # The toolchain is baked into the runner image, so the install steps below
-    # are near-no-ops on it; CARGO_NET_RETRY hardens cargo's downloads against
-    # Thor's intermittent egress.
+    # are near-no-ops on it; CARGO_NET_RETRY hardens cargo's downloads.
     env:
       CARGO_NET_RETRY: "10"
 

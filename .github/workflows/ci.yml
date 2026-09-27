@@ -12,11 +12,11 @@ permissions:
 jobs:
   pre-commit:
     name: pre-commit (fmt + clippy + tests)
-    # Pinned to the arm64 spark runner. The amd64 thor runner shares the
-    # default self-hosted/linux labels, but its outbound network is currently
-    # unstable (see docs/development/RELEASE-RUNNER.md) and would cause false
-    # CI failures. The gate is arch-agnostic, so spark is sufficient.
-    runs-on: [self-hosted, linux, spark]
+    # Pinned to the arm64 thalamus runner (fleet moved off spark 2026-09-27).
+    # amd64 runners share the default self-hosted/linux labels; pinning the
+    # thalamus label keeps this gate on a known-good network. The gate is
+    # arch-agnostic, so any pinned Linux runner would do.
+    runs-on: [self-hosted, linux, thalamus]
     steps:
       - uses: actions/checkout@v7
 
