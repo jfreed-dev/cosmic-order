@@ -12,11 +12,9 @@ permissions:
 jobs:
   pre-commit:
     name: pre-commit (fmt + clippy + tests)
-    # Pinned to the arm64 thalamus runner (fleet moved off spark 2026-09-27).
-    # amd64 runners share the default self-hosted/linux labels; pinning the
-    # thalamus label keeps this gate on a known-good network. The gate is
-    # arch-agnostic, so any pinned Linux runner would do.
-    runs-on: [self-hosted, linux, thalamus]
+    # GitHub-hosted runner. This workflow runs on pull requests from forks, so it
+    # must not run on the self-hosted fleet. The gate is arch-agnostic.
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
